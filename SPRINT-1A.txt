@@ -1,0 +1,22 @@
+STITCH Sprint 1A - Stamgegevens basis
+
+Gebouwd:
+- Merken beheren
+- Producttypes onbeperkt uitbreiden
+- Seizoenen beheren
+- Kleuren onbeperkt uitbreiden
+- Maten beheren
+- Categorieen beheren
+- Eenvoudige indeling in twee tabs
+- Automatisch codevoorstel bij tekstcodes
+- Bewerken, activeren en deactiveren
+- Validatie op dubbele naam of code
+- Google Font afhankelijkheid verwijderd voor betrouwbaardere builds
+
+Controle:
+- TypeScript controle geslaagd: npx tsc --noEmit
+- Next.js compilatie en TypeScript-fase geslaagd
+
+Nog niet uitgevoerd:
+- Geen database-migratie uitgevoerd
+- Stamgegevens worden in deze sprint nog via de bestaande localStorage-laag opgeslagen

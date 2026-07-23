@@ -1,0 +1,98 @@
+.moduleList {
+  padding: 4px 16px;
+}
+
+.moduleRow {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.moduleRow:last-child {
+  border-bottom: 0;
+}
+
+.moduleRow div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.moduleRow strong {
+  font-size: 11px;
+}
+
+.moduleRow p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.required {
+  border-radius: 12px;
+  background: var(--primary-light);
+  padding: 5px 8px;
+  color: var(--primary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+}
+
+.switch span {
+  position: relative;
+  width: 42px;
+  height: 23px;
+  border-radius: 13px;
+  background: #cfd5dc;
+  cursor: pointer;
+}
+
+.switch span::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  content: "";
+  transition: transform 140ms ease;
+}
+
+.switch input:checked + span {
+  background: var(--primary);
+}
+
+.switch input:checked + span::after {
+  transform: translateX(19px);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  padding: 14px 16px;
+}
+
+.success {
+  margin-bottom: 14px;
+  border: 1px solid #b8ddc9;
+  border-radius: 3px;
+  background: var(--success-light);
+  padding: 10px 12px;
+  color: var(--success);
+  font-size: 10px;
+}

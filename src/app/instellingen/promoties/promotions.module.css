@@ -1,0 +1,60 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  padding: 14px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form span {
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.form input,
+.form select {
+  height: 35px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 14px 14px;
+}
+
+.info {
+  padding: 14px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.deleteButton {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+@media (max-width: 850px) {
+  .grid,
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

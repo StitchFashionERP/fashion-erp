@@ -1,0 +1,38 @@
+.notification {
+  margin-bottom: 14px;
+  border: 1px solid #b8ddc9;
+  border-radius: 3px;
+  background: var(--success-light);
+  padding: 10px 12px;
+  color: var(--success);
+  font-size: 10px;
+}
+
+.count {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.select {
+  min-width: 190px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.empty {
+  padding: 36px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 10px;
+}

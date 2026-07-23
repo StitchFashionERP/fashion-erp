@@ -1,0 +1,404 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 18px;
+  align-items: start;
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sideColumn {
+  position: sticky;
+  top: 82px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 20px 18px 22px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.field strong {
+  margin-left: 3px;
+  color: var(--danger);
+}
+
+.field input,
+.field select,
+.field textarea,
+.customOptionRow input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+  padding: 0 10px;
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+}
+
+.field input,
+.field select,
+.customOptionRow input {
+  height: 37px;
+}
+
+.field textarea {
+  min-height: 90px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.customOptionRow input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.1);
+}
+
+.currencyInput {
+  display: flex;
+  height: 37px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+}
+
+.currencyInput:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.1);
+}
+
+.currencyInput > span {
+  display: grid;
+  width: 35px;
+  height: 100%;
+  flex: none;
+  place-items: center;
+  border-right: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.currencyInput input {
+  height: 100%;
+  border: 0;
+  box-shadow: none;
+}
+
+.currencyInput input:focus {
+  box-shadow: none;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  padding: 18px;
+}
+
+.optionCard {
+  display: flex;
+  min-height: 40px;
+  cursor: pointer;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+  padding: 0 11px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.optionCard:hover {
+  border-color: #b8c3cb;
+  background: var(--surface-muted);
+}
+
+.optionCard input {
+  accent-color: var(--primary);
+}
+
+.optionCardSelected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.customOptionRow {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border-light);
+  padding: 14px 18px 18px;
+}
+
+.customOptionRow input {
+  flex: 1;
+}
+
+.summaryList {
+  margin: 0;
+  padding: 8px 18px;
+}
+
+.summaryList > div {
+  display: flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.summaryList dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.summaryList dd {
+  overflow: hidden;
+  max-width: 165px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 650;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variantFormula {
+  margin: 10px 18px 18px;
+  border: 1px solid #cfe1ed;
+  border-radius: 3px;
+  background: var(--primary-light);
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-align: center;
+}
+
+.variantFormula strong {
+  color: var(--primary);
+}
+
+.stockInput {
+  width: 90px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 8px;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-align: right;
+  outline: none;
+}
+
+.stockInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.1);
+}
+
+.emptyVariants {
+  padding: 55px 20px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.errorMessage {
+  margin-top: 18px;
+  border: 1px solid #f1bcbc;
+  border-radius: 3px;
+  background: var(--danger-light);
+  padding: 12px 14px;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
+@media (max-width: 1050px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sideColumn {
+    position: static;
+  }
+}
+
+@media (max-width: 750px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+
+  .optionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .optionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .customOptionRow,
+  .formActions {
+    flex-direction: column;
+  }
+
+  .formActions a,
+  .formActions button {
+    width: 100%;
+  }
+}
+
+.pricingSections {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.pricingBlock {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+}
+
+.pricingBlockHeader {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  padding: 0 14px;
+}
+
+.pricingBlockHeader span {
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.pricingBlockHeader strong {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 14px;
+}
+
+.markupInput {
+  display: flex;
+  height: 37px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+}
+
+.markupInput:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.1);
+}
+
+.markupInput input {
+  width: 100%;
+  height: 35px;
+  border: 0;
+  background: transparent;
+  padding: 0 10px;
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+}
+
+.markupInput span {
+  padding-right: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.calculatedField {
+  display: flex;
+  min-height: 61px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border-left: 2px solid var(--primary);
+  border-radius: 3px;
+  background: white;
+  padding: 8px 11px;
+}
+
+.calculatedField span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.calculatedField strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .pricingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
+}

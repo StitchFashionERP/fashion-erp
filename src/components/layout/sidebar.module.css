@@ -1,0 +1,86 @@
+.navigation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupButton {
+  display: grid;
+  width: 100%;
+  min-height: 38px;
+  grid-template-columns: 22px 1fr 16px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0 9px;
+  color: var(--sidebar-text, #9ca7b5);
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.groupButton:hover,
+.groupButtonActive {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.groupIcon,
+.childIcon {
+  display: grid;
+  place-items: center;
+  color: currentColor;
+  font-size: 13px;
+}
+
+.chevron {
+  transition: transform 140ms ease;
+  font-size: 16px;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 5px;
+  padding-left: 20px;
+}
+
+.childLink {
+  display: grid;
+  min-height: 32px;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 7px;
+  border-radius: 4px;
+  padding: 0 9px;
+  color: var(--sidebar-text, #9ca7b5);
+  font-size: 10px;
+}
+
+.childLink:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.childLinkActive {
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+  font-weight: 700;
+}

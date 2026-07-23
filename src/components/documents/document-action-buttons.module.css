@@ -1,0 +1,72 @@
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.downloadButton {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.downloadButton:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.error {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 800;
+  display: flex;
+  max-width: 430px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #edc1c1;
+  border-radius: 4px;
+  background: #fff5f5;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px
+    rgba(27, 36, 48, 0.18);
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.error span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+}
+
+@media (max-width: 650px) {
+  .actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .downloadButton {
+    width: 100%;
+  }
+
+  .error {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+  }
+}

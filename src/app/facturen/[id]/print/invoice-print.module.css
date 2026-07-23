@@ -1,0 +1,201 @@
+.page {
+  min-height: 100vh;
+}
+
+.screenActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.document {
+  max-width: 960px;
+  min-height: 1120px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  background: white;
+  padding: 54px;
+  box-shadow: var(--shadow-card);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  border-bottom: 2px solid var(--text-primary);
+  padding-bottom: 28px;
+}
+
+.logo {
+  color: var(--primary);
+  font-size: 24px;
+  font-weight: 750;
+}
+
+.header p {
+  margin: 13px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.documentTitle {
+  text-align: right;
+}
+
+.documentTitle h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 650;
+}
+
+.documentTitle strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.addressGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  padding: 34px 0;
+}
+
+.addressGrid h2 {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.addressGrid p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.addressGrid dl {
+  margin: 0;
+}
+
+.addressGrid dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  border-bottom: 1px solid var(--border-light);
+  padding: 9px 0;
+}
+
+.addressGrid dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.addressGrid dd {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.table th {
+  border-bottom: 1px solid var(--text-primary);
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.table td {
+  border-bottom: 1px solid var(--border-light);
+  padding: 13px 8px;
+}
+
+.table th:nth-child(n + 3),
+.table td:nth-child(n + 3) {
+  text-align: right;
+}
+
+.table span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.totals {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 24px;
+}
+
+.totals dl {
+  width: 315px;
+  margin: 0;
+}
+
+.totals dl div {
+  display: flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.totals dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.totals dd {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.totalLine {
+  margin-top: 6px;
+  border-top: 1px solid var(--text-primary);
+  padding-top: 8px;
+}
+
+.totalLine dt,
+.totalLine dd {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.footer {
+  margin-top: 55px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+@media print {
+  .screenActions {
+    display: none;
+  }
+
+  .document {
+    min-height: auto;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .document {
+    padding: 25px;
+  }
+
+  .addressGrid {
+    grid-template-columns: 1fr;
+  }
+}

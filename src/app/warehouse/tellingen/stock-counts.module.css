@@ -1,0 +1,101 @@
+.createAction {
+  display: flex;
+  gap: 8px;
+}
+
+.createAction select {
+  min-width: 210px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 9px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.countList {
+  padding: 4px 0;
+}
+
+.countList button {
+  display: flex;
+  width: 100%;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  background: #fff;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.countList button:hover,
+.countList .activeCount {
+  background: var(--primary-light);
+}
+
+.countList div {
+  display: flex;
+  flex-direction: column;
+}
+
+.countList strong {
+  font-size: 10px;
+}
+
+.countList span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.quantityInput {
+  width: 80px;
+  height: 31px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 7px;
+  text-align: right;
+}
+
+.meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.empty {
+  padding: 36px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 10px;
+}
+
+.error {
+  margin-bottom: 14px;
+  border: 1px solid #edc1c1;
+  border-radius: 3px;
+  background: #fff5f5;
+  padding: 10px 12px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+@media (max-width: 950px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .createAction {
+    width: 100%;
+    flex-direction: column;
+  }
+}

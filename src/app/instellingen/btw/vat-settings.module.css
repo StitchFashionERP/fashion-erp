@@ -1,0 +1,15 @@
+.explanation {
+  border-top: 1px solid var(--border-light);
+  padding: 14px 16px;
+}
+
+.explanation strong {
+  font-size: 10px;
+}
+
+.explanation p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.5;
+}

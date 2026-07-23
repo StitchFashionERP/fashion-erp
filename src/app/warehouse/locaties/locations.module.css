@@ -1,0 +1,99 @@
+.resultCount {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 30, 40, 0.4);
+  padding: 20px;
+}
+
+.dialog {
+  width: min(720px, 100%);
+  overflow: hidden;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(20, 30, 40, 0.25);
+}
+
+.dialog header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.dialog header span {
+  color: var(--text-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.dialog h2 {
+  margin: 3px 0 0;
+  font-size: 16px;
+}
+
+.dialog header button {
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+}
+
+.formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.formGrid label span {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.formGrid input,
+.formGrid select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 9px;
+  background: #fff;
+}
+
+.error {
+  grid-column: 1 / -1;
+  border: 1px solid #edc1c1;
+  border-radius: 3px;
+  background: #fff5f5;
+  padding: 9px 10px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 13px 18px;
+}
+
+@media (max-width: 650px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

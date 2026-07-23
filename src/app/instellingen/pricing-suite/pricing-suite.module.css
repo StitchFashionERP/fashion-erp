@@ -1,0 +1,149 @@
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.controls input {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 8px;
+}
+
+.controls .check {
+  align-items: center;
+  flex-direction: row;
+}
+
+.bulkActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 9px;
+}
+
+.message {
+  margin-bottom: 12px;
+  border: 1px solid #b7dfc5;
+  border-radius: 4px;
+  background: #f1fbf4;
+  padding: 10px 12px;
+  color: #216b39;
+  font-size: 10px;
+}
+
+.scenarioForm {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.scenarioForm input {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 8px;
+}
+
+.scenarioList,
+.adviceList {
+  padding: 0 14px 14px;
+}
+
+.scenarioList > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 9px 0;
+}
+
+.scenarioList span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scenarioList small {
+  color: var(--text-muted);
+}
+
+.scenarioList button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.adviceList > div {
+  margin-top: 9px;
+  border-left: 3px solid #b9c0c7;
+  background: #f8f9fa;
+  padding: 9px 10px;
+}
+
+.adviceList > div[data-tone="warning"] {
+  border-left-color: #d59a21;
+}
+
+.adviceList > div[data-tone="danger"] {
+  border-left-color: #c84545;
+}
+
+.adviceList > div[data-tone="success"] {
+  border-left-color: #3b9660;
+}
+
+.adviceList strong,
+.adviceList span,
+.adviceList small {
+  display: block;
+}
+
+.adviceList span {
+  margin-top: 3px;
+  font-weight: 700;
+}
+
+.adviceList p,
+.adviceList small {
+  color: var(--text-secondary);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1050px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}

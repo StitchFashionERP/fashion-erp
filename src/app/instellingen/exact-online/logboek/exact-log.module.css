@@ -1,0 +1,92 @@
+.timeline {
+  padding: 16px 18px 24px;
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+}
+
+.entry:not(:last-child)::before {
+  position: absolute;
+  top: 18px;
+  bottom: -8px;
+  left: 5px;
+  width: 1px;
+  background: var(--border);
+  content: "";
+}
+
+.marker {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  margin-top: 16px;
+  border: 2px solid;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.successMarker {
+  border-color: var(--success);
+}
+
+.warningMarker {
+  border-color: var(--warning);
+}
+
+.errorMarker {
+  border-color: var(--danger);
+}
+
+.content {
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.content header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 12px;
+}
+
+.content header div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.content strong {
+  font-size: 10px;
+}
+
+.content span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.content p {
+  margin: 0;
+  padding: 11px 12px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.status {
+  font-weight: 650;
+}
+
+.empty {
+  padding: 38px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 10px;
+}

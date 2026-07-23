@@ -1,0 +1,30 @@
+.grid {
+  max-width: 760px;
+}
+
+.message {
+  padding: 28px;
+}
+
+.message > span {
+  color: var(--primary);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.message h2 {
+  margin: 1px 0 18px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .12em;
+}
+
+.message p {
+  max-width: 650px;
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.65;
+}

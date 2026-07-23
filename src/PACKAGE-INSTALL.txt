@@ -1,0 +1,4 @@
+npm install @supabase/supabase-js @supabase/ssr
+
+Optioneel:
+npm install --save-dev supabase

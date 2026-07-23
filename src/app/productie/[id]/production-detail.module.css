@@ -1,0 +1,108 @@
+.breadcrumb {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.breadcrumb a {
+  color: var(--primary);
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.statusValue {
+  margin: 12px 0 8px;
+}
+
+.dateValue {
+  margin: 8px 0 5px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.statusSelect {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 9px;
+}
+
+.receivePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  padding: 14px 16px;
+}
+
+.receivePanel div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.receivePanel strong {
+  font-size: 10px;
+}
+
+.receivePanel span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.receivePanel select {
+  min-width: 240px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 8px;
+}
+
+.success,
+.error {
+  margin-bottom: 14px;
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+.success {
+  border: 1px solid #b8ddc9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.error {
+  border: 1px solid #edc1c1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+.empty {
+  padding: 40px;
+  text-align: center;
+}
+
+@media (max-width: 850px) {
+  .metricGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .receivePanel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

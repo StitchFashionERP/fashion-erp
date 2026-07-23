@@ -1,0 +1,155 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 18, 38, .46);
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+
+.dialog {
+  width: min(560px, 100%);
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow:
+    0 25px 70px rgba(3, 18, 38, .25);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+  padding: 18px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.header p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.header > button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 22px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 18px;
+}
+
+.body label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.body label > span {
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.body input,
+.body select {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 9px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.info strong {
+  font-size: 12px;
+}
+
+.info span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.explanation {
+  border-left: 3px solid var(--primary);
+  background: var(--primary-light);
+  padding: 11px 12px;
+}
+
+.explanation strong {
+  font-size: 10px;
+}
+
+.explanation p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.error {
+  border: 1px solid #efc0c0;
+  border-radius: 5px;
+  background: #fff4f4;
+  padding: 10px;
+  color: var(--danger);
+  font-size: 9px;
+}
+
+.success {
+  border: 1px solid #b8ddc9;
+  border-radius: 5px;
+  background: var(--success-light);
+  padding: 10px;
+  color: var(--success);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.copyRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+}
+
+.copyRow button {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--primary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.preview {
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border-light);
+  padding: 13px 18px;
+}

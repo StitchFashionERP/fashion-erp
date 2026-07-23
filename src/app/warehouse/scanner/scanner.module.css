@@ -1,0 +1,132 @@
+.modeTabs {
+  display: inline-flex;
+  gap: 3px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  padding: 3px;
+}
+
+.modeTabs button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  padding: 0 13px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.modeTabs .activeMode {
+  background: var(--primary);
+  color: #fff;
+}
+
+.scannerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+
+.form label,
+.locationGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form label span,
+.locationGrid label span {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.form select,
+.locationGrid select {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 9px;
+}
+
+.locationGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.success,
+.error {
+  border-radius: 3px;
+  padding: 11px 12px;
+  font-size: 10px;
+}
+
+.success {
+  border: 1px solid #b8ddc9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.error {
+  border: 1px solid #edc1c1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+.progressList {
+  padding: 4px 16px;
+}
+
+.progressLine {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.progressLine:last-child {
+  border-bottom: 0;
+}
+
+.progressLine div {
+  display: flex;
+  flex-direction: column;
+}
+
+.progressLine span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.empty {
+  padding: 40px 18px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .scannerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .locationGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,41 @@
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.list {
+  padding: 4px 16px;
+}
+
+.list div {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 10px;
+}
+
+.list div:last-child {
+  border-bottom: 0;
+}
+
+.list span {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 850px) {
+  .metricGrid,
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,0 +1,56 @@
+.input {
+  width: 100%;
+  min-width: 150px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 8px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+}
+
+.delete {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 9px;
+}
+
+.roles {
+  border-top: 1px solid var(--border-light);
+  padding: 14px 16px;
+}
+
+.roles strong {
+  font-size: 10px;
+}
+
+.roles p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  padding: 14px 16px;
+}
+
+.success {
+  margin-bottom: 14px;
+  border: 1px solid #b8ddc9;
+  border-radius: 3px;
+  background: var(--success-light);
+  padding: 10px 12px;
+  color: var(--success);
+  font-size: 10px;
+}

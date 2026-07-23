@@ -1,0 +1,604 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas = ["public", "auth"]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  PURCHASING
+  WAREHOUSE
+  FINANCE
+  VIEWER
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+}
+
+enum CollectionSeason {
+  SPRING_SUMMER
+  AUTUMN_WINTER
+  PRE_SPRING
+  PRE_FALL
+  RESORT
+  HOLIDAY
+  CORE
+  OTHER
+}
+
+enum CollectionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum VariantStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SizeType {
+  LETTER
+  NUMERIC
+  SHOE
+  CHILDREN
+  ONE_SIZE
+  OTHER
+}
+
+enum InventoryMovementType {
+  OPENING_BALANCE
+  PURCHASE_RECEIPT
+  PURCHASE_RETURN
+  SALES_RESERVATION
+  SALES_RESERVATION_RELEASE
+  SALES_SHIPMENT
+  SALES_RETURN
+  STOCK_CORRECTION
+  DAMAGE
+  LOSS
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum ImageType {
+  PRIMARY
+  FRONT
+  BACK
+  DETAIL
+  LIFESTYLE
+  COLOR_SWATCH
+  OTHER
+}
+
+// ============================================================
+// ORGANISATIE EN GEBRUIKERS
+// ============================================================
+
+model Organization {
+  id     String             @id @default(cuid())
+  name   String
+  status OrganizationStatus @default(ACTIVE)
+
+  legalName          String?
+  registrationNo     String?
+  vatNumber          String?
+  email              String?
+  phone              String?
+  website            String?
+  logoUrl            String?
+  iban               String?
+  bic                String?
+  defaultCurrency    String  @default("EUR")
+  defaultVatRate     Decimal @default(21.00) @db.Decimal(5, 2)
+  defaultPaymentDays Int     @default(30)
+
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
+  city         String?
+  state        String?
+  countryCode  String  @default("NL")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users              User[]
+  collections        Collection[]
+  brands             Brand[]
+  productTypes       ProductType[]
+  categories         Category[]
+  suppliers          Supplier[]
+  products           Product[]
+  colors             Color[]
+  sizes              Size[]
+  productImages      ProductImage[]
+  colorVariants      ProductColorVariant[]
+  variants           ProductVariant[]
+  inventoryRecords   Inventory[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  firstName String
+  lastName  String
+  email     String
+  role      UserRole   @default(VIEWER)
+  status    UserStatus @default(INVITED)
+
+  externalAuthId String?
+  lastLoginAt    DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  inventoryMovements InventoryMovement[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId, status])
+  @@index([externalAuthId])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// COLLECTIES EN CATEGORIEËN
+// ============================================================
+
+model Collection {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  code        String
+  season      CollectionSeason
+  year        Int
+  status      CollectionStatus @default(DRAFT)
+  description String?
+
+  salesStartDate    DateTime?
+  salesEndDate      DateTime?
+  deliveryStartDate DateTime?
+  deliveryEndDate   DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, year, season])
+  @@index([organizationId, status])
+  @@index([deletedAt])
+}
+
+model Brand {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  code        String   @db.VarChar(2)
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
+}
+
+model ProductType {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  code        String   @db.VarChar(2)
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
+}
+
+model Category {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  code        String
+  description String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@index([parentId])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// LEVERANCIERS
+// ============================================================
+
+model Supplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  supplierNumber String
+  companyName    String
+  status         SupplierStatus @default(ACTIVE)
+
+  contactFirstName String?
+  contactLastName  String?
+  email            String?
+  phone            String?
+  website          String?
+
+  registrationNo    String?
+  vatNumber         String?
+  currency          String   @default("EUR")
+  paymentDays       Int      @default(30)
+  minimumOrderValue Decimal? @db.Decimal(12, 2)
+
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
+  city         String?
+  state        String?
+  countryCode  String  @default("NL")
+
+  notes String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@unique([organizationId, supplierNumber])
+  @@index([organizationId, companyName])
+  @@index([organizationId, status])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// MATEN EN KLEUREN
+// ============================================================
+
+model Color {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  code         String
+  supplierCode String?
+  hexCode      String?
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  colorVariants ProductColorVariant[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
+}
+
+model Size {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name      String
+  code      String
+  sizeType  SizeType
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  variants ProductVariant[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, sizeType, sortOrder])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// PRODUCTEN
+// ============================================================
+
+model Product {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Restrict)
+
+  brandId String
+  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  productTypeId String
+  productType   ProductType @relation(fields: [productTypeId], references: [id], onDelete: Restrict)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  styleNumber    String @db.VarChar(11)
+  seasonCode     String @db.VarChar(1)
+  seasonYear     Int
+  sequenceNumber Int
+
+  name   String
+  status ProductStatus @default(DRAFT)
+
+  supplierProductCode String?
+  description         String?
+  materialComposition String?
+  careInstructions    String?
+  countryOfOrigin     String?
+  hsCode              String?
+
+  purchasePrice          Decimal? @db.Decimal(12, 4)
+  wholesalePrice         Decimal? @db.Decimal(12, 2)
+  recommendedRetailPrice Decimal? @db.Decimal(12, 2)
+  vatRate                Decimal  @default(21.00) @db.Decimal(5, 2)
+
+  weightGrams Int?
+  notes       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  colorVariants ProductColorVariant[]
+
+  @@unique([organizationId, styleNumber])
+  @@unique([organizationId, brandId, seasonCode, seasonYear, productTypeId, sequenceNumber])
+  @@index([organizationId, name])
+  @@index([organizationId, status])
+  @@index([collectionId])
+  @@index([brandId])
+  @@index([productTypeId])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([deletedAt])
+}
+
+model ProductColorVariant {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  colorId String
+  color   Color @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  status VariantStatus @default(ACTIVE)
+  notes  String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  variants ProductVariant[]
+  images   ProductImage[]
+
+  @@unique([productId, colorId])
+  @@index([organizationId, status])
+  @@index([productId])
+  @@index([colorId])
+  @@index([deletedAt])
+}
+
+model ProductImage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  colorVariantId String
+  colorVariant   ProductColorVariant @relation(fields: [colorVariantId], references: [id], onDelete: Cascade)
+
+  imageType ImageType @default(OTHER)
+  url       String
+  altText   String?
+  sortOrder Int       @default(0)
+  isPrimary Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([colorVariantId, sortOrder])
+  @@index([colorVariantId, isPrimary])
+}
+
+// ============================================================
+// PRODUCTVARIANTEN
+// ============================================================
+
+model ProductVariant {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  colorVariantId String
+  colorVariant   ProductColorVariant @relation(fields: [colorVariantId], references: [id], onDelete: Cascade)
+
+  sizeId String
+  size   Size @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+
+  sku    String
+  ean    String?
+  status VariantStatus @default(ACTIVE)
+
+  supplierVariantCode String?
+
+  purchasePrice          Decimal? @db.Decimal(12, 4)
+  wholesalePrice         Decimal? @db.Decimal(12, 2)
+  recommendedRetailPrice Decimal? @db.Decimal(12, 2)
+
+  weightGrams Int?
+  isPreorder  Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  inventory          Inventory?
+  inventoryMovements InventoryMovement[]
+
+  @@unique([organizationId, sku])
+  @@unique([colorVariantId, sizeId])
+  @@unique([organizationId, ean])
+  @@index([organizationId, status])
+  @@index([colorVariantId])
+  @@index([sizeId])
+  @@index([ean])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// VOORRAAD
+// ============================================================
+
+model Inventory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  variantId String         @unique
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  physicalQuantity Int @default(0)
+  reservedQuantity Int @default(0)
+  incomingQuantity Int @default(0)
+  minimumQuantity  Int @default(0)
+
+  lastCountedAt  DateTime?
+  lastMovementAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, physicalQuantity])
+}
+
+model InventoryMovement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  type     InventoryMovementType
+  quantity Int
+
+  physicalBefore Int
+  physicalAfter  Int
+  reservedBefore Int
+  reservedAfter  Int
+
+  referenceType String?
+  referenceId   String?
+  referenceNo   String?
+  reason        String?
+  notes         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([variantId, createdAt])
+  @@index([type])
+  @@index([referenceType, referenceId])
+}

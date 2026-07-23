@@ -1,0 +1,70 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(330px, 0.7fr);
+  gap: 14px;
+}
+
+.meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.importList {
+  padding: 4px 14px;
+}
+
+.importCard {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.importCard:last-child {
+  border-bottom: 0;
+}
+
+.importCard div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.importCard strong {
+  font-size: 10px;
+}
+
+.importCard span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.success,
+.error {
+  margin-bottom: 14px;
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+.success {
+  border: 1px solid #b8ddc9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.error {
+  border: 1px solid #edc1c1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

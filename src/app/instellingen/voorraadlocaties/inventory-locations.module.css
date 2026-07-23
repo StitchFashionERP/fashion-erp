@@ -1,0 +1,102 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.65fr);
+  gap: 14px;
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 9px;
+}
+
+.rowActions button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.rowActions .delete {
+  color: var(--danger);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 16px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form label span {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.form input,
+.form select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 9px;
+}
+
+.smallGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form .checkbox {
+  flex-direction: row;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.checkbox input {
+  width: 15px;
+  height: 15px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border-light);
+  padding: 13px 16px;
+}
+
+.success,
+.error {
+  margin-bottom: 14px;
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+.success {
+  border: 1px solid #b8ddc9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.error {
+  border: 1px solid #edc1c1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
