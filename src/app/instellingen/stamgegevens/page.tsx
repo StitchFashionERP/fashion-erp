@@ -1,226 +1,112 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
+import { NamedMasterDataManager } from "@/components/master-data/named-master-data-manager";
 import {
-  addMasterDataItem,
-  deleteMasterDataItem,
-  getMasterDataItems,
-  masterDataLabels,
-  subscribeToMasterData,
-  updateMasterDataItem,
-  type MasterDataEntity,
-  type MasterDataItem,
+  getBrands,
+  getProductTypes,
+  getCategories,
+  getColors,
+  getSizes,
+  saveBrands,
+  saveProductTypes,
+  saveCategories,
+  saveColors,
+  saveSizes,
+  type NamedMasterData,
 } from "@/lib/master-data";
+import styles from "./master-data.module.css";
 
-const entities = Object.keys(masterDataLabels) as MasterDataEntity[];
-
-export default function StamgegevensPage() {
-  const [entity, setEntity] = useState<MasterDataEntity>("brands");
-  const [items, setItems] = useState<MasterDataItem[]>([]);
-  const [search, setSearch] = useState("");
-
-  function reload() {
-    setItems(getMasterDataItems(entity, true));
-  }
+export default function MasterDataPage() {
+  const [brands, setBrands] = useState<NamedMasterData[] | null>(null);
+  const [productTypes, setProductTypes] = useState<NamedMasterData[] | null>(null);
+  const [categories, setCategories] = useState<NamedMasterData[] | null>(null);
+  const [colors, setColors] = useState<NamedMasterData[] | null>(null);
+  const [sizes, setSizes] = useState<NamedMasterData[] | null>(null);
 
   useEffect(() => {
-    reload();
-    return subscribeToMasterData(reload);
-  }, [entity]);
+    setBrands(getBrands());
+    setProductTypes(getProductTypes());
+    setCategories(getCategories());
+    setColors(getColors());
+    setSizes(getSizes());
+  }, []);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        item.code.toLowerCase().includes(query),
-    );
-  }, [items, search]);
-
-  function createItem() {
-    const name = window.prompt(`Naam voor nieuw stamgegeven`);
-    if (!name) return;
-    addMasterDataItem(entity, name);
-    reload();
+  if (!brands || !productTypes || !categories || !colors || !sizes) {
+    return <section className="content-card">Stamgegevens laden...</section>;
   }
 
   return (
     <div>
+      <div className={styles.breadcrumb}>
+        <Link href="/instellingen">Instellingen</Link>
+        <span>›</span>
+        <span>Stamgegevens</span>
+      </div>
+
       <PageHeader
         eyebrow="Instellingen"
         title="Stamgegevens"
-        description="Beheer de centrale keuzelijsten die in heel STITCH worden gebruikt."
-        action={
-          <button type="button" className="button button-primary" onClick={createItem}>
-            + Nieuw stamgegeven
-          </button>
-        }
+        description="Beheer de vaste keuzelijsten die binnen de applicatie worden gebruikt."
       />
 
-      <section
-        className="content-card"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "240px 1fr",
-          minHeight: 620,
-          overflow: "hidden",
-        }}
-      >
-        <aside
-          style={{
-            padding: 14,
-            borderRight: "1px solid #dbe3ee",
-            background: "#f7f9fc",
+      <section className={styles.grid}>
+        <NamedMasterDataManager
+          title="Merken"
+          description="Merkcodes vormen het eerste deel van het artikelnummer."
+          idPrefix="brand"
+          initialItems={brands}
+          onSave={(items) => {
+            setBrands(items);
+            saveBrands(items);
           }}
-        >
-          {entities.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => {
-                setEntity(item);
-                setSearch("");
-              }}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                marginBottom: 4,
-                border: 0,
-                borderRadius: 4,
-                background: entity === item ? "#e6f1fd" : "transparent",
-                color: entity === item ? "#075ea8" : "#263b57",
-                fontWeight: entity === item ? 700 : 500,
-                textAlign: "left",
-                cursor: "pointer",
-              }}
-            >
-              {masterDataLabels[item]}
-            </button>
-          ))}
-        </aside>
+        />
 
-        <div>
-          <div className="content-card-toolbar">
-            <div>
-              <h2 style={{ margin: 0, fontSize: 18 }}>
-                {masterDataLabels[entity]}
-              </h2>
-              <p style={{ margin: "4px 0 0", color: "#66758c", fontSize: 13 }}>
-                {items.length} waarden
-              </p>
-            </div>
+        <NamedMasterDataManager
+          title="Producttypes"
+          description="Uitbreidbare kledingsoorten met een unieke tweecijferige code."
+          idPrefix="product-type"
+          initialItems={productTypes}
+          onSave={(items) => {
+            setProductTypes(items);
+            saveProductTypes(items);
+          }}
+        />
 
-            <div className="table-search">
-              <span>⌕</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Zoeken..."
-              />
-            </div>
-          </div>
+        <NamedMasterDataManager
+          title="Categorieën"
+          description="Productgroepen zoals blouses, jurken en broeken."
+          idPrefix="category"
+          initialItems={categories}
+          onSave={(items) => {
+            setCategories(items);
+            saveCategories(items);
+          }}
+        />
 
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Naam</th>
-                  <th>Status</th>
-                  <th className="table-number">Sortering</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <input
-                        value={item.code}
-                        onChange={(event) =>
-                          updateMasterDataItem(entity, item.id, {
-                            code: event.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          minHeight: 34,
-                          border: "1px solid #d5deea",
-                          borderRadius: 4,
-                          padding: "6px 8px",
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        value={item.name}
-                        onChange={(event) =>
-                          updateMasterDataItem(entity, item.id, {
-                            name: event.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          minHeight: 34,
-                          border: "1px solid #d5deea",
-                          borderRadius: 4,
-                          padding: "6px 8px",
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <input
-                          type="checkbox"
-                          checked={item.active}
-                          onChange={(event) =>
-                            updateMasterDataItem(entity, item.id, {
-                              active: event.target.checked,
-                            })
-                          }
-                        />
-                        {item.active ? "Actief" : "Inactief"}
-                      </label>
-                    </td>
-                    <td className="table-number">
-                      <input
-                        type="number"
-                        value={item.sortOrder}
-                        onChange={(event) =>
-                          updateMasterDataItem(entity, item.id, {
-                            sortOrder: Number(event.target.value),
-                          })
-                        }
-                        style={{
-                          width: 82,
-                          minHeight: 34,
-                          border: "1px solid #d5deea",
-                          borderRadius: 4,
-                          padding: "6px 8px",
-                        }}
-                      />
-                    </td>
-                    <td className="table-number">
-                      <button
-                        type="button"
-                        className="text-button"
-                        onClick={() => {
-                          if (window.confirm(`${item.name} verwijderen?`)) {
-                            deleteMasterDataItem(entity, item.id);
-                          }
-                        }}
-                      >
-                        Verwijderen
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <NamedMasterDataManager
+          title="Kleuren"
+          description="Kleuren die beschikbaar zijn voor productvarianten."
+          idPrefix="color"
+          initialItems={colors}
+          onSave={(items) => {
+            setColors(items);
+            saveColors(items);
+          }}
+        />
+
+        <NamedMasterDataManager
+          title="Maten"
+          description="Letter-, cijfer- en unieke maten."
+          idPrefix="size"
+          initialItems={sizes}
+          onSave={(items) => {
+            setSizes(items);
+            saveSizes(items);
+          }}
+        />
       </section>
     </div>
   );

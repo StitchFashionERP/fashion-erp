@@ -7,12 +7,12 @@ import {
 } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { createMasterId } from "@/lib/master-data";
 import {
-  createMasterId,
   getSuppliers,
   saveSuppliers,
   type Supplier,
-} from "@/lib/master-data";
+} from "@/lib/suppliers";
 import {
   getSupplierHistoryCheck,
 } from "@/lib/relation-history";

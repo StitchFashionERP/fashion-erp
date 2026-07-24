@@ -7,12 +7,12 @@ import {
 } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { createMasterId } from "@/lib/master-data";
 import {
-  createMasterId,
   getCustomers,
   saveCustomers,
   type Customer,
-} from "@/lib/master-data";
+} from "@/lib/customers";
 import { getPriceLists } from "@/lib/price-lists";
 import {
   getCustomerHistoryCheck,

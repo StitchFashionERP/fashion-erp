@@ -12,12 +12,11 @@ type NamedMasterDataManagerProps = {
   initialItems: NamedMasterData[];
   onSave: (items: NamedMasterData[]) => void;
   codeLength?: number;
-  codeMode?: "letters" | "numbers" | "mixed";
+  numericCode?: boolean;
 };
 
-function suggestCode(name: string, mode: "letters" | "numbers" | "mixed", length?: number) {
-  if (mode === "numbers") return "";
-
+function suggestCode(name: string, length?: number, numericCode?: boolean) {
+  if (numericCode) return "";
   const words = name
     .trim()
     .normalize("NFD")
@@ -26,11 +25,12 @@ function suggestCode(name: string, mode: "letters" | "numbers" | "mixed", length
     .split(/\s+/)
     .filter(Boolean);
 
-  const raw = words.length > 1
+  if (!words.length) return "";
+  const max = length ?? 3;
+  const suggestion = words.length > 1
     ? words.map((word) => word[0]).join("")
-    : (words[0] ?? "").slice(0, length ?? 3);
-
-  return raw.toUpperCase().slice(0, length);
+    : words[0].slice(0, max);
+  return suggestion.toUpperCase().slice(0, max);
 }
 
 export function NamedMasterDataManager({
@@ -40,46 +40,51 @@ export function NamedMasterDataManager({
   initialItems,
   onSave,
   codeLength,
-  codeMode = "mixed",
+  numericCode = false,
 }: NamedMasterDataManagerProps) {
   const [items, setItems] = useState(initialItems);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [editingCode, setEditingCode] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return items;
     return items.filter((item) =>
-      item.name.toLowerCase().includes(query) || item.code.toLowerCase().includes(query),
+      item.name.toLowerCase().includes(query) ||
+      item.code.toLowerCase().includes(query),
     );
   }, [items, search]);
-
-  const activeCount = items.filter((item) => item.isActive).length;
 
   function commit(nextItems: NamedMasterData[]) {
     setItems(nextItems);
     onSave(nextItems);
   }
 
+  function normalizeCode(value: string) {
+    const cleaned = numericCode
+      ? value.replace(/\D/g, "")
+      : value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    return codeLength ? cleaned.slice(0, codeLength) : cleaned;
+  }
+
   function handleNameChange(value: string) {
     setName(value);
-    if (!code) setCode(suggestCode(value, codeMode, codeLength));
+    if (!code) setCode(suggestCode(value, codeLength, numericCode));
   }
 
   function addItem() {
     const cleanName = name.trim();
-    const cleanCode = code.trim().toUpperCase();
+    const cleanCode = normalizeCode(code.trim());
     if (!cleanName || !cleanCode) return;
 
     const exists = items.some((item) =>
       item.name.toLowerCase() === cleanName.toLowerCase() ||
       item.code.toLowerCase() === cleanCode.toLowerCase(),
     );
-
     if (exists) {
       window.alert("Deze naam of code bestaat al.");
       return;
@@ -97,20 +102,22 @@ export function NamedMasterDataManager({
 
   function startEditing(item: NamedMasterData) {
     setEditingId(item.id);
-    setEditingName(item.name);
-    setEditingCode(item.code);
+    setEditName(item.name);
+    setEditCode(item.code);
   }
 
-  function saveEditing() {
+  function saveEdit() {
     if (!editingId) return;
-    const cleanName = editingName.trim();
-    const cleanCode = editingCode.trim().toUpperCase();
+    const cleanName = editName.trim();
+    const cleanCode = normalizeCode(editCode.trim());
     if (!cleanName || !cleanCode) return;
 
-    const exists = items.some((item) => item.id !== editingId && (
-      item.name.toLowerCase() === cleanName.toLowerCase() ||
-      item.code.toLowerCase() === cleanCode.toLowerCase()
-    ));
+    const exists = items.some((item) =>
+      item.id !== editingId && (
+        item.name.toLowerCase() === cleanName.toLowerCase() ||
+        item.code.toLowerCase() === cleanCode.toLowerCase()
+      ),
+    );
     if (exists) {
       window.alert("Deze naam of code bestaat al.");
       return;
@@ -123,7 +130,9 @@ export function NamedMasterDataManager({
   }
 
   function toggleItem(id: string) {
-    commit(items.map((item) => item.id === id ? { ...item, isActive: !item.isActive } : item));
+    commit(items.map((item) => item.id === id
+      ? { ...item, isActive: !item.isActive }
+      : item));
   }
 
   return (
@@ -133,18 +142,16 @@ export function NamedMasterDataManager({
           <h2 className="content-card-title">{title}</h2>
           <p className="content-card-description">{description}</p>
         </div>
-        <div className={styles.counter}>{activeCount} actief</div>
       </div>
 
       <div className={styles.addRow}>
         <input value={name} onChange={(event) => handleNameChange(event.target.value)} placeholder="Naam" />
         <input
           value={code}
+          onChange={(event) => setCode(normalizeCode(event.target.value))}
+          placeholder={numericCode ? "Code (bijv. 12)" : "Code"}
+          inputMode={numericCode ? "numeric" : "text"}
           maxLength={codeLength}
-          inputMode={codeMode === "numbers" ? "numeric" : "text"}
-          onChange={(event) => setCode(event.target.value.toUpperCase())}
-          placeholder={codeMode === "numbers" ? "Code, bijv. 12" : "Code"}
-          onKeyDown={(event) => { if (event.key === "Enter") addItem(); }}
         />
         <button className="button button-primary" type="button" onClick={addItem}>Toevoegen</button>
       </div>
@@ -158,17 +165,19 @@ export function NamedMasterDataManager({
           <thead><tr><th>Naam</th><th>Code</th><th>Status</th><th className="table-number">Acties</th></tr></thead>
           <tbody>
             {filteredItems.map((item) => {
-              const isEditing = editingId === item.id;
+              const editing = editingId === item.id;
               return (
                 <tr key={item.id}>
                   <td className="table-primary">
-                    {isEditing ? <input className={styles.inlineInput} value={editingName} onChange={(e) => setEditingName(e.target.value)} /> : item.name}
+                    {editing ? <input className={styles.inlineInput} value={editName} onChange={(e) => setEditName(e.target.value)} /> : item.name}
                   </td>
-                  <td>{isEditing ? <input className={styles.inlineInput} value={editingCode} maxLength={codeLength} onChange={(e) => setEditingCode(e.target.value.toUpperCase())} /> : item.code}</td>
-                  <td><span className={item.isActive ? styles.active : styles.inactive}>{item.isActive ? "Actief" : "Inactief"}</span></td>
+                  <td>
+                    {editing ? <input className={styles.inlineCode} value={editCode} onChange={(e) => setEditCode(normalizeCode(e.target.value))} maxLength={codeLength} /> : item.code}
+                  </td>
+                  <td>{item.isActive ? "Actief" : "Inactief"}</td>
                   <td className={`table-number ${styles.actions}`}>
-                    {isEditing ? (
-                      <><button type="button" onClick={saveEditing}>Opslaan</button><button type="button" onClick={() => setEditingId(null)}>Annuleren</button></>
+                    {editing ? (
+                      <><button type="button" onClick={saveEdit}>Opslaan</button><button type="button" onClick={() => setEditingId(null)}>Annuleren</button></>
                     ) : (
                       <><button type="button" onClick={() => startEditing(item)}>Bewerken</button><button type="button" onClick={() => toggleItem(item.id)}>{item.isActive ? "Deactiveren" : "Activeren"}</button></>
                     )}

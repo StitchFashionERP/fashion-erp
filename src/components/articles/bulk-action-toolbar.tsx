@@ -1,6 +1,6 @@
 "use client";
 
-type Props = {
+type BulkActionToolbarProps = {
   selectedCount: number;
   onEdit: () => void;
   onExport: () => void;
@@ -14,35 +14,73 @@ export function BulkActionToolbar({
   onExport,
   onArchive,
   onClear,
-}: Props) {
-  if (!selectedCount) return null;
+}: BulkActionToolbarProps) {
+  if (selectedCount === 0) {
+    return null;
+  }
 
   return (
     <div
+      role="region"
+      aria-label="Bulkacties"
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 12,
-        padding: "8px 12px",
-        borderTop: "1px solid #dbe3ee",
-        borderBottom: "1px solid #dbe3ee",
-        background: "#f7f9fc",
+        gap: "16px",
+        flexWrap: "wrap",
+        padding: "12px 16px",
+        margin: "0 0 16px",
+        border: "1px solid var(--border-color, #d9dde3)",
+        borderRadius: "8px",
+        background: "var(--surface-muted, #f7f8fa)",
       }}
     >
-      <strong>{selectedCount} geselecteerd</strong>
-      <div style={{ display: "flex", gap: 6 }}>
-        <button type="button" className="button button-primary" onClick={onEdit}>
-          Bulk wijzigen
+      <div>
+        <strong>
+          {selectedCount}{" "}
+          {selectedCount === 1 ? "artikel" : "artikelen"} geselecteerd
+        </strong>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          className="button button-primary"
+          onClick={onEdit}
+        >
+          Bulk aanpassen
         </button>
-        <button type="button" className="button" onClick={onExport}>
+
+        <button
+          type="button"
+          className="button"
+          onClick={onExport}
+        >
           Exporteren
         </button>
-        <button type="button" className="button" onClick={onArchive}>
+
+        <button
+          type="button"
+          className="button"
+          onClick={onArchive}
+        >
           Archiveren
         </button>
-        <button type="button" className="text-button" onClick={onClear}>
-          Wissen
+
+        <button
+          type="button"
+          className="text-button"
+          onClick={onClear}
+        >
+          Selectie wissen
         </button>
       </div>
     </div>

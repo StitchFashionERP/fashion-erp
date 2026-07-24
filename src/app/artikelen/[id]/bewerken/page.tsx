@@ -10,7 +10,7 @@ import {
   useRouter,
 } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArticleForm } from "@/components/articles/article-form";
+import { ArticleForm } from "@/components/articles/article-form-fixed";
 import {
   getProductById,
   updateProduct,

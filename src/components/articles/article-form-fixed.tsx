@@ -350,21 +350,31 @@ export function ArticleForm({
     setColorOptions(activeColors);
     setSizeOptions(activeSizes);
 
-    if (!initialProduct) {
-      setCollection(
-        (current) =>
-          current || collectionValues[0] || "",
-      );
-      setCategory(
-        (current) =>
-          current || categoryValues[0] || "",
-      );
-      setSupplier(
-        (current) =>
-          current || supplierValues[0] || "",
-      );
-    }
+    setCollection(
+      (current) =>
+        current || collectionValues[0] || "",
+    );
+    setCategory(
+      (current) =>
+        current || categoryValues[0] || "",
+    );
+    setSupplier(
+      (current) =>
+        current || supplierValues[0] || "",
+    );
   }, [initialProduct]);
+
+  useEffect(() => {
+    if (
+      error ===
+        "Selecteer een collectie, categorie en leverancier." &&
+      collection &&
+      category &&
+      supplier
+    ) {
+      setError("");
+    }
+  }, [collection, category, supplier, error]);
 
   const variantRows = useMemo(
     () =>
@@ -548,7 +558,7 @@ export function ArticleForm({
                   }
                 >
                   {collections.map((item) => (
-                    <option key={item}>
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
@@ -565,7 +575,7 @@ export function ArticleForm({
                   }
                 >
                   {categories.map((item) => (
-                    <option key={item}>
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
@@ -582,7 +592,7 @@ export function ArticleForm({
                   }
                 >
                   {suppliers.map((item) => (
-                    <option key={item}>
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
