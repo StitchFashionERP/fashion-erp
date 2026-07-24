@@ -1,430 +1,596 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import * as XLSX from "xlsx";
-import { PageHeader } from "@/components/ui/page-header";
 import {
-  deleteEans,
-  getEanPool,
-  importEans,
-  setEanBlocked,
-  type EanImportResult,
-  type EanPoolItem,
-  type EanStatus,
-} from "@/lib/ean-center";
-import styles from "./ean-center.module.css";
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BulkActionToolbar } from "@/components/articles/bulk-action-toolbar";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  deleteProduct,
+  getProductStock,
+  getStoredProducts,
+  getVariantKey,
+  setProductStatus,
+  updateProduct,
+  type Product,
+  type ProductInput,
+  type ProductStatus,
+} from "@/lib/articles";
+import {
+  getArticleHistoryCheck,
+} from "@/lib/article-history";
 
-const statusLabels: Record<EanStatus, string> = {
-  AVAILABLE: "Vrij",
-  ASSIGNED: "Toegewezen",
-  BLOCKED: "Geblokkeerd",
-};
+type StatusTone =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral";
 
-export default function EanCenterPage() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [items, setItems] = useState<EanPoolItem[]>([]);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<"ALL" | EanStatus>("ALL");
-  const [result, setResult] = useState<EanImportResult | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
+function getStatusTone(
+  status: ProductStatus,
+): StatusTone {
+  if (status === "Actief") {
+    return "success";
+  }
+
+  if (status === "Concept") {
+    return "info";
+  }
+
+  return "neutral";
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value);
+}
+
+function productToInput(product: Product): ProductInput {
+  return {
+    code: product.code,
+    name: product.name,
+    collection: product.collection,
+    category: product.category,
+    supplier: product.supplier,
+    status: product.status,
+    vatCode: product.vatCode,
+    brand: product.brand,
+    material: product.material,
+    garmentType: product.garmentType,
+    fit: product.fit,
+    colorFamily: product.colorFamily,
+    seasonType: product.seasonType,
+    countryOfOrigin: product.countryOfOrigin,
+    description: product.description,
+    purchasePrice: product.purchasePrice,
+    wholesalePrice: product.wholesalePrice,
+    shippingCosts: product.shippingCosts,
+    otherCosts: product.otherCosts,
+    totalCost: product.totalCost,
+    brandMarkup: product.brandMarkup,
+    recommendedRetailPrice: product.recommendedRetailPrice,
+    retailerMarkup: product.retailerMarkup,
+    colors: [...product.colors],
+    sizes: [...product.sizes],
+    stockByVariant: Object.fromEntries(
+      product.variants.map((variant) => [
+        getVariantKey(variant.color, variant.size),
+        variant.physicalStock,
+      ]),
+    ),
+  };
+}
+
+export default function ArtikelenPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [collection, setCollection] = useState("Alle collecties");
+  const [status, setStatus] = useState("Actief");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  function reload() {
+    setProducts(getStoredProducts());
+  }
 
   useEffect(() => {
-    refreshItems();
+    reload();
+    setIsLoaded(true);
   }, []);
 
-  function refreshItems() {
-    try {
-      setItems(getEanPool());
-    } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "EAN-codes laden mislukt.",
-      );
-    }
-  }
-
-  const counts = useMemo(
-    () => ({
-      total: items.length,
-      available: items.filter((item) => item.status === "AVAILABLE").length,
-      assigned: items.filter((item) => item.status === "ASSIGNED").length,
-      blocked: items.filter((item) => item.status === "BLOCKED").length,
-    }),
-    [items],
+  const collections = useMemo(
+    () => [
+      "Alle collecties",
+      ...new Set(products.map((product) => product.collection)),
+    ],
+    [products],
   );
 
-  const filtered = useMemo(
-    () =>
-      items.filter((item) => {
-        const matchesStatus = status === "ALL" || item.status === status;
-        const needle = query.trim().toLowerCase();
-        const matchesQuery =
-          !needle ||
-          [
-            item.ean,
-            item.productCode,
-            item.productName,
-            item.variantLabel,
-          ].some((value) =>
-            String(value ?? "")
-              .toLowerCase()
-              .includes(needle),
-          );
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-        return matchesStatus && matchesQuery;
-      }),
-    [items, query, status],
-  );
-
-  async function parseFile(file: File) {
-    const name = file.name.toLowerCase();
-
-    if (
-      !name.endsWith(".xlsx") &&
-      !name.endsWith(".xls") &&
-      !name.endsWith(".csv")
-    ) {
-      window.alert("Gebruik een Excel- of CSV-bestand.");
-      return;
-    }
-
-    const workbook = name.endsWith(".csv")
-      ? XLSX.read(await file.text(), { type: "string" })
-      : XLSX.read(await file.arrayBuffer(), { type: "array" });
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    if (!sheet) return;
-
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-      header: 1,
-      defval: "",
-    });
-
-    const values = matrix.flatMap((row, rowIndex) => {
-      if (
-        rowIndex === 0 &&
-        String(row[0] ?? "")
+    return products.filter((product) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [
+          product.name,
+          product.code,
+          product.supplier,
+          product.category,
+          product.garmentType,
+          product.material,
+          product.fit,
+          product.colorFamily,
+        ]
+          .join(" ")
           .toLowerCase()
-          .includes("ean")
-      ) {
-        return [];
-      }
+          .includes(normalizedSearch);
 
-      return row.filter((value) => String(value ?? "").trim() !== "");
+      const matchesCollection =
+        collection === "Alle collecties" ||
+        product.collection === collection;
+
+      const matchesStatus =
+        status === "Alle statussen" ||
+        product.status === status;
+
+      return matchesSearch && matchesCollection && matchesStatus;
     });
+  }, [products, search, collection, status]);
 
-    const nextResult = importEans(values);
-    setResult(nextResult);
-    refreshItems();
-    setSelected([]);
-  }
+  const visibleProductIds = useMemo(
+    () => filteredProducts.map((product) => product.id),
+    [filteredProducts],
+  );
 
-  function downloadTemplate() {
-    const sheet = XLSX.utils.aoa_to_sheet([["EAN"], ["8719324733823"]]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, "EAN-codes");
-    XLSX.writeFile(workbook, "STiTch-EAN-importsjabloon.xlsx");
-  }
+  const selectedProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        selectedIds.includes(product.id),
+      ),
+    [products, selectedIds],
+  );
 
-  function exportLog() {
-    if (!result) return;
+  const visibleSelectedCount = visibleProductIds.filter((id) =>
+    selectedIds.includes(id),
+  ).length;
 
-    const rows: Array<Array<string | number>> = [
-      ["Resultaat", "Aantal"],
-      ["Geïmporteerd", result.imported],
-      ["Duplicaten", result.duplicates],
-      ["Ongeldig", result.invalid],
-      [],
-      ["Overgeslagen regels"],
-    ];
+  const allVisibleSelected =
+    visibleProductIds.length > 0 &&
+    visibleSelectedCount === visibleProductIds.length;
 
-    result.skipped.forEach((line) => rows.push([line]));
+  const someVisibleSelected =
+    visibleSelectedCount > 0 && !allVisibleSelected;
 
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, "Importlog");
-    XLSX.writeFile(workbook, "STiTch-EAN-importlog.xlsx");
-  }
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someVisibleSelected;
+    }
+  }, [someVisibleSelected]);
 
-  function toggleSelection(ean: string) {
-    setSelected((current) =>
-      current.includes(ean)
-        ? current.filter((value) => value !== ean)
-        : [...current, ean],
+  function toggleProductSelection(productId: string) {
+    setSelectedIds((current) =>
+      current.includes(productId)
+        ? current.filter((id) => id !== productId)
+        : [...current, productId],
     );
   }
 
-  function handleDelete() {
-    if (!selected.length) return;
+  function toggleAllVisibleProducts() {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter(
+          (id) => !visibleProductIds.includes(id),
+        );
+      }
 
-    const assigned = items.filter(
-      (item) =>
-        selected.includes(item.ean) && item.status === "ASSIGNED",
-    ).length;
+      return Array.from(
+        new Set([...current, ...visibleProductIds]),
+      );
+    });
+  }
 
-    if (
-      !window.confirm(
-        `${selected.length - assigned} vrije/geblokkeerde EAN-code(s) verwijderen? Toegewezen codes blijven staan.`,
+  function archiveSelectedProducts() {
+    selectedProducts.forEach((product) =>
+      setProductStatus(product.id, "Inactief"),
+    );
+    reload();
+    setSelectedIds([]);
+    setMessage("Geselecteerde artikelen gearchiveerd.");
+  }
+
+  function exportSelectedProducts() {
+    const rows = selectedProducts.map((product) => [
+      product.code,
+      product.name,
+      product.collection,
+      product.brand,
+      product.wholesalePrice,
+      product.status,
+    ]);
+
+    const csv = [
+      ["Artikelcode", "Artikel", "Collectie", "Merk", "Wholesaleprijs", "Status"],
+      ...rows,
+    ]
+      .map((row) =>
+        row
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(","),
       )
-    ) {
+      .join("\n");
+
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "stitch-artikelen.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const totalStock = products.reduce(
+    (total, product) =>
+      total + getProductStock(product),
+    0,
+  );
+
+  function resetFilters() {
+    setSearch("");
+    setCollection("Alle collecties");
+    setStatus("Actief");
+  }
+
+  function archiveProduct(product: Product) {
+    setProductStatus(
+      product.id,
+      product.status === "Inactief"
+        ? "Actief"
+        : "Inactief",
+    );
+
+    reload();
+    setError("");
+    setMessage(
+      product.status === "Inactief"
+        ? "Artikel opnieuw geactiveerd."
+        : "Artikel gearchiveerd.",
+    );
+  }
+
+  function removeProduct(product: Product) {
+    const history = getArticleHistoryCheck(product.id);
+
+    if (!history.canDelete) {
+      setMessage("");
+      setError(history.message);
       return;
     }
 
-    try {
-      deleteEans(selected);
-      refreshItems();
-      setSelected([]);
-    } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "Verwijderen mislukt.",
-      );
+    const confirmed = window.confirm(
+      `Artikel ${product.code} · ${product.name} definitief verwijderen?`,
+    );
+
+    if (!confirmed) {
+      return;
     }
+
+    deleteProduct(product.id);
+    reload();
+    setError("");
+    setMessage("Artikel verwijderd.");
   }
 
   return (
     <div>
-      <div className={styles.breadcrumb}>
-        <Link href="/instellingen">Instellingen</Link>
-        <span>›</span>
-        <span>EAN Center</span>
-      </div>
-
       <PageHeader
-        eyebrow="Artikelbeheer"
-        title="EAN Center"
-        description="Importeer gekochte EAN-codes en beheer de centrale voorraad van vrije, toegewezen en geblokkeerde codes."
+        eyebrow="Assortiment"
+        title="Artikelen"
+        description="Beheer artikelen, Product DNA, prijzen, varianten en voorraad."
         action={
-          <div className="button-group">
-            <button
-              className="button button-secondary"
-              type="button"
-              onClick={downloadTemplate}
-            >
-              Excel-sjabloon
-            </button>
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={() => inputRef.current?.click()}
-            >
-              EAN-codes importeren
-            </button>
-          </div>
+          <Link
+            href="/artikelen/nieuw"
+            className="button button-primary"
+          >
+            + Nieuw artikel
+          </Link>
         }
       />
 
-      <section className={styles.summary}>
-        <div>
-          <span>Totaal gekocht</span>
-          <strong>{counts.total}</strong>
+      {message && (
+        <div className="master-data-success">
+          ✓ {message}
         </div>
-        <div>
-          <span>Beschikbaar</span>
-          <strong>{counts.available}</strong>
-        </div>
-        <div>
-          <span>Toegewezen</span>
-          <strong>{counts.assigned}</strong>
-        </div>
-        <div>
-          <span>Geblokkeerd</span>
-          <strong>{counts.blocked}</strong>
-        </div>
-      </section>
-
-      <input
-        ref={inputRef}
-        className={styles.hiddenInput}
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void parseFile(file);
-          event.currentTarget.value = "";
-        }}
-      />
-
-      <section
-        className={`${styles.dropzone} ${
-          dragging ? styles.dropzoneActive : ""
-        }`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          const file = event.dataTransfer.files[0];
-          if (file) void parseFile(file);
-        }}
-        onClick={() => inputRef.current?.click()}
-      >
-        <strong>Sleep je Excel- of CSV-bestand hierheen</strong>
-        <span>
-          Gebruik één kolom met als koptekst EAN. Alleen geldige EAN-13-codes
-          worden toegevoegd.
-        </span>
-      </section>
-
-      {result && (
-        <section className={styles.result}>
-          <div>
-            <strong>{result.imported}</strong>
-            <span>nieuw toegevoegd</span>
-          </div>
-          <div>
-            <strong>{result.duplicates}</strong>
-            <span>duplicaten</span>
-          </div>
-          <div>
-            <strong>{result.invalid}</strong>
-            <span>ongeldig</span>
-          </div>
-          <button
-            className="button button-secondary"
-            type="button"
-            onClick={exportLog}
-          >
-            Importlog downloaden
-          </button>
-        </section>
       )}
 
-      <section className={`content-card ${styles.tableCard}`}>
-        <div className={styles.toolbar}>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Zoek op EAN, artikel of variant"
-          />
+      {error && (
+        <div className="master-data-error">
+          ! {error}
+        </div>
+      )}
 
-          <select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as "ALL" | EanStatus)
-            }
-          >
-            <option value="ALL">Alle statussen</option>
-            <option value="AVAILABLE">Vrij</option>
-            <option value="ASSIGNED">Toegewezen</option>
-            <option value="BLOCKED">Geblokkeerd</option>
-          </select>
+      <section className="article-summary-grid">
+        <article className="metric-card">
+          <div className="metric-label">
+            Totaal artikelen
+          </div>
+          <div className="metric-value">
+            {isLoaded ? products.length : "—"}
+          </div>
+          <div className="metric-detail">
+            inclusief gearchiveerd
+          </div>
+        </article>
 
-          <span>{filtered.length} resultaten</span>
+        <article className="metric-card">
+          <div className="metric-label">
+            Actieve artikelen
+          </div>
+          <div className="metric-value">
+            {isLoaded
+              ? products.filter(
+                  (product) => product.status === "Actief",
+                ).length
+              : "—"}
+          </div>
+          <div className="metric-detail">
+            beschikbaar voor verkoop
+          </div>
+        </article>
 
-          {selected.length > 0 && (
-            <button
-              className="button button-secondary"
-              type="button"
-              onClick={handleDelete}
+        <article className="metric-card">
+          <div className="metric-label">
+            Totale voorraad
+          </div>
+          <div className="metric-value">
+            {isLoaded ? totalStock : "—"}
+          </div>
+          <div className="metric-detail">
+            stuks over alle varianten
+          </div>
+        </article>
+      </section>
+
+      <section className="content-card">
+        <div className="content-card-toolbar article-toolbar">
+          <div className="table-search">
+            <span>⌕</span>
+            <input
+              type="search"
+              placeholder="Zoek op artikel, DNA-kenmerk of leverancier..."
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+            />
+          </div>
+
+          <div className="article-filters">
+            <select
+              className="article-filter-select"
+              value={collection}
+              onChange={(event) =>
+                setCollection(event.target.value)
+              }
             >
-              Selectie verwijderen
+              {collections.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="article-filter-select"
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value)
+              }
+            >
+              <option value="Actief">Actief</option>
+              <option value="Concept">Concept</option>
+              <option value="Inactief">Gearchiveerd</option>
+              <option value="Alle statussen">Alles</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="article-results-bar">
+          <span>
+            <strong>{filteredProducts.length}</strong>{" "}
+            {filteredProducts.length === 1
+              ? "artikel"
+              : "artikelen"}
+          </span>
+
+          {(search ||
+            collection !== "Alle collecties" ||
+            status !== "Actief") && (
+            <button
+              className="text-button"
+              type="button"
+              onClick={resetFilters}
+            >
+              Filters wissen
             </button>
           )}
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <BulkActionToolbar
+          selectedCount={selectedIds.length}
+          onEdit={() =>
+            window.alert(
+              "Bulk bewerken wordt later toegevoegd. Exporteren en archiveren werken al.",
+            )
+          }
+          onExport={exportSelectedProducts}
+          onArchive={archiveSelectedProducts}
+          onClear={() => setSelectedIds([])}
+        />
+
+        <div className="table-wrapper">
+          <table className="data-table article-table">
             <thead>
               <tr>
-                <th></th>
-                <th>EAN</th>
-                <th>Status</th>
+                <th style={{ width: 42, textAlign: "center" }}>
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisibleProducts}
+                    aria-label="Alle zichtbare artikelen selecteren"
+                  />
+                </th>
+                <th>Artikelcode</th>
                 <th>Artikel</th>
-                <th>Variant</th>
-                <th>Geïmporteerd</th>
-                <th>Actie</th>
+                <th>Collectie</th>
+                <th>Type</th>
+                <th>Materiaal</th>
+                <th>Pasvorm</th>
+                <th className="table-number">
+                  Voorraad
+                </th>
+                <th className="table-number">
+                  Wholesaleprijs
+                </th>
+                <th>Status</th>
+                <th />
               </tr>
             </thead>
 
             <tbody>
-              {filtered.map((item) => (
-                <tr key={item.ean}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(item.ean)}
-                      onChange={() => toggleSelection(item.ean)}
-                    />
-                  </td>
+              {filteredProducts.map((product) => {
+                const isSelected = selectedIds.includes(product.id);
 
-                  <td>
-                    <strong>{item.ean}</strong>
-                  </td>
+                return (
+                  <tr
+                    key={product.id}
+                    style={{
+                      background: isSelected ? "#f2f7fc" : undefined,
+                    }}
+                  >
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() =>
+                          toggleProductSelection(product.id)
+                        }
+                        aria-label={`${product.code} selecteren`}
+                      />
+                    </td>
+                    <td>
+                      <Link
+                        href={`/artikelen/${product.id}`}
+                        className="table-link"
+                      >
+                        {product.code}
+                      </Link>
+                    </td>
 
-                  <td>
-                    <span
-                      className={`${styles.status} ${
-                        styles[item.status.toLowerCase()]
+                    <td className="table-primary">
+                      <Link
+                        href={`/artikelen/${product.id}`}
+                        className="table-link"
+                      >
+                        {product.name}
+                      </Link>
+                    </td>
+
+                    <td>{product.collection}</td>
+                    <td>
+                      {product.garmentType ||
+                        product.category ||
+                        "—"}
+                    </td>
+                    <td>{product.material || "—"}</td>
+                    <td>{product.fit || "—"}</td>
+
+                    <td
+                      className={`table-number table-primary ${
+                        getProductStock(product) <= 10
+                          ? "stock-warning"
+                          : ""
                       }`}
                     >
-                      {statusLabels[item.status]}
-                    </span>
-                  </td>
+                      {getProductStock(product)}
+                    </td>
 
-                  <td>
-                    {item.productName ? (
-                      <>
-                        <strong>{item.productName}</strong>
-                        {item.productCode && <small>{item.productCode}</small>}
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+                    <td className="table-number table-primary">
+                      {formatCurrency(product.wholesalePrice)}
+                    </td>
 
-                  <td>{item.variantLabel || "—"}</td>
+                    <td>
+                      <StatusBadge
+                        label={
+                          product.status === "Inactief"
+                            ? "Gearchiveerd"
+                            : product.status
+                        }
+                        tone={getStatusTone(product.status)}
+                      />
+                    </td>
 
-                  <td>
-                    {new Date(item.importedAt).toLocaleDateString("nl-NL")}
-                  </td>
+                    <td className="table-number">
+                      <div className="master-data-row-actions">
+                        <Link
+                          href={`/artikelen/${product.id}/bewerken`}
+                        >
+                          Bewerken
+                        </Link>
 
-                  <td>
-                    {item.status === "ASSIGNED" ? (
-                      <span className={styles.muted}>In gebruik</span>
-                    ) : (
-                      <button
-                        className={styles.linkButton}
-                        type="button"
-                        onClick={() => {
-                          try {
-                            setEanBlocked(
-                              item.ean,
-                              item.status !== "BLOCKED",
-                            );
-                            refreshItems();
-                          } catch (error) {
-                            window.alert(
-                              error instanceof Error
-                                ? error.message
-                                : "Bijwerken mislukt.",
-                            );
+                        <button
+                          type="button"
+                          onClick={() =>
+                            archiveProduct(product)
                           }
-                        }}
-                      >
-                        {item.status === "BLOCKED"
-                          ? "Vrijgeven"
-                          : "Blokkeren"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        >
+                          {product.status === "Inactief"
+                            ? "Activeren"
+                            : "Archiveren"}
+                        </button>
 
-              {!filtered.length && (
-                <tr>
-                  <td colSpan={7} className={styles.empty}>
-                    Nog geen EAN-codes gevonden.
-                  </td>
-                </tr>
-              )}
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={() =>
+                            removeProduct(product)
+                          }
+                        >
+                          Verwijderen
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {isLoaded &&
+          filteredProducts.length === 0 && (
+            <div className="article-empty-state">
+              <h2>Geen artikelen gevonden</h2>
+              <p>Pas je zoekterm of filters aan.</p>
+            </div>
+          )}
       </section>
+
+
     </div>
   );
 }
