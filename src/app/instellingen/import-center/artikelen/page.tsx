@@ -116,8 +116,11 @@ export default function ArticleImportPage(){
         const supplier=text(row,mapping,"supplier")||"";
         if(!supplier)warnings+=1;
 
+        const supplierProductCode=text(row,mapping,"supplierSku");
+
         const input:ProductInput={
           code:nextImportCode(existingCodes,existingCodes.size),
+          supplierProductCode,
           name,
           collection,
           category:"",

@@ -543,6 +543,11 @@ export default function ProductDetailPage() {
             </div>
 
             <div>
+              <dt>Artikelnummer leverancier</dt>
+              <dd>{product.supplierProductCode || "—"}</dd>
+            </div>
+
+            <div>
               <dt>Merk</dt>
               <dd>
                 {product.brand || "—"}

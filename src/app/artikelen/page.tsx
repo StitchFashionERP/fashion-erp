@@ -60,6 +60,7 @@ function productToInput(product: Product): ProductInput {
     collection: product.collection,
     category: product.category,
     supplier: product.supplier,
+    supplierProductCode: product.supplierProductCode,
     status: product.status,
     vatCode: product.vatCode,
     brand: product.brand,
@@ -127,6 +128,7 @@ export default function ArtikelenPage() {
           product.name,
           product.code,
           product.supplier,
+          product.supplierProductCode,
           product.category,
           product.garmentType,
           product.material,
@@ -208,6 +210,32 @@ export default function ArtikelenPage() {
     reload();
     setSelectedIds([]);
     setMessage("Geselecteerde artikelen gearchiveerd.");
+  }
+
+  function deleteSelectedProducts() {
+    const blocked = selectedProducts.filter(
+      (product) => !getArticleHistoryCheck(product.id).canDelete,
+    );
+    const deletable = selectedProducts.filter(
+      (product) => getArticleHistoryCheck(product.id).canDelete,
+    );
+
+    if (deletable.length === 0) {
+      setMessage("");
+      setError("Geen van de geselecteerde artikelen kan definitief worden verwijderd, omdat ze al in documenten zijn gebruikt.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `${deletable.length} artikel(en) definitief verwijderen? Dit kan niet ongedaan worden gemaakt.${blocked.length ? `\n\n${blocked.length} gebruikt(e) artikel(en) worden overgeslagen.` : ""}`,
+    );
+    if (!confirmed) return;
+
+    deletable.forEach((product) => deleteProduct(product.id));
+    reload();
+    setSelectedIds([]);
+    setError(blocked.length ? `${blocked.length} gebruikt(e) artikel(en) konden alleen worden gearchiveerd en zijn niet verwijderd.` : "");
+    setMessage(`${deletable.length} artikel(en) definitief verwijderd.`);
   }
 
   function exportSelectedProducts() {
@@ -438,6 +466,7 @@ export default function ArtikelenPage() {
           }
           onExport={exportSelectedProducts}
           onArchive={archiveSelectedProducts}
+          onDelete={deleteSelectedProducts}
           onClear={() => setSelectedIds([])}
         />
 
@@ -456,6 +485,7 @@ export default function ArtikelenPage() {
                 </th>
                 <th>Artikelcode</th>
                 <th>Artikel</th>
+                <th>Maten</th>
                 <th>Collectie</th>
                 <th>Type</th>
                 <th>Materiaal</th>
@@ -502,14 +532,17 @@ export default function ArtikelenPage() {
                     </td>
 
                     <td className="table-primary">
-                      <Link
-                        href={`/artikelen/${product.id}`}
-                        className="table-link"
-                      >
+                      <Link href={`/artikelen/${product.id}`} className="table-link">
                         {product.name}
                       </Link>
+                      {product.supplierProductCode && (
+                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+                          Leverancier: {product.supplierProductCode}
+                        </div>
+                      )}
                     </td>
 
+                    <td style={{ whiteSpace: "nowrap" }}>{product.sizes.join(" · ") || "—"}</td>
                     <td>{product.collection}</td>
                     <td>
                       {product.garmentType ||

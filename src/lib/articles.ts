@@ -34,6 +34,7 @@ export type Product = {
   collection: string;
   category: string;
   supplier: string;
+  supplierProductCode: string;
   status: ProductStatus;
   vatCode: VatCode;
 
@@ -72,6 +73,7 @@ export type ProductInput = {
   collection: string;
   category: string;
   supplier: string;
+  supplierProductCode: string;
   status: ProductStatus;
   vatCode: VatCode;
 
@@ -125,24 +127,24 @@ function cleanCodePart(value: string, maxLength = 5) {
 }
 
 export function generateArticleNumber({
-  brandCode,
-  seasonCode,
-  year,
+  collectionCode,
   productTypeCode,
 }: {
-  brandCode: string;
-  seasonCode: string;
-  year: number;
+  collectionCode: string;
   productTypeCode: string;
 }) {
-  const prefix = `${cleanCodePart(brandCode, 2)}${cleanCodePart(seasonCode, 1)}${String(year).slice(-2)}${cleanCodePart(productTypeCode, 2).padStart(2, "0")}`;
+  const prefix = `${cleanCodePart(collectionCode, 4)}${cleanCodePart(productTypeCode, 2).padStart(2, "0")}`;
   const existing = getStoredProducts()
     .map((product) => product.code)
     .filter((code) => code.startsWith(prefix))
-    .map((code) => Number(code.slice(prefix.length)))
+    .map((code) => Number(code.slice(prefix.length, prefix.length + 2)))
     .filter((value) => Number.isFinite(value));
   const next = (existing.length ? Math.max(...existing) : 0) + 1;
-  return `${prefix}${String(next).padStart(4, "0")}`;
+  return `${prefix}${String(next).padStart(2, "0")}`;
+}
+
+export function getColorArticleCode(productCode: string, colorCode: string) {
+  return `${productCode}-${cleanCodePart(colorCode, 6)}`;
 }
 
 export function getVariantKey(color: string, size: string) {
@@ -239,7 +241,7 @@ export function generateVariants(
 }
 
 function makeDefaultProduct(
-  partial: Omit<ProductInput, "stockByVariant" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
+  partial: Omit<ProductInput, "stockByVariant" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
     id: string;
     stockByVariant?: Record<string, number>;
   },
@@ -252,6 +254,7 @@ function makeDefaultProduct(
     collection: partial.collection,
     category: partial.category,
     supplier: partial.supplier,
+    supplierProductCode: partial.supplierProductCode ?? "",
     status: partial.status,
     vatCode: partial.vatCode ?? "2V",
     brand: partial.brand,
@@ -496,6 +499,7 @@ function normalizeLegacyProduct(
     collection: String(product.collection ?? ""),
     category: String(product.category ?? ""),
     supplier: String(product.supplier ?? ""),
+    supplierProductCode: String(product.supplierProductCode ?? product.supplierArticleNumber ?? ""),
     status:
       (product.status as ProductStatus | undefined) ??
       "Concept",
@@ -921,6 +925,7 @@ export function duplicateProduct(id: string) {
     collection: source.collection,
     category: source.category,
     supplier: source.supplier,
+    supplierProductCode: source.supplierProductCode,
     status: "Concept",
     vatCode: source.vatCode,
     brand: source.brand,

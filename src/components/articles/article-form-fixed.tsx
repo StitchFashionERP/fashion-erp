@@ -78,6 +78,9 @@ export function ArticleForm({
   const [supplier, setSupplier] = useState(
     initialProduct?.supplier ?? "",
   );
+  const [supplierProductCode, setSupplierProductCode] = useState(
+    initialProduct?.supplierProductCode ?? "",
+  );
   const [status, setStatus] =
     useState<ProductStatus>(
       initialProduct?.status ?? "Concept",
@@ -581,6 +584,7 @@ export function ArticleForm({
       collection,
       category,
       supplier,
+      supplierProductCode: supplierProductCode.trim(),
       status,
       vatCode,
       brand: brand.trim(),
@@ -711,6 +715,15 @@ export function ArticleForm({
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className={styles.field}>
+                <span>Artikelnummer leverancier</span>
+                <input
+                  value={supplierProductCode}
+                  onChange={(event) => setSupplierProductCode(event.target.value)}
+                  placeholder="Exact nummer van de fabriek"
+                />
               </label>
 
               <label className={styles.field}>

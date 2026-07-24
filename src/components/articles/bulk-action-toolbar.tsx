@@ -5,6 +5,7 @@ type BulkActionToolbarProps = {
   onEdit: () => void;
   onExport: () => void;
   onArchive: () => void;
+  onDelete: () => void;
   onClear: () => void;
 };
 
@@ -13,6 +14,7 @@ export function BulkActionToolbar({
   onEdit,
   onExport,
   onArchive,
+  onDelete,
   onClear,
 }: BulkActionToolbarProps) {
   if (selectedCount === 0) {
@@ -72,7 +74,11 @@ export function BulkActionToolbar({
           className="button"
           onClick={onArchive}
         >
-          Verwijderen
+          Archiveren
+        </button>
+
+        <button type="button" className="button" onClick={onDelete} style={{ color: "#b42318" }}>
+          Definitief verwijderen
         </button>
 
         <button

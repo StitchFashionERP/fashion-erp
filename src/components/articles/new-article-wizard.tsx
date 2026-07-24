@@ -40,7 +40,7 @@ export function NewArticleWizard() {
   const collection = collections.find((x) => x.id === collectionId);
   const productType = productTypes.find((x) => x.id === productTypeId);
   const previewCode = brand && collection && productType
-    ? `${brand.code}${seasonCode(collection.season)}${String(collection.year).slice(-2)}${productType.code.padStart(2, "0")}0001`
+    ? `${collection.code.toUpperCase()}${productType.code.padStart(2, "0")}01-KLEUR`
     : "Wordt automatisch gegenereerd";
 
   function toggle(value: string, current: string[], setter: (next: string[]) => void) {
@@ -60,13 +60,14 @@ export function NewArticleWizard() {
     if (!brand || !collection || !productType) return;
     const defaults = getPricingDefaults();
     const pricing = calculatePricing({ supplierPurchasePrice: 0, shippingCosts: 0, otherCosts: 0, brandMarkup: defaults.brandMarkup, retailerMarkup: defaults.retailerMarkup });
-    const code = generateArticleNumber({ brandCode: brand.code, seasonCode: seasonCode(collection.season), year: collection.year, productTypeCode: productType.code });
+    const code = generateArticleNumber({ collectionCode: collection.code, productTypeCode: productType.code });
     const input: ProductInput = {
       code,
       name: name.trim(),
       collection: collection.code,
       category: productType.name,
       supplier: "",
+      supplierProductCode: "",
       status: "Concept",
       vatCode: "2V",
       brand: brand.name,
@@ -100,7 +101,7 @@ export function NewArticleWizard() {
         {step === 1 && <><h2>Waar hoort het artikel bij?</h2><div className={styles.formGrid}><label>Merk<select value={brandId} onChange={(e) => setBrandId(e.target.value)}><option value="">Kies merk</option>{brands.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.code})</option>)}</select></label><label>Collectie<select value={collectionId} onChange={(e) => setCollectionId(e.target.value)}><option value="">Kies collectie</option>{collections.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Producttype<select value={productTypeId} onChange={(e) => setProductTypeId(e.target.value)}><option value="">Kies producttype</option>{productTypes.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.code})</option>)}</select></label></div><div className={styles.preview}><span>Voorbeeld artikelnummer</span><strong>{previewCode}</strong></div></>}
         {step === 2 && <><h2>Welke kleuren?</h2><p>Kleuren kun je later altijd toevoegen.</p><div className={styles.optionGrid}>{colorOptions.map((x) => <button type="button" key={x.id} className={colors.includes(x.name) ? styles.selected : ""} onClick={() => toggle(x.name, colors, setColors)}><span>{colors.includes(x.name) ? "✓" : "+"}</span>{x.name}<small>{x.code}</small></button>)}</div><Link className={styles.manageLink} href="/instellingen/stamgegevens">+ Nieuwe kleur toevoegen</Link></>}
         {step === 3 && <><h2>Welke maten?</h2><p>Selecteer alleen de maten die voor dit artikel gelden.</p><div className={styles.optionGrid}>{sizeOptions.map((x) => <button type="button" key={x.id} className={sizes.includes(x.name) ? styles.selected : ""} onClick={() => toggle(x.name, sizes, setSizes)}><span>{sizes.includes(x.name) ? "✓" : "+"}</span>{x.name}</button>)}</div></>}
-        {step === 4 && <><h2>Klaar om aan te maken</h2><div className={styles.summary}><div><span>Artikel</span><strong>{name}</strong></div><div><span>Artikelnummer</span><strong>{previewCode.replace(/0001$/, "wordt bepaald")}</strong></div><div><span>Merk</span><strong>{brand?.name}</strong></div><div><span>Collectie</span><strong>{collection?.name}</strong></div><div><span>Producttype</span><strong>{productType?.name}</strong></div><div><span>Kleuren</span><strong>{colors.join(", ")}</strong></div><div><span>Maten</span><strong>{sizes.join(", ")}</strong></div><div><span>Varianten</span><strong>{colors.length * sizes.length}</strong></div></div></>}
+        {step === 4 && <><h2>Klaar om aan te maken</h2><div className={styles.summary}><div><span>Artikel</span><strong>{name}</strong></div><div><span>Artikelnummer</span><strong>{previewCode.replace(/01-KLEUR$/, "[volgnummer]-[kleur]")}</strong></div><div><span>Merk</span><strong>{brand?.name}</strong></div><div><span>Collectie</span><strong>{collection?.name}</strong></div><div><span>Producttype</span><strong>{productType?.name}</strong></div><div><span>Kleuren</span><strong>{colors.join(", ")}</strong></div><div><span>Maten</span><strong>{sizes.join(", ")}</strong></div><div><span>Varianten</span><strong>{colors.length * sizes.length}</strong></div></div></>}
         {error && <div className={styles.error}>{error}</div>}
         <div className={styles.actions}><Link href="/artikelen">Annuleren</Link><div>{step > 0 && <button type="button" className={styles.secondary} onClick={() => setStep((v) => v - 1)}>Vorige</button>}{step < 4 ? <button type="button" onClick={next}>Volgende</button> : <button type="button" onClick={createArticle}>Artikel aanmaken</button>}</div></div>
       </div>

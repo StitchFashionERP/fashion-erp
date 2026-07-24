@@ -161,3 +161,10 @@
   font-weight: 400;
   white-space: nowrap;
 }
+
+.orderImage { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid #dfe3e8; display: block; }
+.imagePlaceholder { width: 54px; height: 54px; border-radius: 6px; border: 1px dashed #c8ced6; display:grid; place-items:center; text-align:center; font-size:10px; color:#7a8491; background:#f7f8fa; }
+.matrixInput { width: 54px; min-width:54px; padding: 7px 5px; text-align:center; border:1px solid #cfd6de; border-radius:5px; }
+.stockHint,.stockLow { display:block; margin-top:3px; font-size:10px; color:#6b7280; white-space:nowrap; }
+.stockLow { color:#b54708; font-weight:600; }
+.notAvailable { color:#a8b0ba; }
