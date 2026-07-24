@@ -402,3 +402,99 @@
     grid-template-columns: 1fr;
   }
 }
+
+.eanModeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 18px;
+  border-top: 1px solid var(--border-light);
+}
+
+.eanModeCard {
+  display: flex;
+  min-height: 74px;
+  cursor: pointer;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+  padding: 12px;
+}
+
+.eanModeCard:hover {
+  border-color: #b8c3cb;
+  background: var(--surface-muted);
+}
+
+.eanModeCard input {
+  margin-top: 2px;
+  accent-color: var(--primary);
+}
+
+.eanModeCard span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eanModeCard strong {
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.eanModeCard small {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.eanModeCardSelected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.eanAvailability {
+  margin: 0 18px 16px;
+  border: 1px solid #cfe1ed;
+  border-radius: 3px;
+  background: var(--primary-light);
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.eanSelect {
+  width: 165px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: white;
+  padding: 0 8px;
+  color: var(--text-primary);
+  font-size: 10px;
+  outline: none;
+}
+
+.eanSelect:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.1);
+}
+
+.eanMuted,
+.eanPreview {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.eanPreview {
+  color: var(--primary);
+  font-weight: 650;
+}
+
+@media (max-width: 900px) {
+  .eanModeGrid {
+    grid-template-columns: 1fr;
+  }
+}

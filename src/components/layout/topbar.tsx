@@ -127,7 +127,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/help"))
     return "Helpcentrum";
 
-  return "STITCH Fashion ERP";
+  return "STiTch Fashion ERP";
 }
 
 export function Topbar() {

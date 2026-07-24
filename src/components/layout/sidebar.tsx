@@ -283,7 +283,7 @@ export function Sidebar() {
       <div className="sidebar-brand">
         <Image
           src="/stitch-logo.png"
-          alt="STITCH Fashion ERP"
+          alt="STiTch Fashion ERP"
           width={52}
           height={52}
           priority
@@ -292,7 +292,7 @@ export function Sidebar() {
 
         <div>
           <div className="sidebar-brand-name">
-            STITCH
+            STiTch
           </div>
           <div className="sidebar-brand-subtitle">
             Fashion ERP

@@ -15,6 +15,7 @@ import {
   type PriceRounding,
 } from "@/lib/company-settings";
 import { migrateProductsToPricingSettings } from "@/lib/articles";
+import { getCountries, subscribeToMasterData } from "@/lib/master-data";
 import styles from "./company-settings.module.css";
 
 type Section =
@@ -89,9 +90,11 @@ export default function CompanySettingsPage() {
   const [saved, setSaved] = useState(false);
   const [migrationMessage, setMigrationMessage] =
     useState("");
+  const [countries, setCountries] = useState(() => getCountries());
 
   useEffect(() => {
     setSettings(getCompanySettings());
+    return subscribeToMasterData(() => setCountries(getCountries()));
   }, []);
 
   if (!settings) {
@@ -383,14 +386,22 @@ export default function CompanySettingsPage() {
 
                 <label>
                   <span>Land</span>
-                  <input
+                  <select
                     value={settings.company.country}
                     onChange={(event) =>
                       updateGroup("company", {
                         country: event.target.value,
                       })
                     }
-                  />
+                  >
+                    {countries
+                      .filter((country) => country.isActive)
+                      .map((country) => (
+                        <option key={country.id} value={country.name}>
+                          {country.name}
+                        </option>
+                      ))}
+                  </select>
                 </label>
 
                 <label>

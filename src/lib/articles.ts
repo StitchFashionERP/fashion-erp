@@ -13,6 +13,8 @@ export type ProductVariant = {
   sku: string;
   color: string;
   size: string;
+  ean?: string;
+  supplierVariantCode?: string;
   physicalStock: number;
   reservedStock: number;
   purchasePrice: number;
@@ -98,6 +100,13 @@ export type ProductInput = {
   sizes: string[];
 
   stockByVariant?: Record<string, number>;
+  importedVariants?: Array<{
+    color: string;
+    size: string;
+    stock?: number;
+    ean?: string;
+    supplierVariantCode?: string;
+  }>;
 };
 
 const storageKey = "fashion-erp-products-v3";
@@ -178,37 +187,55 @@ export function generateVariants(
     ]),
   );
 
-  return input.colors.flatMap((color) =>
-    input.sizes.map((size) => {
-      const key = getVariantKey(color, size);
-      const existing = existingByKey.get(key);
+  const requestedVariants: NonNullable<ProductInput["importedVariants"]> =
+    input.importedVariants?.length
+      ? input.importedVariants
+      : input.colors.flatMap((color) =>
+          input.sizes.map((size) => ({
+            color,
+            size,
+            stock: undefined,
+            ean: undefined,
+            supplierVariantCode: undefined,
+          })),
+        );
 
-      return {
-        id: existing?.id ?? `${key}-${Date.now()}-${Math.random()}`,
-        sku: generateSku(
-          input.collection,
-          input.code,
-          color,
-          size,
-        ),
+  return requestedVariants.map((requested) => {
+    const color = requested.color;
+    const size = requested.size;
+    const key = getVariantKey(color, size);
+    const existing = existingByKey.get(key);
+
+    return {
+      id: existing?.id ?? `${key}-${Date.now()}-${Math.random()}`,
+      sku: generateSku(
+        input.collection,
+        input.code,
         color,
         size,
-        physicalStock:
-          input.stockByVariant?.[key] ??
-          existing?.physicalStock ??
-          0,
-        reservedStock: existing?.reservedStock ?? 0,
-        purchasePrice: input.purchasePrice,
-        wholesalePrice: input.wholesalePrice,
-        shippingCosts: input.shippingCosts,
-        otherCosts: input.otherCosts,
-        totalCost: input.totalCost,
-        brandMarkup: input.brandMarkup,
-        recommendedRetailPrice: input.recommendedRetailPrice,
-        retailerMarkup: input.retailerMarkup,
-      };
-    }),
-  );
+      ),
+      color,
+      size,
+      ean: requested.ean || existing?.ean,
+      supplierVariantCode:
+        requested.supplierVariantCode ||
+        existing?.supplierVariantCode,
+      physicalStock:
+        requested.stock ??
+        input.stockByVariant?.[key] ??
+        existing?.physicalStock ??
+        0,
+      reservedStock: existing?.reservedStock ?? 0,
+      purchasePrice: input.purchasePrice,
+      wholesalePrice: input.wholesalePrice,
+      shippingCosts: input.shippingCosts,
+      otherCosts: input.otherCosts,
+      totalCost: input.totalCost,
+      brandMarkup: input.brandMarkup,
+      recommendedRetailPrice: input.recommendedRetailPrice,
+      retailerMarkup: input.retailerMarkup,
+    };
+  });
 }
 
 function makeDefaultProduct(
@@ -766,6 +793,65 @@ export function updateProduct(
   });
 
   return updated;
+}
+
+
+export type BulkProductUpdate = {
+  material?: string;
+  collection?: string;
+  garmentType?: string;
+  status?: ProductStatus;
+};
+
+export function bulkUpdateProducts(
+  ids: string[],
+  changes: BulkProductUpdate,
+) {
+  const selectedIds = new Set(ids);
+  const now = new Date().toISOString();
+  const products = getStoredProducts();
+
+  const updatedProducts = products.map((product) => {
+    if (!selectedIds.has(product.id)) {
+      return product;
+    }
+
+    const updated: Product = {
+      ...product,
+      ...(changes.material !== undefined
+        ? { material: changes.material }
+        : {}),
+      ...(changes.collection !== undefined
+        ? { collection: changes.collection }
+        : {}),
+      ...(changes.garmentType !== undefined
+        ? { garmentType: changes.garmentType }
+        : {}),
+      ...(changes.status !== undefined
+        ? { status: changes.status }
+        : {}),
+      updatedAt: now,
+    };
+
+    if (changes.collection !== undefined) {
+      updated.variants = updated.variants.map((variant) => ({
+        ...variant,
+        sku: generateSku(
+          updated.collection,
+          updated.code,
+          variant.color,
+          variant.size,
+        ),
+      }));
+    }
+
+    return updated;
+  });
+
+  saveProducts(updatedProducts);
+  return updatedProducts.filter((product) =>
+    selectedIds.has(product.id),
+  );
 }
 
 export function setProductStatus(

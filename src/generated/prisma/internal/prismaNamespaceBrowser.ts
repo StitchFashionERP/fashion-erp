@@ -51,44 +51,21 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  audit_log_entries: 'audit_log_entries',
-  custom_oauth_providers: 'custom_oauth_providers',
-  flow_state: 'flow_state',
-  identities: 'identities',
-  instances: 'instances',
-  mfa_amr_claims: 'mfa_amr_claims',
-  mfa_challenges: 'mfa_challenges',
-  mfa_factors: 'mfa_factors',
-  oauth_authorizations: 'oauth_authorizations',
-  oauth_client_states: 'oauth_client_states',
-  oauth_clients: 'oauth_clients',
-  oauth_consents: 'oauth_consents',
-  one_time_tokens: 'one_time_tokens',
-  refresh_tokens: 'refresh_tokens',
-  saml_providers: 'saml_providers',
-  saml_relay_states: 'saml_relay_states',
-  schema_migrations: 'schema_migrations',
-  sessions: 'sessions',
-  sso_domains: 'sso_domains',
-  sso_providers: 'sso_providers',
-  users: 'users',
-  webauthn_challenges: 'webauthn_challenges',
-  webauthn_credentials: 'webauthn_credentials',
-  audit_log: 'audit_log',
-  customers: 'customers',
-  invoices: 'invoices',
-  organization_members: 'organization_members',
-  organizations: 'organizations',
-  product_variants: 'product_variants',
-  products: 'products',
-  purchase_order_lines: 'purchase_order_lines',
-  purchase_orders: 'purchase_orders',
-  sales_order_lines: 'sales_order_lines',
-  sales_orders: 'sales_orders',
-  stock_balances: 'stock_balances',
-  stock_locations: 'stock_locations',
-  suppliers: 'suppliers',
-  user_preferences: 'user_preferences'
+  Organization: 'Organization',
+  User: 'User',
+  Collection: 'Collection',
+  Brand: 'Brand',
+  ProductType: 'ProductType',
+  Category: 'Category',
+  Supplier: 'Supplier',
+  Color: 'Color',
+  Size: 'Size',
+  Product: 'Product',
+  ProductColorVariant: 'ProductColorVariant',
+  ProductImage: 'ProductImage',
+  ProductVariant: 'ProductVariant',
+  Inventory: 'Inventory',
+  InventoryMovement: 'InventoryMovement'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -107,636 +84,326 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
-export const Audit_log_entriesScalarFieldEnum = {
-  instance_id: 'instance_id',
-  id: 'id',
-  payload: 'payload',
-  created_at: 'created_at',
-  ip_address: 'ip_address'
-} as const
-
-export type Audit_log_entriesScalarFieldEnum = (typeof Audit_log_entriesScalarFieldEnum)[keyof typeof Audit_log_entriesScalarFieldEnum]
-
-
-export const Custom_oauth_providersScalarFieldEnum = {
-  id: 'id',
-  provider_type: 'provider_type',
-  identifier: 'identifier',
-  name: 'name',
-  client_id: 'client_id',
-  client_secret: 'client_secret',
-  acceptable_client_ids: 'acceptable_client_ids',
-  scopes: 'scopes',
-  pkce_enabled: 'pkce_enabled',
-  attribute_mapping: 'attribute_mapping',
-  authorization_params: 'authorization_params',
-  enabled: 'enabled',
-  email_optional: 'email_optional',
-  issuer: 'issuer',
-  discovery_url: 'discovery_url',
-  skip_nonce_check: 'skip_nonce_check',
-  cached_discovery: 'cached_discovery',
-  discovery_cached_at: 'discovery_cached_at',
-  authorization_url: 'authorization_url',
-  token_url: 'token_url',
-  userinfo_url: 'userinfo_url',
-  jwks_uri: 'jwks_uri',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  custom_claims_allowlist: 'custom_claims_allowlist'
-} as const
-
-export type Custom_oauth_providersScalarFieldEnum = (typeof Custom_oauth_providersScalarFieldEnum)[keyof typeof Custom_oauth_providersScalarFieldEnum]
-
-
-export const Flow_stateScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  auth_code: 'auth_code',
-  code_challenge_method: 'code_challenge_method',
-  code_challenge: 'code_challenge',
-  provider_type: 'provider_type',
-  provider_access_token: 'provider_access_token',
-  provider_refresh_token: 'provider_refresh_token',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  authentication_method: 'authentication_method',
-  auth_code_issued_at: 'auth_code_issued_at',
-  invite_token: 'invite_token',
-  referrer: 'referrer',
-  oauth_client_state_id: 'oauth_client_state_id',
-  linking_target_id: 'linking_target_id',
-  email_optional: 'email_optional'
-} as const
-
-export type Flow_stateScalarFieldEnum = (typeof Flow_stateScalarFieldEnum)[keyof typeof Flow_stateScalarFieldEnum]
-
-
-export const IdentitiesScalarFieldEnum = {
-  provider_id: 'provider_id',
-  user_id: 'user_id',
-  identity_data: 'identity_data',
-  provider: 'provider',
-  last_sign_in_at: 'last_sign_in_at',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  email: 'email',
-  id: 'id'
-} as const
-
-export type IdentitiesScalarFieldEnum = (typeof IdentitiesScalarFieldEnum)[keyof typeof IdentitiesScalarFieldEnum]
-
-
-export const InstancesScalarFieldEnum = {
-  id: 'id',
-  uuid: 'uuid',
-  raw_base_config: 'raw_base_config',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type InstancesScalarFieldEnum = (typeof InstancesScalarFieldEnum)[keyof typeof InstancesScalarFieldEnum]
-
-
-export const Mfa_amr_claimsScalarFieldEnum = {
-  session_id: 'session_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  authentication_method: 'authentication_method',
-  id: 'id'
-} as const
-
-export type Mfa_amr_claimsScalarFieldEnum = (typeof Mfa_amr_claimsScalarFieldEnum)[keyof typeof Mfa_amr_claimsScalarFieldEnum]
-
-
-export const Mfa_challengesScalarFieldEnum = {
-  id: 'id',
-  factor_id: 'factor_id',
-  created_at: 'created_at',
-  verified_at: 'verified_at',
-  ip_address: 'ip_address',
-  otp_code: 'otp_code',
-  web_authn_session_data: 'web_authn_session_data'
-} as const
-
-export type Mfa_challengesScalarFieldEnum = (typeof Mfa_challengesScalarFieldEnum)[keyof typeof Mfa_challengesScalarFieldEnum]
-
-
-export const Mfa_factorsScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  friendly_name: 'friendly_name',
-  factor_type: 'factor_type',
-  status: 'status',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  secret: 'secret',
-  phone: 'phone',
-  last_challenged_at: 'last_challenged_at',
-  web_authn_credential: 'web_authn_credential',
-  web_authn_aaguid: 'web_authn_aaguid',
-  last_webauthn_challenge_data: 'last_webauthn_challenge_data'
-} as const
-
-export type Mfa_factorsScalarFieldEnum = (typeof Mfa_factorsScalarFieldEnum)[keyof typeof Mfa_factorsScalarFieldEnum]
-
-
-export const Oauth_authorizationsScalarFieldEnum = {
-  id: 'id',
-  authorization_id: 'authorization_id',
-  client_id: 'client_id',
-  user_id: 'user_id',
-  redirect_uri: 'redirect_uri',
-  scope: 'scope',
-  state: 'state',
-  resource: 'resource',
-  code_challenge: 'code_challenge',
-  code_challenge_method: 'code_challenge_method',
-  response_type: 'response_type',
-  status: 'status',
-  authorization_code: 'authorization_code',
-  created_at: 'created_at',
-  expires_at: 'expires_at',
-  approved_at: 'approved_at',
-  nonce: 'nonce'
-} as const
-
-export type Oauth_authorizationsScalarFieldEnum = (typeof Oauth_authorizationsScalarFieldEnum)[keyof typeof Oauth_authorizationsScalarFieldEnum]
-
-
-export const Oauth_client_statesScalarFieldEnum = {
-  id: 'id',
-  provider_type: 'provider_type',
-  code_verifier: 'code_verifier',
-  created_at: 'created_at'
-} as const
-
-export type Oauth_client_statesScalarFieldEnum = (typeof Oauth_client_statesScalarFieldEnum)[keyof typeof Oauth_client_statesScalarFieldEnum]
-
-
-export const Oauth_clientsScalarFieldEnum = {
-  id: 'id',
-  client_secret_hash: 'client_secret_hash',
-  registration_type: 'registration_type',
-  redirect_uris: 'redirect_uris',
-  grant_types: 'grant_types',
-  client_name: 'client_name',
-  client_uri: 'client_uri',
-  logo_uri: 'logo_uri',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  deleted_at: 'deleted_at',
-  client_type: 'client_type',
-  token_endpoint_auth_method: 'token_endpoint_auth_method'
-} as const
-
-export type Oauth_clientsScalarFieldEnum = (typeof Oauth_clientsScalarFieldEnum)[keyof typeof Oauth_clientsScalarFieldEnum]
-
-
-export const Oauth_consentsScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  client_id: 'client_id',
-  scopes: 'scopes',
-  granted_at: 'granted_at',
-  revoked_at: 'revoked_at'
-} as const
-
-export type Oauth_consentsScalarFieldEnum = (typeof Oauth_consentsScalarFieldEnum)[keyof typeof Oauth_consentsScalarFieldEnum]
-
-
-export const One_time_tokensScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  token_type: 'token_type',
-  token_hash: 'token_hash',
-  relates_to: 'relates_to',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type One_time_tokensScalarFieldEnum = (typeof One_time_tokensScalarFieldEnum)[keyof typeof One_time_tokensScalarFieldEnum]
-
-
-export const Refresh_tokensScalarFieldEnum = {
-  instance_id: 'instance_id',
-  id: 'id',
-  token: 'token',
-  user_id: 'user_id',
-  revoked: 'revoked',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  parent: 'parent',
-  session_id: 'session_id'
-} as const
-
-export type Refresh_tokensScalarFieldEnum = (typeof Refresh_tokensScalarFieldEnum)[keyof typeof Refresh_tokensScalarFieldEnum]
-
-
-export const Saml_providersScalarFieldEnum = {
-  id: 'id',
-  sso_provider_id: 'sso_provider_id',
-  entity_id: 'entity_id',
-  metadata_xml: 'metadata_xml',
-  metadata_url: 'metadata_url',
-  attribute_mapping: 'attribute_mapping',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  name_id_format: 'name_id_format'
-} as const
-
-export type Saml_providersScalarFieldEnum = (typeof Saml_providersScalarFieldEnum)[keyof typeof Saml_providersScalarFieldEnum]
-
-
-export const Saml_relay_statesScalarFieldEnum = {
-  id: 'id',
-  sso_provider_id: 'sso_provider_id',
-  request_id: 'request_id',
-  for_email: 'for_email',
-  redirect_to: 'redirect_to',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  flow_state_id: 'flow_state_id'
-} as const
-
-export type Saml_relay_statesScalarFieldEnum = (typeof Saml_relay_statesScalarFieldEnum)[keyof typeof Saml_relay_statesScalarFieldEnum]
-
-
-export const Schema_migrationsScalarFieldEnum = {
-  version: 'version'
-} as const
-
-export type Schema_migrationsScalarFieldEnum = (typeof Schema_migrationsScalarFieldEnum)[keyof typeof Schema_migrationsScalarFieldEnum]
-
-
-export const SessionsScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  factor_id: 'factor_id',
-  aal: 'aal',
-  not_after: 'not_after',
-  refreshed_at: 'refreshed_at',
-  user_agent: 'user_agent',
-  ip: 'ip',
-  tag: 'tag',
-  oauth_client_id: 'oauth_client_id',
-  refresh_token_hmac_key: 'refresh_token_hmac_key',
-  refresh_token_counter: 'refresh_token_counter',
-  scopes: 'scopes'
-} as const
-
-export type SessionsScalarFieldEnum = (typeof SessionsScalarFieldEnum)[keyof typeof SessionsScalarFieldEnum]
-
-
-export const Sso_domainsScalarFieldEnum = {
-  id: 'id',
-  sso_provider_id: 'sso_provider_id',
-  domain: 'domain',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type Sso_domainsScalarFieldEnum = (typeof Sso_domainsScalarFieldEnum)[keyof typeof Sso_domainsScalarFieldEnum]
-
-
-export const Sso_providersScalarFieldEnum = {
-  id: 'id',
-  resource_id: 'resource_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  disabled: 'disabled'
-} as const
-
-export type Sso_providersScalarFieldEnum = (typeof Sso_providersScalarFieldEnum)[keyof typeof Sso_providersScalarFieldEnum]
-
-
-export const UsersScalarFieldEnum = {
-  instance_id: 'instance_id',
-  id: 'id',
-  aud: 'aud',
-  role: 'role',
-  email: 'email',
-  encrypted_password: 'encrypted_password',
-  email_confirmed_at: 'email_confirmed_at',
-  invited_at: 'invited_at',
-  confirmation_token: 'confirmation_token',
-  confirmation_sent_at: 'confirmation_sent_at',
-  recovery_token: 'recovery_token',
-  recovery_sent_at: 'recovery_sent_at',
-  email_change_token_new: 'email_change_token_new',
-  email_change: 'email_change',
-  email_change_sent_at: 'email_change_sent_at',
-  last_sign_in_at: 'last_sign_in_at',
-  raw_app_meta_data: 'raw_app_meta_data',
-  raw_user_meta_data: 'raw_user_meta_data',
-  is_super_admin: 'is_super_admin',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  phone: 'phone',
-  phone_confirmed_at: 'phone_confirmed_at',
-  phone_change: 'phone_change',
-  phone_change_token: 'phone_change_token',
-  phone_change_sent_at: 'phone_change_sent_at',
-  confirmed_at: 'confirmed_at',
-  email_change_token_current: 'email_change_token_current',
-  email_change_confirm_status: 'email_change_confirm_status',
-  banned_until: 'banned_until',
-  reauthentication_token: 'reauthentication_token',
-  reauthentication_sent_at: 'reauthentication_sent_at',
-  is_sso_user: 'is_sso_user',
-  deleted_at: 'deleted_at',
-  is_anonymous: 'is_anonymous'
-} as const
-
-export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
-
-
-export const Webauthn_challengesScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  challenge_type: 'challenge_type',
-  session_data: 'session_data',
-  created_at: 'created_at',
-  expires_at: 'expires_at'
-} as const
-
-export type Webauthn_challengesScalarFieldEnum = (typeof Webauthn_challengesScalarFieldEnum)[keyof typeof Webauthn_challengesScalarFieldEnum]
-
-
-export const Webauthn_credentialsScalarFieldEnum = {
-  id: 'id',
-  user_id: 'user_id',
-  credential_id: 'credential_id',
-  public_key: 'public_key',
-  attestation_type: 'attestation_type',
-  aaguid: 'aaguid',
-  sign_count: 'sign_count',
-  transports: 'transports',
-  backup_eligible: 'backup_eligible',
-  backed_up: 'backed_up',
-  friendly_name: 'friendly_name',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  last_used_at: 'last_used_at'
-} as const
-
-export type Webauthn_credentialsScalarFieldEnum = (typeof Webauthn_credentialsScalarFieldEnum)[keyof typeof Webauthn_credentialsScalarFieldEnum]
-
-
-export const Audit_logScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  user_id: 'user_id',
-  action: 'action',
-  entity_type: 'entity_type',
-  entity_id: 'entity_id',
-  metadata: 'metadata',
-  created_at: 'created_at'
-} as const
-
-export type Audit_logScalarFieldEnum = (typeof Audit_logScalarFieldEnum)[keyof typeof Audit_logScalarFieldEnum]
-
-
-export const CustomersScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  customer_number: 'customer_number',
-  company_name: 'company_name',
-  contact_person: 'contact_person',
-  email: 'email',
-  phone: 'phone',
-  address: 'address',
-  postal_code: 'postal_code',
-  city: 'city',
-  country_code: 'country_code',
-  chamber_of_commerce_number: 'chamber_of_commerce_number',
-  vat_number: 'vat_number',
-  language: 'language',
-  payment_days: 'payment_days',
-  active: 'active',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type CustomersScalarFieldEnum = (typeof CustomersScalarFieldEnum)[keyof typeof CustomersScalarFieldEnum]
-
-
-export const InvoicesScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  invoice_number: 'invoice_number',
-  customer_id: 'customer_id',
-  sales_order_id: 'sales_order_id',
-  invoice_date: 'invoice_date',
-  due_date: 'due_date',
-  status: 'status',
-  subtotal: 'subtotal',
-  vat: 'vat',
-  total: 'total',
-  outstanding_amount: 'outstanding_amount',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type InvoicesScalarFieldEnum = (typeof InvoicesScalarFieldEnum)[keyof typeof InvoicesScalarFieldEnum]
-
-
-export const Organization_membersScalarFieldEnum = {
-  organization_id: 'organization_id',
-  user_id: 'user_id',
-  role: 'role',
-  active: 'active',
-  created_at: 'created_at'
-} as const
-
-export type Organization_membersScalarFieldEnum = (typeof Organization_membersScalarFieldEnum)[keyof typeof Organization_membersScalarFieldEnum]
-
-
-export const OrganizationsScalarFieldEnum = {
+export const OrganizationScalarFieldEnum = {
   id: 'id',
   name: 'name',
-  slug: 'slug',
-  trade_name: 'trade_name',
-  logo_url: 'logo_url',
-  address: 'address',
-  postal_code: 'postal_code',
-  city: 'city',
-  country_code: 'country_code',
-  chamber_of_commerce_number: 'chamber_of_commerce_number',
-  vat_number: 'vat_number',
-  iban: 'iban',
+  status: 'status',
+  legalName: 'legalName',
+  registrationNo: 'registrationNo',
+  vatNumber: 'vatNumber',
   email: 'email',
   phone: 'phone',
   website: 'website',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  logoUrl: 'logoUrl',
+  iban: 'iban',
+  bic: 'bic',
+  defaultCurrency: 'defaultCurrency',
+  defaultVatRate: 'defaultVatRate',
+  defaultPaymentDays: 'defaultPaymentDays',
+  street: 'street',
+  houseNumber: 'houseNumber',
+  houseNumberAddition: 'houseNumberAddition',
+  addressLine1: 'addressLine1',
+  addressLine2: 'addressLine2',
+  postalCode: 'postalCode',
+  city: 'city',
+  state: 'state',
+  countryCode: 'countryCode',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
 } as const
 
-export type OrganizationsScalarFieldEnum = (typeof OrganizationsScalarFieldEnum)[keyof typeof OrganizationsScalarFieldEnum]
+export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[keyof typeof OrganizationScalarFieldEnum]
 
 
-export const Product_variantsScalarFieldEnum = {
+export const UserScalarFieldEnum = {
   id: 'id',
-  organization_id: 'organization_id',
-  product_id: 'product_id',
-  sku: 'sku',
-  color: 'color',
-  color_code: 'color_code',
-  size: 'size',
-  barcode: 'barcode',
-  created_at: 'created_at'
+  organizationId: 'organizationId',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  email: 'email',
+  role: 'role',
+  status: 'status',
+  externalAuthId: 'externalAuthId',
+  lastLoginAt: 'lastLoginAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
 } as const
 
-export type Product_variantsScalarFieldEnum = (typeof Product_variantsScalarFieldEnum)[keyof typeof Product_variantsScalarFieldEnum]
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
-export const ProductsScalarFieldEnum = {
+export const CollectionScalarFieldEnum = {
   id: 'id',
-  organization_id: 'organization_id',
-  product_code: 'product_code',
+  organizationId: 'organizationId',
   name: 'name',
-  brand: 'brand',
-  season: 'season',
-  category: 'category',
-  material: 'material',
-  vat_code: 'vat_code',
-  sales_price: 'sales_price',
-  purchase_price: 'purchase_price',
-  active: 'active',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type ProductsScalarFieldEnum = (typeof ProductsScalarFieldEnum)[keyof typeof ProductsScalarFieldEnum]
-
-
-export const Purchase_order_linesScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  purchase_order_id: 'purchase_order_id',
-  variant_id: 'variant_id',
-  ordered_quantity: 'ordered_quantity',
-  received_quantity: 'received_quantity',
-  unit_price: 'unit_price',
-  line_total: 'line_total'
-} as const
-
-export type Purchase_order_linesScalarFieldEnum = (typeof Purchase_order_linesScalarFieldEnum)[keyof typeof Purchase_order_linesScalarFieldEnum]
-
-
-export const Purchase_ordersScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  order_number: 'order_number',
-  supplier_id: 'supplier_id',
-  order_date: 'order_date',
-  expected_delivery_date: 'expected_delivery_date',
-  status: 'status',
-  notes: 'notes',
-  subtotal: 'subtotal',
-  vat: 'vat',
-  total: 'total',
-  created_by: 'created_by',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type Purchase_ordersScalarFieldEnum = (typeof Purchase_ordersScalarFieldEnum)[keyof typeof Purchase_ordersScalarFieldEnum]
-
-
-export const Sales_order_linesScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  sales_order_id: 'sales_order_id',
-  variant_id: 'variant_id',
-  quantity: 'quantity',
-  delivered_quantity: 'delivered_quantity',
-  reserved_quantity: 'reserved_quantity',
-  unit_price: 'unit_price',
-  discount_percentage: 'discount_percentage',
-  line_total: 'line_total'
-} as const
-
-export type Sales_order_linesScalarFieldEnum = (typeof Sales_order_linesScalarFieldEnum)[keyof typeof Sales_order_linesScalarFieldEnum]
-
-
-export const Sales_ordersScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
-  order_number: 'order_number',
-  customer_id: 'customer_id',
-  order_date: 'order_date',
-  requested_delivery_date: 'requested_delivery_date',
-  status: 'status',
-  notes: 'notes',
-  subtotal: 'subtotal',
-  vat: 'vat',
-  total: 'total',
-  created_by: 'created_by',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-} as const
-
-export type Sales_ordersScalarFieldEnum = (typeof Sales_ordersScalarFieldEnum)[keyof typeof Sales_ordersScalarFieldEnum]
-
-
-export const Stock_balancesScalarFieldEnum = {
-  organization_id: 'organization_id',
-  location_id: 'location_id',
-  variant_id: 'variant_id',
-  quantity: 'quantity',
-  reserved_quantity: 'reserved_quantity',
-  updated_at: 'updated_at'
-} as const
-
-export type Stock_balancesScalarFieldEnum = (typeof Stock_balancesScalarFieldEnum)[keyof typeof Stock_balancesScalarFieldEnum]
-
-
-export const Stock_locationsScalarFieldEnum = {
-  id: 'id',
-  organization_id: 'organization_id',
   code: 'code',
-  name: 'name',
-  active: 'active'
+  season: 'season',
+  year: 'year',
+  status: 'status',
+  description: 'description',
+  salesStartDate: 'salesStartDate',
+  salesEndDate: 'salesEndDate',
+  deliveryStartDate: 'deliveryStartDate',
+  deliveryEndDate: 'deliveryEndDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
 } as const
 
-export type Stock_locationsScalarFieldEnum = (typeof Stock_locationsScalarFieldEnum)[keyof typeof Stock_locationsScalarFieldEnum]
+export type CollectionScalarFieldEnum = (typeof CollectionScalarFieldEnum)[keyof typeof CollectionScalarFieldEnum]
 
 
-export const SuppliersScalarFieldEnum = {
+export const BrandScalarFieldEnum = {
   id: 'id',
-  organization_id: 'organization_id',
-  supplier_number: 'supplier_number',
-  company_name: 'company_name',
-  contact_person: 'contact_person',
+  organizationId: 'organizationId',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type BrandScalarFieldEnum = (typeof BrandScalarFieldEnum)[keyof typeof BrandScalarFieldEnum]
+
+
+export const ProductTypeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type ProductTypeScalarFieldEnum = (typeof ProductTypeScalarFieldEnum)[keyof typeof ProductTypeScalarFieldEnum]
+
+
+export const CategoryScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  parentId: 'parentId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
+
+
+export const SupplierScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  supplierNumber: 'supplierNumber',
+  companyName: 'companyName',
+  status: 'status',
+  tradeName: 'tradeName',
+  contactFirstName: 'contactFirstName',
+  contactLastName: 'contactLastName',
   email: 'email',
   phone: 'phone',
-  address: 'address',
-  postal_code: 'postal_code',
+  website: 'website',
+  registrationNo: 'registrationNo',
+  vatNumber: 'vatNumber',
+  eoriNumber: 'eoriNumber',
+  currency: 'currency',
+  paymentDays: 'paymentDays',
+  iban: 'iban',
+  bic: 'bic',
+  leadTimeDays: 'leadTimeDays',
+  minimumOrderValue: 'minimumOrderValue',
+  minimumOrderQty: 'minimumOrderQty',
+  incoterm: 'incoterm',
+  deliveryTerms: 'deliveryTerms',
+  street: 'street',
+  houseNumber: 'houseNumber',
+  houseNumberAddition: 'houseNumberAddition',
+  addressLine1: 'addressLine1',
+  addressLine2: 'addressLine2',
+  postalCode: 'postalCode',
   city: 'city',
-  country_code: 'country_code',
-  chamber_of_commerce_number: 'chamber_of_commerce_number',
-  vat_number: 'vat_number',
-  language: 'language',
-  payment_days: 'payment_days',
-  active: 'active',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  state: 'state',
+  countryCode: 'countryCode',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
 } as const
 
-export type SuppliersScalarFieldEnum = (typeof SuppliersScalarFieldEnum)[keyof typeof SuppliersScalarFieldEnum]
+export type SupplierScalarFieldEnum = (typeof SupplierScalarFieldEnum)[keyof typeof SupplierScalarFieldEnum]
 
 
-export const User_preferencesScalarFieldEnum = {
-  user_id: 'user_id',
-  active_organization_id: 'active_organization_id',
-  language: 'language',
-  updated_at: 'updated_at'
+export const ColorScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  name: 'name',
+  code: 'code',
+  supplierCode: 'supplierCode',
+  hexCode: 'hexCode',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
 } as const
 
-export type User_preferencesScalarFieldEnum = (typeof User_preferencesScalarFieldEnum)[keyof typeof User_preferencesScalarFieldEnum]
+export type ColorScalarFieldEnum = (typeof ColorScalarFieldEnum)[keyof typeof ColorScalarFieldEnum]
+
+
+export const SizeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  name: 'name',
+  code: 'code',
+  sizeType: 'sizeType',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type SizeScalarFieldEnum = (typeof SizeScalarFieldEnum)[keyof typeof SizeScalarFieldEnum]
+
+
+export const ProductScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  collectionId: 'collectionId',
+  brandId: 'brandId',
+  productTypeId: 'productTypeId',
+  categoryId: 'categoryId',
+  supplierId: 'supplierId',
+  styleNumber: 'styleNumber',
+  seasonCode: 'seasonCode',
+  seasonYear: 'seasonYear',
+  sequenceNumber: 'sequenceNumber',
+  name: 'name',
+  status: 'status',
+  supplierProductCode: 'supplierProductCode',
+  description: 'description',
+  materialComposition: 'materialComposition',
+  careInstructions: 'careInstructions',
+  countryOfOrigin: 'countryOfOrigin',
+  hsCode: 'hsCode',
+  purchasePrice: 'purchasePrice',
+  wholesalePrice: 'wholesalePrice',
+  recommendedRetailPrice: 'recommendedRetailPrice',
+  vatRate: 'vatRate',
+  weightGrams: 'weightGrams',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
+
+
+export const ProductColorVariantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  productId: 'productId',
+  colorId: 'colorId',
+  status: 'status',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type ProductColorVariantScalarFieldEnum = (typeof ProductColorVariantScalarFieldEnum)[keyof typeof ProductColorVariantScalarFieldEnum]
+
+
+export const ProductImageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  colorVariantId: 'colorVariantId',
+  imageType: 'imageType',
+  url: 'url',
+  altText: 'altText',
+  sortOrder: 'sortOrder',
+  isPrimary: 'isPrimary',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductImageScalarFieldEnum = (typeof ProductImageScalarFieldEnum)[keyof typeof ProductImageScalarFieldEnum]
+
+
+export const ProductVariantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  colorVariantId: 'colorVariantId',
+  sizeId: 'sizeId',
+  sku: 'sku',
+  ean: 'ean',
+  status: 'status',
+  supplierVariantCode: 'supplierVariantCode',
+  purchasePrice: 'purchasePrice',
+  wholesalePrice: 'wholesalePrice',
+  recommendedRetailPrice: 'recommendedRetailPrice',
+  weightGrams: 'weightGrams',
+  isPreorder: 'isPreorder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt'
+} as const
+
+export type ProductVariantScalarFieldEnum = (typeof ProductVariantScalarFieldEnum)[keyof typeof ProductVariantScalarFieldEnum]
+
+
+export const InventoryScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  variantId: 'variantId',
+  physicalQuantity: 'physicalQuantity',
+  reservedQuantity: 'reservedQuantity',
+  incomingQuantity: 'incomingQuantity',
+  minimumQuantity: 'minimumQuantity',
+  lastCountedAt: 'lastCountedAt',
+  lastMovementAt: 'lastMovementAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type InventoryScalarFieldEnum = (typeof InventoryScalarFieldEnum)[keyof typeof InventoryScalarFieldEnum]
+
+
+export const InventoryMovementScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  variantId: 'variantId',
+  userId: 'userId',
+  type: 'type',
+  quantity: 'quantity',
+  physicalBefore: 'physicalBefore',
+  physicalAfter: 'physicalAfter',
+  reservedBefore: 'reservedBefore',
+  reservedAfter: 'reservedAfter',
+  referenceType: 'referenceType',
+  referenceId: 'referenceId',
+  referenceNo: 'referenceNo',
+  reason: 'reason',
+  notes: 'notes',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryMovementScalarFieldEnum = (typeof InventoryMovementScalarFieldEnum)[keyof typeof InventoryMovementScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -747,36 +414,12 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const NullableJsonNullValueInput = {
-  DbNull: DbNull,
-  JsonNull: JsonNull
-} as const
-
-export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const JsonNullValueFilter = {
-  DbNull: DbNull,
-  JsonNull: JsonNull,
-  AnyNull: AnyNull
-} as const
-
-export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 export const NullsOrder = {

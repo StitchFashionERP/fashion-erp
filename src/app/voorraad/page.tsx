@@ -973,7 +973,7 @@ export default function InventoryPage() {
 
                     <td>
                       <Link
-                        href={`/voorraad/${row.variantId}`}
+                        href={`/artikelen/${row.productId}`}
                         className="table-link"
                       >
                         {row.sku}

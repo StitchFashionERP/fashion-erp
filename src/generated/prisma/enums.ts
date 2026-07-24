@@ -9,93 +9,124 @@
 * 🟢 You can import this file directly.
 */
 
-export const aal_level = {
-  aal1: 'aal1',
-  aal2: 'aal2',
-  aal3: 'aal3'
+export const OrganizationStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED'
 } as const
 
-export type aal_level = (typeof aal_level)[keyof typeof aal_level]
+export type OrganizationStatus = (typeof OrganizationStatus)[keyof typeof OrganizationStatus]
 
 
-export const code_challenge_method = {
-  s256: 's256',
-  plain: 'plain'
+export const UserRole = {
+  ADMIN: 'ADMIN',
+  SALES: 'SALES',
+  PURCHASING: 'PURCHASING',
+  WAREHOUSE: 'WAREHOUSE',
+  FINANCE: 'FINANCE',
+  VIEWER: 'VIEWER'
 } as const
 
-export type code_challenge_method = (typeof code_challenge_method)[keyof typeof code_challenge_method]
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
-export const factor_status = {
-  unverified: 'unverified',
-  verified: 'verified'
+export const UserStatus = {
+  INVITED: 'INVITED',
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE'
 } as const
 
-export type factor_status = (typeof factor_status)[keyof typeof factor_status]
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus]
 
 
-export const factor_type = {
-  totp: 'totp',
-  webauthn: 'webauthn',
-  phone: 'phone'
+export const CollectionSeason = {
+  SPRING_SUMMER: 'SPRING_SUMMER',
+  AUTUMN_WINTER: 'AUTUMN_WINTER',
+  PRE_SPRING: 'PRE_SPRING',
+  PRE_FALL: 'PRE_FALL',
+  RESORT: 'RESORT',
+  HOLIDAY: 'HOLIDAY',
+  CORE: 'CORE',
+  OTHER: 'OTHER'
 } as const
 
-export type factor_type = (typeof factor_type)[keyof typeof factor_type]
+export type CollectionSeason = (typeof CollectionSeason)[keyof typeof CollectionSeason]
 
 
-export const oauth_authorization_status = {
-  pending: 'pending',
-  approved: 'approved',
-  denied: 'denied',
-  expired: 'expired'
+export const CollectionStatus = {
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED'
 } as const
 
-export type oauth_authorization_status = (typeof oauth_authorization_status)[keyof typeof oauth_authorization_status]
+export type CollectionStatus = (typeof CollectionStatus)[keyof typeof CollectionStatus]
 
 
-export const oauth_client_type = {
-  public: 'public',
-  confidential: 'confidential'
+export const ProductStatus = {
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  ARCHIVED: 'ARCHIVED'
 } as const
 
-export type oauth_client_type = (typeof oauth_client_type)[keyof typeof oauth_client_type]
+export type ProductStatus = (typeof ProductStatus)[keyof typeof ProductStatus]
 
 
-export const oauth_registration_type = {
-  dynamic: 'dynamic',
-  manual: 'manual'
+export const VariantStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  DISCONTINUED: 'DISCONTINUED'
 } as const
 
-export type oauth_registration_type = (typeof oauth_registration_type)[keyof typeof oauth_registration_type]
+export type VariantStatus = (typeof VariantStatus)[keyof typeof VariantStatus]
 
 
-export const oauth_response_type = {
-  code: 'code'
+export const SupplierStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE'
 } as const
 
-export type oauth_response_type = (typeof oauth_response_type)[keyof typeof oauth_response_type]
+export type SupplierStatus = (typeof SupplierStatus)[keyof typeof SupplierStatus]
 
 
-export const one_time_token_type = {
-  confirmation_token: 'confirmation_token',
-  reauthentication_token: 'reauthentication_token',
-  recovery_token: 'recovery_token',
-  email_change_token_new: 'email_change_token_new',
-  email_change_token_current: 'email_change_token_current',
-  phone_change_token: 'phone_change_token'
+export const SizeType = {
+  LETTER: 'LETTER',
+  NUMERIC: 'NUMERIC',
+  SHOE: 'SHOE',
+  CHILDREN: 'CHILDREN',
+  ONE_SIZE: 'ONE_SIZE',
+  OTHER: 'OTHER'
 } as const
 
-export type one_time_token_type = (typeof one_time_token_type)[keyof typeof one_time_token_type]
+export type SizeType = (typeof SizeType)[keyof typeof SizeType]
 
 
-export const organization_role = {
-  owner: 'owner',
-  admin: 'admin',
-  sales: 'sales',
-  purchasing: 'purchasing',
-  warehouse: 'warehouse',
-  finance: 'finance',
-  read_only: 'read_only'
+export const InventoryMovementType = {
+  OPENING_BALANCE: 'OPENING_BALANCE',
+  PURCHASE_RECEIPT: 'PURCHASE_RECEIPT',
+  PURCHASE_RETURN: 'PURCHASE_RETURN',
+  SALES_RESERVATION: 'SALES_RESERVATION',
+  SALES_RESERVATION_RELEASE: 'SALES_RESERVATION_RELEASE',
+  SALES_SHIPMENT: 'SALES_SHIPMENT',
+  SALES_RETURN: 'SALES_RETURN',
+  STOCK_CORRECTION: 'STOCK_CORRECTION',
+  DAMAGE: 'DAMAGE',
+  LOSS: 'LOSS',
+  TRANSFER_IN: 'TRANSFER_IN',
+  TRANSFER_OUT: 'TRANSFER_OUT'
 } as const
 
-export type organization_role = (typeof organization_role)[keyof typeof organization_role]
+export type InventoryMovementType = (typeof InventoryMovementType)[keyof typeof InventoryMovementType]
+
+
+export const ImageType = {
+  PRIMARY: 'PRIMARY',
+  FRONT: 'FRONT',
+  BACK: 'BACK',
+  DETAIL: 'DETAIL',
+  LIFESTYLE: 'LIFESTYLE',
+  COLOR_SWATCH: 'COLOR_SWATCH',
+  OTHER: 'OTHER'
+} as const
+
+export type ImageType = (typeof ImageType)[keyof typeof ImageType]

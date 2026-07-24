@@ -196,7 +196,7 @@ export default function ProductDetailPage() {
       getArticleHistoryCheck(product.id);
 
     if (!history.canDelete) {
-      setError(history.message);
+      window.alert(history.message);
       return;
     }
 
@@ -227,7 +227,7 @@ export default function ProductDetailPage() {
     setProduct(updated);
     setNotification(
       updated.status === "Inactief"
-        ? "Artikel gearchiveerd."
+        ? "Artikel op Inactief gezet."
         : "Artikel opnieuw geactiveerd.",
     );
   }

@@ -10,11 +10,13 @@ import {
   getCategories,
   getColors,
   getSizes,
+  getCountries,
   saveBrands,
   saveProductTypes,
   saveCategories,
   saveColors,
   saveSizes,
+  saveCountries,
   type NamedMasterData,
 } from "@/lib/master-data";
 import styles from "./master-data.module.css";
@@ -25,6 +27,7 @@ export default function MasterDataPage() {
   const [categories, setCategories] = useState<NamedMasterData[] | null>(null);
   const [colors, setColors] = useState<NamedMasterData[] | null>(null);
   const [sizes, setSizes] = useState<NamedMasterData[] | null>(null);
+  const [countries, setCountries] = useState<NamedMasterData[] | null>(null);
 
   useEffect(() => {
     setBrands(getBrands());
@@ -32,9 +35,10 @@ export default function MasterDataPage() {
     setCategories(getCategories());
     setColors(getColors());
     setSizes(getSizes());
+    setCountries(getCountries());
   }, []);
 
-  if (!brands || !productTypes || !categories || !colors || !sizes) {
+  if (!brands || !productTypes || !categories || !colors || !sizes || !countries) {
     return <section className="content-card">Stamgegevens laden...</section>;
   }
 
@@ -94,6 +98,17 @@ export default function MasterDataPage() {
           onSave={(items) => {
             setColors(items);
             saveColors(items);
+          }}
+        />
+
+        <NamedMasterDataManager
+          title="Landen"
+          description="Centrale landenlijst voor bedrijfsgegevens, leveranciers en klanten. Gebruik bij voorkeur de ISO-landcode."
+          idPrefix="country"
+          initialItems={countries}
+          onSave={(items) => {
+            setCountries(items);
+            saveCountries(items);
           }}
         />
 

@@ -21,6 +21,10 @@ import {
 } from "@/lib/vat-engine";
 import { getCompanySettings } from "@/lib/company-settings";
 import {
+  getAvailableEans,
+  isEanSelectable,
+} from "@/lib/ean-center";
+import {
   getCategories,
   getCollections,
   getColors,
@@ -29,6 +33,8 @@ import {
   type NamedMasterData,
 } from "@/lib/master-data";
 import styles from "./article-form.module.css";
+
+type EanAssignmentMode = "AUTO" | "MANUAL" | "NONE";
 
 type ArticleFormProps = {
   initialProduct?: Product;
@@ -321,6 +327,23 @@ export function ArticleForm({
       );
     });
 
+  const [eanMode, setEanMode] =
+    useState<EanAssignmentMode>(() =>
+      initialProduct?.variants.some((variant) => variant.ean)
+        ? "MANUAL"
+        : "NONE",
+    );
+  const [eanByVariant, setEanByVariant] =
+    useState<Record<string, string>>(() =>
+      Object.fromEntries(
+        (initialProduct?.variants ?? [])
+          .filter((variant) => variant.ean)
+          .map((variant) => [
+            getVariantKey(variant.color, variant.size),
+            variant.ean ?? "",
+          ]),
+      ),
+    );
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -419,6 +442,61 @@ export function ArticleForm({
     }));
   }
 
+  function changeVariantEan(key: string, ean: string) {
+    setEanByVariant((current) => ({
+      ...current,
+      [key]: ean,
+    }));
+  }
+
+  function getManualEanOptions(key: string) {
+    const selectedElsewhere = new Set(
+      Object.entries(eanByVariant)
+        .filter(([variantKey, ean]) => variantKey !== key && ean)
+        .map(([, ean]) => ean),
+    );
+
+    return getAvailableEans({
+      includeAssignedToProductId: initialProduct?.id,
+    }).filter((item) => !selectedElsewhere.has(item.ean));
+  }
+
+  function buildVariantEans() {
+    if (eanMode === "NONE") {
+      return Object.fromEntries(variantRows.map((variant) => [variant.key, ""]));
+    }
+
+    if (eanMode === "MANUAL") {
+      return Object.fromEntries(
+        variantRows.map((variant) => [
+          variant.key,
+          eanByVariant[variant.key] ?? "",
+        ]),
+      );
+    }
+
+    const available = getAvailableEans({
+      includeAssignedToProductId: initialProduct?.id,
+    });
+    const used = new Set<string>();
+    const result: Record<string, string> = {};
+
+    for (const variant of variantRows) {
+      const existing = eanByVariant[variant.key];
+      if (existing && !used.has(existing)) {
+        result[variant.key] = existing;
+        used.add(existing);
+        continue;
+      }
+
+      const next = available.find((item) => !used.has(item.ean));
+      result[variant.key] = next?.ean ?? "";
+      if (next) used.add(next.ean);
+    }
+
+    return result;
+  }
+
   function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
@@ -467,6 +545,36 @@ export function ArticleForm({
       return;
     }
 
+    const variantEans = buildVariantEans();
+    const selectedEans = Object.values(variantEans).filter(Boolean);
+
+    if (new Set(selectedEans).size !== selectedEans.length) {
+      setError("Elke variant moet een unieke EAN-code hebben.");
+      return;
+    }
+
+    if (eanMode === "AUTO" && selectedEans.length < variantRows.length) {
+      setError(
+        `Er zijn ${variantRows.length} vrije EAN-codes nodig, maar er zijn er slechts ${selectedEans.length} beschikbaar. Importeer eerst extra codes of kies Geen EAN.`,
+      );
+      return;
+    }
+
+    if (
+      eanMode === "MANUAL" &&
+      selectedEans.some(
+        (ean) =>
+          !isEanSelectable(ean, {
+            currentProductId: initialProduct?.id,
+          }),
+      )
+    ) {
+      setError(
+        "Een gekozen EAN-code is niet meer vrij. Vernieuw de pagina en kies opnieuw.",
+      );
+      return;
+    }
+
     onSubmit({
       code: normalizedCode,
       name: name.trim(),
@@ -495,6 +603,12 @@ export function ArticleForm({
       colors: selectedColors,
       sizes: selectedSizes,
       stockByVariant,
+      importedVariants: variantRows.map((variant) => ({
+        color: variant.color,
+        size: variant.size,
+        stock: stockByVariant[variant.key] ?? 0,
+        ean: variantEans[variant.key] || undefined,
+      })),
     });
   }
 
@@ -834,12 +948,34 @@ export function ArticleForm({
               </div>
             </div>
 
+            <div className={styles.eanModeGrid}>
+              <label className={`${styles.eanModeCard} ${eanMode === "AUTO" ? styles.eanModeCardSelected : ""}`}>
+                <input type="radio" name="eanMode" checked={eanMode === "AUTO"} onChange={() => setEanMode("AUTO")} />
+                <span><strong>Automatisch toewijzen</strong><small>STiTch gebruikt de eerstvolgende vrije EAN per variant.</small></span>
+              </label>
+              <label className={`${styles.eanModeCard} ${eanMode === "MANUAL" ? styles.eanModeCardSelected : ""}`}>
+                <input type="radio" name="eanMode" checked={eanMode === "MANUAL"} onChange={() => setEanMode("MANUAL")} />
+                <span><strong>Handmatig kiezen</strong><small>Kies per variant een beschikbare EAN-code.</small></span>
+              </label>
+              <label className={`${styles.eanModeCard} ${eanMode === "NONE" ? styles.eanModeCardSelected : ""}`}>
+                <input type="radio" name="eanMode" checked={eanMode === "NONE"} onChange={() => setEanMode("NONE")} />
+                <span><strong>Geen EAN</strong><small>Varianten worden zonder EAN opgeslagen. Er verschijnt geen waarschuwing.</small></span>
+              </label>
+            </div>
+
+            {eanMode === "AUTO" && (
+              <div className={styles.eanAvailability}>
+                <strong>{getAvailableEans({ includeAssignedToProductId: initialProduct?.id }).length}</strong> vrije EAN-codes voor <strong>{variantRows.length}</strong> varianten
+              </div>
+            )}
+
             <div className="table-wrapper">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Kleur</th>
                     <th>Maat</th>
+                    <th>EAN</th>
                     <th className="table-number">
                       Beginvoorraad
                     </th>
@@ -854,6 +990,29 @@ export function ArticleForm({
                       </td>
 
                       <td>{variant.size}</td>
+
+                      <td>
+                        {eanMode === "NONE" ? (
+                          <span className={styles.eanMuted}>Geen EAN</span>
+                        ) : eanMode === "AUTO" ? (
+                          <span className={styles.eanPreview}>Automatisch</span>
+                        ) : (
+                          <select
+                            className={styles.eanSelect}
+                            value={eanByVariant[variant.key] ?? ""}
+                            onChange={(event) =>
+                              changeVariantEan(variant.key, event.target.value)
+                            }
+                          >
+                            <option value="">Geen EAN</option>
+                            {getManualEanOptions(variant.key).map((item) => (
+                              <option key={item.ean} value={item.ean}>
+                                {item.ean}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
 
                       <td className="table-number">
                         <input

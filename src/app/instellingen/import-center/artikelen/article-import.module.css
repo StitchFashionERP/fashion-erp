@@ -1,0 +1,193 @@
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.steps span {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.steps .activeStep {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+}
+
+.templateCard,
+.uploadCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.templateCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.iconBox,
+.uploadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+}
+
+.iconBox {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+}
+
+.templateText h2,
+.uploadCard h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.templateText p,
+.uploadCard > div:first-child p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.requiredFields {
+  margin-top: 9px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.downloadButton,
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.downloadButton,
+.primaryButton {
+  border: 1px solid var(--primary);
+  color: #fff;
+  background: var(--primary);
+}
+
+.uploadCard {
+  padding: 20px;
+}
+
+.dropZone {
+  display: flex;
+  min-height: 185px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 16px;
+  border: 1px dashed #aebbc4;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.dropZone:hover,
+.hasFile {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.dropZone strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.dropZone span:last-child {
+  font-size: 10px;
+}
+
+.uploadIcon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 3px;
+  border-radius: 50%;
+}
+
+.fileInput {
+  display: none;
+}
+
+.error {
+  margin: 10px 0 0;
+  color: #a23737;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+
+.primaryButton:disabled {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  cursor: not-allowed;
+}
+
+.nextStepNote {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-align: right;
+}
+
+@media (max-width: 800px) {
+  .steps {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .templateCard {
+    grid-template-columns: auto 1fr;
+  }
+
+  .downloadButton {
+    grid-column: 1 / -1;
+  }
+}
+.sectionHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.textButton{border:0;background:transparent;color:var(--primary);font-size:10px;font-weight:700;cursor:pointer}.mappingTable{margin-top:18px;border:1px solid var(--border);border-radius:8px;overflow:hidden}.mappingHeader,.mappingRow{display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:center}.mappingHeader{background:var(--surface-subtle);color:var(--text-muted);font-size:9px;font-weight:800;text-transform:uppercase}.mappingHeader>div,.mappingRow>div{padding:10px 12px}.mappingRow{border-top:1px solid var(--border);font-size:10px}.mappingRow select{width:calc(100% - 24px);margin:6px 12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-primary);font-size:10px}.required{color:#a23737}.example{overflow:hidden;color:var(--text-secondary);text-overflow:ellipsis;white-space:nowrap}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.summary div{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-subtle)}.summary strong{display:block;font-size:20px}.summary span{color:var(--text-muted);font-size:9px;font-weight:700}.previewWrap{overflow:auto;border:1px solid var(--border);border-radius:8px}.preview{width:100%;border-collapse:collapse;font-size:10px}.preview th,.preview td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}.preview th{background:var(--surface-subtle);color:var(--text-muted);font-size:9px;text-transform:uppercase}.ok,.warn,.bad{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:800}.ok{color:#31734c;background:#eaf7ef}.warn{color:#8b6500;background:#fff6d9}.bad{color:#a23737;background:#fdecec}.completeCard{padding:42px;border:1px solid var(--border);border-radius:10px;background:var(--surface);text-align:center}.completeIcon{display:inline-flex;width:58px;height:58px;align-items:center;justify-content:center;border-radius:50%;color:#31734c;background:#eaf7ef}.completeCard h2{margin:14px 0 6px;font-size:16px}.completeCard p{max-width:620px;margin:0 auto;color:var(--text-secondary);font-size:11px;line-height:1.6}.completeCard .actions{justify-content:center}@media(max-width:800px){.mappingHeader{display:none}.mappingRow{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}}
+.progressTrack{width:min(520px,100%);height:10px;margin:22px auto 8px;overflow:hidden;border-radius:999px;background:var(--surface-subtle);border:1px solid var(--border)}.progressBar{height:100%;border-radius:999px;background:var(--primary);transition:width 160ms ease}.progressLabel{color:var(--text-muted);font-size:10px;font-weight:700}.errorList{max-width:760px;margin:18px auto 0;padding:12px 14px;border:1px solid #efcccc;border-radius:8px;background:#fff7f7;color:#8f3030;font-size:10px;line-height:1.7;text-align:left}.completeCard .summary{max-width:760px;margin-left:auto;margin-right:auto;text-align:left}

@@ -4,11 +4,39 @@ import styles from "./settings.module.css";
 
 const settings = [
   {
+    title: "EAN Center",
+    description:
+      "Importeer gekochte EAN-codes en beheer vrije, toegewezen en geblokkeerde codes.",
+    href: "/instellingen/ean-center",
+    label: "EAN-beheer",
+  },
+  {
+    title: "Nummerreeksen",
+    description:
+      "Beheer voorstellen voor artikel-, order-, factuur- en overige documentnummers.",
+    href: "/instellingen/nummerreeksen",
+    label: "Nummerstructuur",
+  },
+  {
+    title: "Import Center",
+    description:
+      "Importeer artikelen vanuit Excel of CSV en beheer toekomstige imports.",
+    href: "/instellingen/import-center",
+    label: "Artikelimport",
+  },
+  {
     title: "Bedrijfsinstellingen",
     description:
       "Beheer bedrijfsgegevens, bedrijfslogo, prijsinstellingen, nummerreeksen en documenten.",
     href: "/instellingen/bedrijf",
     label: "Bedrijfslogo & gegevens",
+  },
+  {
+    title: "E-mail & documenten",
+    description:
+      "Beheer eigen afzenderadressen, handtekeningen en standaardinstellingen per documenttype.",
+    href: "/instellingen/communicatie",
+    label: "Communicatie",
   },
   {
     title: "STITCH-huisstijl",

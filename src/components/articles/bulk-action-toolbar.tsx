@@ -72,7 +72,7 @@ export function BulkActionToolbar({
           className="button"
           onClick={onArchive}
         >
-          Archiveren
+          Verwijderen
         </button>
 
         <button

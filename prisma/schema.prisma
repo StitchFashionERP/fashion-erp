@@ -16,6 +16,8 @@ enum OrganizationStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+
+  @@schema("public")
 }
 
 enum UserRole {
@@ -25,12 +27,16 @@ enum UserRole {
   WAREHOUSE
   FINANCE
   VIEWER
+
+  @@schema("public")
 }
 
 enum UserStatus {
   INVITED
   ACTIVE
   INACTIVE
+
+  @@schema("public")
 }
 
 enum CollectionSeason {
@@ -42,12 +48,16 @@ enum CollectionSeason {
   HOLIDAY
   CORE
   OTHER
+
+  @@schema("public")
 }
 
 enum CollectionStatus {
   DRAFT
   ACTIVE
   ARCHIVED
+
+  @@schema("public")
 }
 
 enum ProductStatus {
@@ -55,17 +65,23 @@ enum ProductStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
+
+  @@schema("public")
 }
 
 enum VariantStatus {
   ACTIVE
   INACTIVE
   DISCONTINUED
+
+  @@schema("public")
 }
 
 enum SupplierStatus {
   ACTIVE
   INACTIVE
+
+  @@schema("public")
 }
 
 enum SizeType {
@@ -75,6 +91,8 @@ enum SizeType {
   CHILDREN
   ONE_SIZE
   OTHER
+
+  @@schema("public")
 }
 
 enum InventoryMovementType {
@@ -90,6 +108,8 @@ enum InventoryMovementType {
   LOSS
   TRANSFER_IN
   TRANSFER_OUT
+
+  @@schema("public")
 }
 
 enum ImageType {
@@ -100,6 +120,8 @@ enum ImageType {
   LIFESTYLE
   COLOR_SWATCH
   OTHER
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -124,12 +146,15 @@ model Organization {
   defaultVatRate     Decimal @default(21.00) @db.Decimal(5, 2)
   defaultPaymentDays Int     @default(30)
 
-  addressLine1 String?
-  addressLine2 String?
-  postalCode   String?
-  city         String?
-  state        String?
-  countryCode  String  @default("NL")
+  street              String?
+  houseNumber         String?
+  houseNumberAddition String?
+  addressLine1        String?
+  addressLine2        String?
+  postalCode          String?
+  city                String?
+  state               String?
+  countryCode         String  @default("NL")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -152,6 +177,8 @@ model Organization {
 
   @@index([status])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model User {
@@ -178,6 +205,8 @@ model User {
   @@index([organizationId, status])
   @@index([externalAuthId])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -211,6 +240,8 @@ model Collection {
   @@index([organizationId, year, season])
   @@index([organizationId, status])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model Brand {
@@ -234,6 +265,8 @@ model Brand {
   @@index([organizationId, name])
   @@index([organizationId, isActive])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model ProductType {
@@ -257,6 +290,8 @@ model ProductType {
   @@index([organizationId, name])
   @@index([organizationId, isActive])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model Category {
@@ -284,6 +319,8 @@ model Category {
   @@index([organizationId, isActive])
   @@index([parentId])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -299,6 +336,7 @@ model Supplier {
   companyName    String
   status         SupplierStatus @default(ACTIVE)
 
+  tradeName        String?
   contactFirstName String?
   contactLastName  String?
   email            String?
@@ -307,16 +345,26 @@ model Supplier {
 
   registrationNo    String?
   vatNumber         String?
+  eoriNumber        String?
   currency          String   @default("EUR")
   paymentDays       Int      @default(30)
+  iban              String?
+  bic               String?
+  leadTimeDays      Int      @default(0)
   minimumOrderValue Decimal? @db.Decimal(12, 2)
+  minimumOrderQty   Int      @default(0)
+  incoterm          String?
+  deliveryTerms     String?
 
-  addressLine1 String?
-  addressLine2 String?
-  postalCode   String?
-  city         String?
-  state        String?
-  countryCode  String  @default("NL")
+  street              String?
+  houseNumber         String?
+  houseNumberAddition String?
+  addressLine1        String?
+  addressLine2        String?
+  postalCode          String?
+  city                String?
+  state               String?
+  countryCode         String  @default("NL")
 
   notes String?
 
@@ -330,6 +378,8 @@ model Supplier {
   @@index([organizationId, companyName])
   @@index([organizationId, status])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -358,6 +408,8 @@ model Color {
   @@index([organizationId, name])
   @@index([organizationId, isActive])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model Size {
@@ -381,6 +433,8 @@ model Size {
   @@index([organizationId, sizeType, sortOrder])
   @@index([organizationId, isActive])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -446,6 +500,8 @@ model Product {
   @@index([categoryId])
   @@index([supplierId])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model ProductColorVariant {
@@ -474,6 +530,8 @@ model ProductColorVariant {
   @@index([productId])
   @@index([colorId])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 model ProductImage {
@@ -496,6 +554,8 @@ model ProductImage {
   @@index([organizationId])
   @@index([colorVariantId, sortOrder])
   @@index([colorVariantId, isPrimary])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -541,6 +601,8 @@ model ProductVariant {
   @@index([sizeId])
   @@index([ean])
   @@index([deletedAt])
+
+  @@schema("public")
 }
 
 // ============================================================
@@ -568,6 +630,8 @@ model Inventory {
 
   @@index([organizationId])
   @@index([organizationId, physicalQuantity])
+
+  @@schema("public")
 }
 
 model InventoryMovement {
@@ -601,4 +665,6 @@ model InventoryMovement {
   @@index([variantId, createdAt])
   @@index([type])
   @@index([referenceType, referenceId])
+
+  @@schema("public")
 }

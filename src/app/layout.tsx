@@ -9,12 +9,12 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: {
-    default: "STITCH Fashion ERP",
-    template: "%s | STITCH Fashion ERP",
+    default: "STiTch Fashion ERP",
+    template: "%s | STiTch Fashion ERP",
   },
   description:
     "Fashion ERP voor verkoop, inkoop, voorraad, facturatie en supply intelligence.",
-  applicationName: "STITCH Fashion ERP",
+  applicationName: "STiTch Fashion ERP",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -54,11 +54,11 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "STITCH Fashion ERP",
+    title: "STiTch Fashion ERP",
     statusBarStyle: "black-translucent",
   },
   openGraph: {
-    title: "STITCH Fashion ERP",
+    title: "STiTch Fashion ERP",
     description:
       "Fashion ERP voor verkoop, inkoop, voorraad en facturatie.",
     type: "website",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
         url: "/icon-512.png",
         width: 512,
         height: 512,
-        alt: "STITCH Fashion ERP",
+        alt: "STiTch Fashion ERP",
       },
     ],
   },

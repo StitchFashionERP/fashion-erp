@@ -14,6 +14,26 @@ import styles from "./collections.module.css";
 
 type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
+type CollectionForm = {
+  code: string;
+  name: string;
+  season: string;
+  year: string;
+  status: CollectionStatus;
+  startDate: string;
+  endDate: string;
+};
+
+const emptyForm = (): CollectionForm => ({
+  code: "",
+  name: "",
+  season: "Autumn / Winter",
+  year: String(new Date().getFullYear() + 1),
+  status: "Concept",
+  startDate: "",
+  endDate: "",
+});
+
 function getTone(status: CollectionStatus): StatusTone {
   if (status === "Actief") return "success";
   if (status === "Concept") return "info";
@@ -24,12 +44,9 @@ export default function CollectionsPage() {
   const [items, setItems] = useState<Collection[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [season, setSeason] = useState("Autumn / Winter");
-  const [year, setYear] = useState(String(new Date().getFullYear() + 1));
-  const [status, setStatus] = useState<CollectionStatus>("Concept");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<CollectionForm>(emptyForm);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setItems(getCollections());
@@ -37,7 +54,6 @@ export default function CollectionsPage() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     if (!query) return items;
 
     return items.filter(
@@ -52,30 +68,86 @@ export default function CollectionsPage() {
     saveCollections(nextItems);
   }
 
-  function addCollection() {
-    if (!code.trim() || !name.trim()) return;
+  function updateForm<K extends keyof CollectionForm>(
+    field: K,
+    value: CollectionForm[K],
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setError(null);
+  }
 
-    const next: Collection = {
-      id: createMasterId("collection", name),
-      code: code.trim().toUpperCase(),
-      name: name.trim(),
-      season,
-      year: Number(year) || new Date().getFullYear(),
-      status,
-      startDate: "",
-      endDate: "",
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm());
+    setError(null);
+  }
+
+  function startNewCollection() {
+    setEditingId(null);
+    setForm(emptyForm());
+    setError(null);
+    setShowForm(true);
+  }
+
+  function startEditCollection(item: Collection) {
+    setEditingId(item.id);
+    setForm({
+      code: item.code,
+      name: item.name,
+      season: item.season,
+      year: String(item.year),
+      status: item.status,
+      startDate: item.startDate,
+      endDate: item.endDate,
+    });
+    setError(null);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function saveCollection() {
+    const code = form.code.trim().toUpperCase();
+    const name = form.name.trim();
+
+    if (!code || !name) {
+      setError("Vul minimaal een code en naam in.");
+      return;
+    }
+
+    const duplicateCode = items.some(
+      (item) => item.id !== editingId && item.code.toUpperCase() === code,
+    );
+
+    if (duplicateCode) {
+      setError("Deze collectiecode bestaat al.");
+      return;
+    }
+
+    const collection: Collection = {
+      id: editingId ?? createMasterId("collection", name),
+      code,
+      name,
+      season: form.season,
+      year: Number(form.year) || new Date().getFullYear(),
+      status: form.status,
+      startDate: form.startDate,
+      endDate: form.endDate,
     };
 
-    commit([...items, next]);
+    if (editingId) {
+      commit(items.map((item) => (item.id === editingId ? collection : item)));
+    } else {
+      commit([...items, collection]);
+    }
 
-    setCode("");
-    setName("");
-    setShowForm(false);
+    closeForm();
   }
 
   function deleteCollection(id: string) {
     if (!window.confirm("Collectie verwijderen?")) return;
     commit(items.filter((item) => item.id !== id));
+    if (editingId === id) closeForm();
   }
 
   return (
@@ -88,7 +160,7 @@ export default function CollectionsPage() {
           <button
             className="button button-primary"
             type="button"
-            onClick={() => setShowForm((current) => !current)}
+            onClick={startNewCollection}
           >
             <span className="button-plus">+</span>
             Nieuwe collectie
@@ -100,9 +172,13 @@ export default function CollectionsPage() {
         <section className={`content-card ${styles.formCard}`}>
           <div className="content-card-header">
             <div>
-              <h2 className="content-card-title">Nieuwe collectie</h2>
+              <h2 className="content-card-title">
+                {editingId ? "Collectie bewerken" : "Nieuwe collectie"}
+              </h2>
               <p className="content-card-description">
-                Voeg een seizoen of doorlopende collectie toe.
+                {editingId
+                  ? "Pas de gegevens van deze collectie aan."
+                  : "Voeg een seizoen of doorlopende collectie toe."}
               </p>
             </div>
           </div>
@@ -110,17 +186,26 @@ export default function CollectionsPage() {
           <div className={styles.formGrid}>
             <label>
               <span>Code</span>
-              <input value={code} onChange={(e) => setCode(e.target.value)} />
+              <input
+                value={form.code}
+                onChange={(event) => updateForm("code", event.target.value)}
+              />
             </label>
 
             <label>
               <span>Naam</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} />
+              <input
+                value={form.name}
+                onChange={(event) => updateForm("name", event.target.value)}
+              />
             </label>
 
             <label>
               <span>Seizoen</span>
-              <select value={season} onChange={(e) => setSeason(e.target.value)}>
+              <select
+                value={form.season}
+                onChange={(event) => updateForm("season", event.target.value)}
+              >
                 <option>Autumn / Winter</option>
                 <option>Spring / Summer</option>
                 <option>Pre Fall</option>
@@ -131,15 +216,39 @@ export default function CollectionsPage() {
 
             <label>
               <span>Jaar</span>
-              <input value={year} onChange={(e) => setYear(e.target.value)} />
+              <input
+                type="number"
+                min="2000"
+                max="2100"
+                value={form.year}
+                onChange={(event) => updateForm("year", event.target.value)}
+              />
+            </label>
+
+            <label>
+              <span>Startdatum</span>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(event) => updateForm("startDate", event.target.value)}
+              />
+            </label>
+
+            <label>
+              <span>Einddatum</span>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={(event) => updateForm("endDate", event.target.value)}
+              />
             </label>
 
             <label>
               <span>Status</span>
               <select
-                value={status}
-                onChange={(e) =>
-                  setStatus(e.target.value as CollectionStatus)
+                value={form.status}
+                onChange={(event) =>
+                  updateForm("status", event.target.value as CollectionStatus)
                 }
               >
                 <option>Concept</option>
@@ -149,11 +258,13 @@ export default function CollectionsPage() {
             </label>
           </div>
 
+          {error && <div className={styles.formError}>{error}</div>}
+
           <div className={styles.formActions}>
             <button
               className="button button-secondary"
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
             >
               Annuleren
             </button>
@@ -161,9 +272,9 @@ export default function CollectionsPage() {
             <button
               className="button button-primary"
               type="button"
-              onClick={addCollection}
+              onClick={saveCollection}
             >
-              Collectie opslaan
+              {editingId ? "Wijzigingen opslaan" : "Collectie opslaan"}
             </button>
           </div>
         </section>
@@ -205,13 +316,23 @@ export default function CollectionsPage() {
                   <td>
                     <StatusBadge label={item.status} tone={getTone(item.status)} />
                   </td>
-                  <td className={`table-number ${styles.actions}`}>
-                    <button
-                      type="button"
-                      onClick={() => deleteCollection(item.id)}
-                    >
-                      Verwijderen
-                    </button>
+                  <td className="table-number">
+                    <div className={styles.actions}>
+                      <button
+                        className={styles.editButton}
+                        type="button"
+                        onClick={() => startEditCollection(item)}
+                      >
+                        Bewerken
+                      </button>
+                      <button
+                        className={styles.deleteButton}
+                        type="button"
+                        onClick={() => deleteCollection(item.id)}
+                      >
+                        Verwijderen
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
