@@ -12,6 +12,7 @@ export type MasterDataEntity =
   | "countries";
 
 export type MasterDataItem = {
+
   id: string;
   code: string;
   name: string;
@@ -22,19 +23,38 @@ export type MasterDataItem = {
   updatedAt: string;
 };
 
+
+
+
+export type SupplierStatus = "Actief" | "Inactief";
+
+export type Supplier = {
+  id: string;
+  supplierNumber: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  country: string;
+  customerType: import("@/lib/vat-engine").CustomerType;
+  vatNumber: string;
+  vatNumberStatus: import("@/lib/vat-engine").VatNumberStatus;
+  vatNumberCheckedAt: string;
+  transactionNature: "Goederen" | "Diensten";
+  language: import("@/lib/language").RelationLanguage;
+  paymentDays: number;
+  status: SupplierStatus;
+};
+
 export type NamedMasterData = {
   id: string;
   code: string;
   name: string;
   isActive: boolean;
 };
-
 export type CollectionStatus = "Concept" | "Actief" | "Gearchiveerd";
 
-export type Collection = {
-  id: string;
-  code: string;
-  name: string;
+export type Collection = MasterDataItem & {
   season: string;
   year: number;
   status: CollectionStatus;
@@ -91,115 +111,20 @@ const initialNames: Record<MasterDataEntity, string[]> = {
     "Bruin",
     "Beige",
   ],
-  sizes: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "34", "36", "38", "40", "42", "44"],
+  sizes: ["XXS","XS","S","M","L","XL","XXL","34","36","38","40","42","44"],
   seasons: ["Voorjaar/Zomer", "Herfst/Winter", "Doorlopend"],
   countries: [
-    "Albanië",
-    "Andorra",
-    "Armenië",
-    "Azerbeidzjan",
-    "België",
-    "Bosnië en Herzegovina",
-    "Bulgarije",
-    "Cyprus",
-    "Denemarken",
-    "Duitsland",
-    "Estland",
-    "Finland",
-    "Frankrijk",
-    "Georgië",
-    "Griekenland",
-    "Hongarije",
-    "Ierland",
-    "IJsland",
-    "Italië",
-    "Kazachstan",
-    "Kosovo",
-    "Kroatië",
-    "Letland",
-    "Liechtenstein",
-    "Litouwen",
-    "Luxemburg",
-    "Malta",
-    "Moldavië",
-    "Monaco",
-    "Montenegro",
     "Nederland",
-    "Noord-Macedonië",
-    "Noorwegen",
-    "Oekraïne",
-    "Oostenrijk",
-    "Polen",
+    "België",
+    "Duitsland",
     "Portugal",
-    "Roemenië",
-    "Rusland",
-    "San Marino",
-    "Servië",
-    "Slovenië",
-    "Slowakije",
+    "Italië",
     "Spanje",
-    "Tsjechië",
     "Turkije",
-    "Vaticaanstad",
-    "Verenigd Koninkrijk",
-    "Wit-Rusland",
-    "Zweden",
-    "Zwitserland",
+    "China",
+    "India",
+    "Bangladesh",
   ],
-};
-
-const countryIsoCodes: Record<string, string> = {
-  "Albanië": "AL",
-  Andorra: "AD",
-  "Armenië": "AM",
-  Azerbeidzjan: "AZ",
-  "België": "BE",
-  "Bosnië en Herzegovina": "BA",
-  Bulgarije: "BG",
-  Cyprus: "CY",
-  Denemarken: "DK",
-  Duitsland: "DE",
-  Estland: "EE",
-  Finland: "FI",
-  Frankrijk: "FR",
-  "Georgië": "GE",
-  Griekenland: "GR",
-  Hongarije: "HU",
-  Ierland: "IE",
-  IJsland: "IS",
-  "Italië": "IT",
-  Kazachstan: "KZ",
-  Kosovo: "XK",
-  "Kroatië": "HR",
-  Letland: "LV",
-  Liechtenstein: "LI",
-  Litouwen: "LT",
-  Luxemburg: "LU",
-  Malta: "MT",
-  "Moldavië": "MD",
-  Monaco: "MC",
-  Montenegro: "ME",
-  Nederland: "NL",
-  "Noord-Macedonië": "MK",
-  Noorwegen: "NO",
-  "Oekraïne": "UA",
-  Oostenrijk: "AT",
-  Polen: "PL",
-  Portugal: "PT",
-  "Roemenië": "RO",
-  Rusland: "RU",
-  "San Marino": "SM",
-  "Servië": "RS",
-  "Slovenië": "SI",
-  "Slowakije": "SK",
-  Spanje: "ES",
-  "Tsjechië": "CZ",
-  Turkije: "TR",
-  Vaticaanstad: "VA",
-  "Verenigd Koninkrijk": "GB",
-  "Wit-Rusland": "BY",
-  Zweden: "SE",
-  Zwitserland: "CH",
 };
 
 function slug(value: string) {
@@ -215,10 +140,6 @@ export function createMasterId(prefix: string, value: string) {
   return `${prefix}-${slug(value)}-${Date.now()}`;
 }
 
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
 function createInitialStore(): Record<MasterDataEntity, MasterDataItem[]> {
   const now = new Date().toISOString();
 
@@ -227,10 +148,7 @@ function createInitialStore(): Record<MasterDataEntity, MasterDataItem[]> {
       entity,
       names.map((name, index) => ({
         id: `${entity}-${slug(name)}`,
-        code:
-          entity === "countries"
-            ? countryIsoCodes[name] ?? slug(name).toUpperCase().replace(/-/g, "_")
-            : slug(name).toUpperCase().replace(/-/g, "_"),
+        code: slug(name).toUpperCase().replace(/-/g, "_"),
         name,
         active: true,
         sortOrder: index + 1,
@@ -242,35 +160,33 @@ function createInitialStore(): Record<MasterDataEntity, MasterDataItem[]> {
   ) as Record<MasterDataEntity, MasterDataItem[]>;
 }
 
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
 export function getMasterDataStore(): Record<MasterDataEntity, MasterDataItem[]> {
   const fallback = createInitialStore();
-  if (!isBrowser()) return fallback;
+
+  if (!isBrowser()) {
+    return fallback;
+  }
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
+
   if (!raw) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
     return fallback;
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<Record<MasterDataEntity, MasterDataItem[]>>;
+    const parsed = JSON.parse(raw) as Partial<
+      Record<MasterDataEntity, MasterDataItem[]>
+    >;
 
     return Object.fromEntries(
       (Object.keys(initialNames) as MasterDataEntity[]).map((entity) => [
         entity,
-        Array.isArray(parsed[entity])
-          ? [
-              ...parsed[entity]!,
-              ...fallback[entity].filter(
-                (fallbackItem) =>
-                  !parsed[entity]!.some(
-                    (storedItem) =>
-                      storedItem.name.toLowerCase() ===
-                      fallbackItem.name.toLowerCase(),
-                  ),
-              ),
-            ]
-          : fallback[entity],
+        Array.isArray(parsed[entity]) ? parsed[entity] : fallback[entity],
       ]),
     ) as Record<MasterDataEntity, MasterDataItem[]>;
   } catch {
@@ -279,34 +195,54 @@ export function getMasterDataStore(): Record<MasterDataEntity, MasterDataItem[]>
   }
 }
 
-function saveMasterDataStore(store: Record<MasterDataEntity, MasterDataItem[]>) {
-  if (!isBrowser()) return;
+function saveMasterDataStore(
+  store: Record<MasterDataEntity, MasterDataItem[]>,
+) {
+  if (!isBrowser()) {
+    return;
+  }
+
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 
-export function getMasterDataItems(entity: MasterDataEntity, includeInactive = false) {
+export function getMasterDataItems(
+  entity: MasterDataEntity,
+  includeInactive = false,
+) {
   return getMasterDataStore()[entity]
     .filter((item) => includeInactive || item.active)
     .sort(
       (left, right) =>
-        left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "nl"),
+        left.sortOrder - right.sortOrder ||
+        left.name.localeCompare(right.name, "nl"),
     );
 }
 
-export function addMasterDataItem(entity: MasterDataEntity, name: string, code?: string) {
+export function addMasterDataItem(
+  entity: MasterDataEntity,
+  name: string,
+  code?: string,
+) {
   const cleanName = name.trim();
-  if (!cleanName) throw new Error("Naam is verplicht.");
+
+  if (!cleanName) {
+    throw new Error("Naam is verplicht.");
+  }
 
   const store = getMasterDataStore();
   const existing = store[entity].find(
     (item) => item.name.toLowerCase() === cleanName.toLowerCase(),
   );
-  if (existing) return existing;
+
+  if (existing) {
+    return existing;
+  }
 
   const now = new Date().toISOString();
+
   const item: MasterDataItem = {
-    id: createMasterId(entity, cleanName),
+    id: `${entity}-${slug(cleanName)}-${Date.now()}`,
     code: code?.trim() || slug(cleanName).toUpperCase().replace(/-/g, "_"),
     name: cleanName,
     active: true,
@@ -318,31 +254,49 @@ export function addMasterDataItem(entity: MasterDataEntity, name: string, code?:
 
   store[entity] = [...store[entity], item];
   saveMasterDataStore(store);
+
   return item;
 }
 
 export function updateMasterDataItem(
   entity: MasterDataEntity,
   id: string,
-  changes: Partial<Pick<MasterDataItem, "code" | "name" | "active" | "sortOrder" | "notes">>,
+  changes: Partial<
+    Pick<MasterDataItem, "code" | "name" | "active" | "sortOrder" | "notes">
+  >,
 ) {
   const store = getMasterDataStore();
+
   store[entity] = store[entity].map((item) =>
-    item.id === id ? { ...item, ...changes, updatedAt: new Date().toISOString() } : item,
+    item.id === id
+      ? {
+          ...item,
+          ...changes,
+          updatedAt: new Date().toISOString(),
+        }
+      : item,
   );
+
   saveMasterDataStore(store);
 }
 
-export function deleteMasterDataItem(entity: MasterDataEntity, id: string) {
+export function deleteMasterDataItem(
+  entity: MasterDataEntity,
+  id: string,
+) {
   const store = getMasterDataStore();
+
   store[entity] = store[entity].filter((item) => item.id !== id);
   saveMasterDataStore(store);
 }
 
 export function subscribeToMasterData(callback: () => void) {
-  if (!isBrowser()) return () => undefined;
+  if (!isBrowser()) {
+    return () => undefined;
+  }
 
   const listener = () => callback();
+
   window.addEventListener(CHANGE_EVENT, listener);
   window.addEventListener("storage", listener);
 
@@ -351,6 +305,145 @@ export function subscribeToMasterData(callback: () => void) {
     window.removeEventListener("storage", listener);
   };
 }
+
+export type CustomerStatus = "Actief" | "Inactief";
+
+export type Customer = {
+  id: string;
+  customerNumber: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  chamberOfCommerceNumber: string;
+  customerType: import("@/lib/vat-engine").CustomerType;
+  vatNumber: string;
+  vatNumberStatus: import("@/lib/vat-engine").VatNumberStatus;
+  vatNumberCheckedAt: string;
+  transactionNature: "Goederen" | "Diensten";
+  language: import("@/lib/language").RelationLanguage;
+  paymentDays: number;
+  paymentDiscountPercentage: number;
+  paymentDiscountDays: number;
+  discountPercentage: number;
+  priceListId: string;
+  status: CustomerStatus;
+};
+
+export type CustomerMasterData = Customer;
+
+function normalizeCustomer(
+  value: Partial<Customer> & Record<string, unknown>,
+  index: number,
+): Customer {
+  return {
+    id: typeof value.id === "string" ? value.id : `customer-${index + 1}`,
+    customerNumber:
+      typeof value.customerNumber === "string"
+        ? value.customerNumber
+        : `KLT-${String(index + 1).padStart(4, "0")}`,
+    companyName:
+      typeof value.companyName === "string"
+        ? value.companyName
+        : typeof value.name === "string"
+          ? value.name
+          : "Onbekende klant",
+    contactPerson:
+      typeof value.contactPerson === "string" ? value.contactPerson : "",
+    email: typeof value.email === "string" ? value.email : "",
+    phone: typeof value.phone === "string" ? value.phone : "",
+    address: typeof value.address === "string" ? value.address : "",
+    postalCode: typeof value.postalCode === "string" ? value.postalCode : "",
+    city: typeof value.city === "string" ? value.city : "",
+    country: typeof value.country === "string" ? value.country : "Nederland",
+    chamberOfCommerceNumber:
+      typeof value.chamberOfCommerceNumber === "string"
+        ? value.chamberOfCommerceNumber
+        : "",
+    customerType: value.customerType ?? "Zakelijk",
+    vatNumber: typeof value.vatNumber === "string" ? value.vatNumber : "",
+    vatNumberStatus: value.vatNumberStatus ?? "Niet gecontroleerd",
+    vatNumberCheckedAt:
+      typeof value.vatNumberCheckedAt === "string" ? value.vatNumberCheckedAt : "",
+    transactionNature: value.transactionNature ?? "Goederen",
+    language: value.language ?? "Nederlands",
+    paymentDays: typeof value.paymentDays === "number" ? value.paymentDays : 30,
+    paymentDiscountPercentage:
+      typeof value.paymentDiscountPercentage === "number"
+        ? value.paymentDiscountPercentage
+        : 0,
+    paymentDiscountDays:
+      typeof value.paymentDiscountDays === "number" ? value.paymentDiscountDays : 0,
+    discountPercentage:
+      typeof value.discountPercentage === "number" ? value.discountPercentage : 0,
+    priceListId:
+      typeof value.priceListId === "string"
+        ? value.priceListId
+        : "price-list-standard",
+    status: value.status === "Inactief" ? "Inactief" : "Actief",
+  };
+}
+
+export function getCustomers(): Customer[] {
+  if (!isBrowser()) {
+    return [];
+  }
+
+  const possibleKeys = [
+    "stitch-customers",
+    "stitch-customers-v1",
+    "fashion-erp-customers",
+    "customers",
+  ];
+
+  for (const key of possibleKeys) {
+    const raw = window.localStorage.getItem(key);
+
+    if (!raw) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      const values = Array.isArray(parsed)
+        ? parsed
+        : parsed &&
+            typeof parsed === "object" &&
+            Array.isArray((parsed as { customers?: unknown[] }).customers)
+          ? (parsed as { customers: unknown[] }).customers
+          : null;
+
+      if (values) {
+        return values.map((value, index) =>
+          normalizeCustomer(
+            value && typeof value === "object"
+              ? (value as Partial<Customer> & Record<string, unknown>)
+              : {},
+            index,
+          ),
+        );
+      }
+    } catch {
+      // Probeer de volgende opslaglocatie.
+    }
+  }
+
+  return [];
+}
+
+export function saveCustomers(customers: Customer[]) {
+  if (!isBrowser()) {
+    return;
+  }
+
+  window.localStorage.setItem("stitch-customers", JSON.stringify(customers));
+  window.dispatchEvent(new CustomEvent("stitch-customers-change"));
+}
+
 
 function toNamedMasterData(item: MasterDataItem): NamedMasterData {
   return {
@@ -361,41 +454,60 @@ function toNamedMasterData(item: MasterDataItem): NamedMasterData {
   };
 }
 
-function saveNamedMasterData(entity: MasterDataEntity, items: NamedMasterData[]) {
-  const store = getMasterDataStore();
-  const now = new Date().toISOString();
-  const existingById = new Map(store[entity].map((item) => [item.id, item]));
 
-  store[entity] = items.map((item, index) => {
-    const existing = existingById.get(item.id);
+export const getBrands = () => getMasterDataItems("brands").map(toNamedMasterData);
+
+export const getSuppliers = (): Supplier[] =>
+  getMasterDataItems("suppliers", true).map((item, index) => {
+    const stored = item as MasterDataItem & Partial<Supplier>;
+
     return {
       id: item.id,
-      code: item.code,
-      name: item.name,
-      active: item.isActive,
-      sortOrder: existing?.sortOrder ?? index + 1,
-      notes: existing?.notes ?? "",
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
+      supplierNumber:
+        stored.supplierNumber ?? `LEV-${String(index + 1).padStart(4, "0")}`,
+      companyName: stored.companyName ?? item.name,
+      contactPerson: stored.contactPerson ?? "",
+      email: stored.email ?? "",
+      phone: stored.phone ?? "",
+      country: stored.country ?? "Nederland",
+      customerType: stored.customerType ?? "Zakelijk",
+      vatNumber: stored.vatNumber ?? "",
+      vatNumberStatus: stored.vatNumberStatus ?? "Niet gecontroleerd",
+      vatNumberCheckedAt: stored.vatNumberCheckedAt ?? "",
+      transactionNature: stored.transactionNature ?? "Goederen",
+      language: stored.language ?? "Nederlands",
+      paymentDays: stored.paymentDays ?? 30,
+      status: stored.status ?? (item.active ? "Actief" : "Inactief"),
     };
   });
 
+export function saveSuppliers(suppliers: Supplier[]) {
+  const store = getMasterDataStore();
+  const now = new Date().toISOString();
+
+  store.suppliers = suppliers.map((supplier, index) => ({
+    ...supplier,
+    code: supplier.supplierNumber,
+    name: supplier.companyName,
+    active: supplier.status === "Actief",
+    sortOrder: index + 1,
+    notes: "",
+    createdAt:
+      (supplier as Supplier & Partial<MasterDataItem>).createdAt ?? now,
+    updatedAt: now,
+  }));
+
   saveMasterDataStore(store);
 }
-
-export const getBrands = () => getMasterDataItems("brands", true).map(toNamedMasterData);
-export const saveBrands = (items: NamedMasterData[]) => saveNamedMasterData("brands", items);
 
 export function getCollections(): Collection[] {
   const currentYear = new Date().getFullYear();
 
   return getMasterDataItems("collections", true).map((item) => {
-    const stored = item as MasterDataItem & Partial<Collection>;
+    const stored = item as Partial<Collection>;
 
     return {
-      id: item.id,
-      code: item.code,
-      name: item.name,
+      ...item,
       season: stored.season ?? "Doorlopend",
       year: stored.year ?? currentYear,
       status: stored.status ?? (item.active ? "Actief" : "Gearchiveerd"),
@@ -408,67 +520,29 @@ export function getCollections(): Collection[] {
 export function saveCollections(collections: Collection[]) {
   const store = getMasterDataStore();
   const now = new Date().toISOString();
-  const existingById = new Map(store.collections.map((item) => [item.id, item]));
 
-  store.collections = collections.map((collection, index) => {
-    const existing = existingById.get(collection.id);
-
-    return {
-      id: collection.id,
-      code: collection.code,
-      name: collection.name,
-      active: collection.status !== "Gearchiveerd",
-      sortOrder: existing?.sortOrder ?? index + 1,
-      notes: existing?.notes ?? "",
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-      season: collection.season,
-      year: collection.year,
-      status: collection.status,
-      startDate: collection.startDate,
-      endDate: collection.endDate,
-    } as MasterDataItem;
-  });
+  store.collections = collections.map((collection, index) => ({
+    ...collection,
+    active: collection.status !== "Gearchiveerd",
+    sortOrder: collection.sortOrder || index + 1,
+    notes: collection.notes || "",
+    createdAt: collection.createdAt || now,
+    updatedAt: now,
+  }));
 
   saveMasterDataStore(store);
 }
 
-export const getProductTypes = () => getMasterDataItems("productTypes", true).map(toNamedMasterData);
-export const saveProductTypes = (items: NamedMasterData[]) => saveNamedMasterData("productTypes", items);
+export const getProductTypes = () => getMasterDataItems("productTypes").map(toNamedMasterData);
 
 export const getCategories = () => getMasterDataItems("categories", true).map(toNamedMasterData);
-export const saveCategories = (items: NamedMasterData[]) => saveNamedMasterData("categories", items);
 
-export const getMaterials = () => getMasterDataItems("materials", true).map(toNamedMasterData);
-export const saveMaterials = (items: NamedMasterData[]) => saveNamedMasterData("materials", items);
+export const getMaterials = () => getMasterDataItems("materials").map(toNamedMasterData);
 
-export const getFits = () => getMasterDataItems("fits", true).map(toNamedMasterData);
-export const saveFits = (items: NamedMasterData[]) => saveNamedMasterData("fits", items);
+export const getFits = () => getMasterDataItems("fits").map(toNamedMasterData);
 
-export const getCountries = () => getMasterDataItems("countries", true).map(toNamedMasterData);
-export const saveCountries = (items: NamedMasterData[]) => saveNamedMasterData("countries", items);
+export const getCountries = () => getMasterDataItems("countries").map(toNamedMasterData);
 
 export const getColors = () => getMasterDataItems("colorFamilies", true).map(toNamedMasterData);
-export const saveColors = (items: NamedMasterData[]) => saveNamedMasterData("colorFamilies", items);
 
 export const getSizes = () => getMasterDataItems("sizes", true).map(toNamedMasterData);
-export const saveSizes = (items: NamedMasterData[]) => saveNamedMasterData("sizes", items);
-
-export const getSeasons = () => getMasterDataItems("seasons", true).map(toNamedMasterData);
-export const saveSeasons = (items: NamedMasterData[]) => saveNamedMasterData("seasons", items);
-
-
-// Tijdelijke compatibiliteit voor modules die nog vanuit master-data importeren.
-export {
-  getCustomers,
-  saveCustomers,
-  subscribeToCustomers,
-} from "@/lib/customers";
-export type { Customer, CustomerMasterData } from "@/lib/customers";
-
-export {
-  getSuppliers,
-  saveSuppliers,
-  subscribeToSuppliers,
-} from "@/lib/suppliers";
-export type { Supplier } from "@/lib/suppliers";
