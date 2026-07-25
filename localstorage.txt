@@ -1,0 +1,116 @@
+src/app/instellingen/import-center/artikelen/page.tsx:156:      window.localStorage.setItem("fashion-erp-article-import-history-v1",JSON.stringify([{id:`import-${Date.now()}`,fileName,createdAt:new Date().toISOString(),...importResult},...JSON.parse(window.localStorage.getItem("fashion-erp-article-import-history-v1")||"[]")].slice(0,100)));
+src/app/klanten/page.tsx:280:    const value = window.localStorage.getItem(CRM_STORAGE_KEY);
+src/app/klanten/page.tsx:288:  window.localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(map));
+src/lib/inventory.ts:122:  const stored = window.localStorage.getItem(
+src/lib/inventory.ts:148:    window.localStorage.removeItem(
+src/lib/inventory.ts:165:  window.localStorage.setItem(
+src/lib/inventory.ts:176:  const stored = window.localStorage.getItem(
+src/lib/inventory.ts:187:    window.localStorage.removeItem(
+src/lib/inventory.ts:201:  window.localStorage.setItem(
+src/lib/company-settings.ts:185:  const stored = window.localStorage.getItem(storageKey);
+src/lib/company-settings.ts:196:    window.localStorage.removeItem(storageKey);
+src/lib/company-settings.ts:214:  window.localStorage.setItem(
+src/lib/production.ts:90:  const stored = window.localStorage.getItem(
+src/lib/production.ts:101:    window.localStorage.removeItem(storageKey);
+src/lib/production.ts:111:  window.localStorage.setItem(
+src/lib/number-series.ts:57:  const stored = window.localStorage.getItem(storageKey);
+src/lib/number-series.ts:67:    window.localStorage.removeItem(storageKey);
+src/lib/number-series.ts:80:  window.localStorage.setItem(storageKey, JSON.stringify(normalized));
+src/lib/purchasing.ts:186:  const stored = window.localStorage.getItem(
+src/lib/purchasing.ts:201:    window.localStorage.removeItem(orderStorageKey);
+src/lib/purchasing.ts:213:  window.localStorage.setItem(
+src/lib/purchasing.ts:224:  const stored = window.localStorage.getItem(
+src/lib/purchasing.ts:235:    window.localStorage.removeItem(
+src/lib/purchasing.ts:249:  window.localStorage.setItem(
+src/lib/invoices.ts:151:  const stored = window.localStorage.getItem(storageKey);
+src/lib/invoices.ts:219:    window.localStorage.removeItem(storageKey);
+src/lib/invoices.ts:225:  window.localStorage.setItem(
+src/lib/suppliers.ts:249:  const raw = window.localStorage.getItem(MASTER_DATA_STORAGE_KEY);
+src/lib/articles.ts:595:    window.localStorage.getItem(pricingMigrationKey) ===
+src/lib/articles.ts:629:  window.localStorage.setItem(pricingMigrationKey, "done");
+src/lib/articles.ts:655:  const stored = window.localStorage.getItem(storageKey);
+src/lib/articles.ts:664:      window.localStorage.removeItem(storageKey);
+src/lib/articles.ts:669:    window.localStorage.getItem(previousStorageKey);
+src/lib/articles.ts:682:      window.localStorage.setItem(
+src/lib/articles.ts:688:      window.localStorage.removeItem(previousStorageKey);
+src/lib/articles.ts:693:    window.localStorage.getItem(legacyStorageKey);
+src/lib/articles.ts:708:      window.localStorage.removeItem(legacyStorageKey);
+src/lib/articles.ts:721:  window.localStorage.setItem(
+src/lib/barcodes.ts:323:  const stored = window.localStorage.getItem(
+src/lib/barcodes.ts:362:    window.localStorage.removeItem(
+src/lib/barcodes.ts:377:  window.localStorage.setItem(
+src/lib/barcodes.ts:812:  const stored = window.localStorage.getItem(
+src/lib/barcodes.ts:823:    window.localStorage.removeItem(
+src/lib/barcodes.ts:838:  window.localStorage.setItem(
+src/lib/permissions.ts:57:    (window.localStorage.getItem(
+src/lib/permissions.ts:65:  window.localStorage.setItem(
+src/lib/pricing-professional.ts:85:  const stored = window.localStorage.getItem(key);
+src/lib/pricing-professional.ts:90:    window.localStorage.removeItem(key);
+src/lib/pricing-professional.ts:97:  window.localStorage.setItem(key, JSON.stringify(values));
+src/lib/master-data.ts:249:  const raw = window.localStorage.getItem(STORAGE_KEY);
+src/lib/master-data.ts:251:    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+src/lib/master-data.ts:277:    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+src/lib/master-data.ts:284:  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+src/lib/language.ts:41:  const value = window.localStorage.getItem(
+src/lib/language.ts:53:  window.localStorage.setItem(
+src/lib/storage.ts:12:    const raw = window.localStorage.getItem(key);
+src/lib/storage.ts:43:  window.localStorage.setItem(key, JSON.stringify(items));
+src/lib/module-settings.ts:19:  const stored = window.localStorage.getItem(
+src/lib/module-settings.ts:35:    window.localStorage.removeItem(storageKey);
+src/lib/module-settings.ts:44:    window.localStorage.setItem(
+src/lib/price-lists.ts:76:  const stored = window.localStorage.getItem(key);
+src/lib/price-lists.ts:78:    window.localStorage.setItem(key, JSON.stringify(fallback));
+src/lib/price-lists.ts:85:    window.localStorage.setItem(key, JSON.stringify(fallback));
+src/lib/price-lists.ts:92:  window.localStorage.setItem(key, JSON.stringify(values));
+src/lib/exact-bridge.ts:153:  const stored = window.localStorage.getItem(key);
+src/lib/exact-bridge.ts:162:    window.localStorage.removeItem(key);
+src/lib/exact-bridge.ts:172:  const stored = window.localStorage.getItem(key);
+src/lib/exact-bridge.ts:181:    window.localStorage.removeItem(key);
+src/lib/exact-bridge.ts:191:  window.localStorage.setItem(
+src/lib/exact-bridge.ts:202:  window.localStorage.setItem(
+src/lib/debtor-management.ts:54:  const stored = window.localStorage.getItem(
+src/lib/debtor-management.ts:65:    window.localStorage.removeItem(reminderLogKey);
+src/lib/debtor-management.ts:75:  window.localStorage.setItem(
+src/lib/pricing-promotions.ts:34:  const stored = window.localStorage.getItem(storageKey);
+src/lib/pricing-promotions.ts:39:    window.localStorage.removeItem(storageKey);
+src/lib/pricing-promotions.ts:46:  window.localStorage.setItem(
+src/lib/history-engine.ts:68:  const stored = window.localStorage.getItem(
+src/lib/history-engine.ts:79:    window.localStorage.removeItem(storageKey);
+src/lib/history-engine.ts:98:  window.localStorage.setItem(
+src/lib/history-engine.ts:121:  window.localStorage.setItem(
+src/lib/pricing-history.ts:65:  const stored = window.localStorage.getItem(storageKey);
+src/lib/pricing-history.ts:74:    window.localStorage.removeItem(storageKey);
+src/lib/pricing-history.ts:84:  window.localStorage.setItem(storageKey, JSON.stringify(entries));
+src/lib/returns.ts:160:  const stored = window.localStorage.getItem(key);
+src/lib/returns.ts:169:    window.localStorage.removeItem(key);
+src/lib/returns.ts:179:  window.localStorage.setItem(
+src/lib/product-media.ts:27:    const raw = window.localStorage.getItem(storageKey);
+src/lib/product-media.ts:37:  window.localStorage.setItem(storageKey, JSON.stringify(items));
+src/lib/scheduled-prices.ts:49:  const stored = window.localStorage.getItem(storageKey);
+src/lib/scheduled-prices.ts:72:    window.localStorage.removeItem(storageKey);
+src/lib/scheduled-prices.ts:82:  window.localStorage.setItem(
+src/lib/ean-center.ts:100:  const raw = window.localStorage.getItem(storageKey);
+src/lib/ean-center.ts:107:    window.localStorage.removeItem(storageKey);
+src/lib/ean-center.ts:127:  window.localStorage.setItem(storageKey, JSON.stringify(items));
+src/lib/sales.ts:166:    window.localStorage.getItem(storageKey);
+src/lib/sales.ts:179:    window.localStorage.removeItem(storageKey);
+src/lib/sales.ts:191:  window.localStorage.setItem(
+src/lib/users.ts:45:  const stored = window.localStorage.getItem(storageKey);
+src/lib/users.ts:55:  window.localStorage.setItem(
+src/lib/branding.ts:34:  const stored = window.localStorage.getItem(storageKey);
+src/lib/branding.ts:53:  window.localStorage.setItem(
+src/lib/backup.ts:102:  for (let index = 0; index < window.localStorage.length; index += 1) {
+src/lib/backup.ts:103:    const key = window.localStorage.key(index);
+src/lib/backup.ts:106:    const value = window.localStorage.getItem(key) ?? "";
+src/lib/backup.ts:129:  for (let index = 0; index < window.localStorage.length; index += 1) {
+src/lib/backup.ts:130:    const key = window.localStorage.key(index);
+src/lib/backup.ts:134:    entries[key] = window.localStorage.getItem(key) ?? "";
+src/lib/backup.ts:192:    window.localStorage.setItem(key, value as string);
+src/lib/warehouse.ts:181:  const stored = window.localStorage.getItem(key);
+src/lib/warehouse.ts:190:    window.localStorage.removeItem(key);
+src/lib/warehouse.ts:200:  window.localStorage.setItem(
+src/lib/document-emails.ts:1092:  const stored = window.localStorage.getItem(
+src/lib/document-emails.ts:1105:    window.localStorage.removeItem(
+src/lib/document-emails.ts:1120:  window.localStorage.setItem(
+src/lib/communication-settings.ts:127:    const stored = window.localStorage.getItem(storageKey);
+src/lib/communication-settings.ts:142:    window.localStorage.setItem(storageKey, JSON.stringify(normalized));

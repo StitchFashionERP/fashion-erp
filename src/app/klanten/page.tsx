@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { createMasterId } from "@/lib/master-data";
-import { getCustomers, saveCustomers, type Customer } from "@/lib/customers";
+import { deleteCustomerCloud, getCustomers, saveCustomerCloud, type Customer } from "@/lib/customers";
 import { getPriceLists } from "@/lib/price-lists";
 import { getCustomerHistoryCheck } from "@/lib/relation-history";
 import { relationLanguages, type RelationLanguage } from "@/lib/language";
@@ -140,7 +140,6 @@ const tabs: CustomerTab[] = [
 const contactRoles: ContactRole[] = ["Algemeen", "Inkoop", "Verkoop", "Financieel", "Logistiek"];
 const addressTypes: AddressType[] = ["Bezoekadres", "Factuuradres", "Afleveradres", "Overig"];
 const documentTypes: DocumentType[] = ["Contract", "Prijslijst", "Certificaat", "Overig"];
-const CRM_STORAGE_KEY = "stitch-customer-crm-v1";
 
 const emptyForm: CustomerForm = {
   companyName: "",
@@ -274,20 +273,6 @@ function emptyCrm(customer?: Customer): CustomerCrm {
   };
 }
 
-function readCrmMap(): Record<string, CustomerCrm> {
-  if (typeof window === "undefined") return {};
-  try {
-    const value = window.localStorage.getItem(CRM_STORAGE_KEY);
-    return value ? JSON.parse(value) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeCrmMap(map: Record<string, CustomerCrm>) {
-  window.localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(map));
-}
-
 export default function CustomersPage() {
   const [items, setItems] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
@@ -319,9 +304,19 @@ export default function CustomersPage() {
   const outstanding = customerInvoices.filter((item) => !["Betaald", "Gecrediteerd"].includes(item.status)).reduce((sum, item) => sum + Math.max(0, item.total - item.payments.reduce((paid, payment) => paid + payment.amount, 0)), 0);
 
   useEffect(() => {
-    setItems(getCustomers());
+    let active = true;
+    void getCustomers()
+      .then((customers) => {
+        if (active) setItems(customers);
+      })
+      .catch((caughtError) => {
+        if (active) setError(caughtError instanceof Error ? caughtError.message : "Klanten ophalen is niet gelukt.");
+      });
     setOrders(getSalesOrders() as unknown as CustomerOrder[]);
     setInvoices(getInvoices());
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -332,19 +327,12 @@ export default function CustomersPage() {
     });
   }, [items, search, statusFilter]);
 
-  function commit(nextItems: Customer[]) {
-    setItems(nextItems);
-    saveCustomers(nextItems);
-  }
 
   function updateForm(changes: Partial<CustomerForm>) {
     setForm((current) => ({ ...current, ...changes }));
   }
 
-  function persistCrm(customerId: string, nextCrm: CustomerCrm) {
-    const map = readCrmMap();
-    map[customerId] = nextCrm;
-    writeCrmMap(map);
+  function persistCrm(_customerId: string, nextCrm: CustomerCrm) {
     setCrm(nextCrm);
   }
 
@@ -367,10 +355,9 @@ export default function CustomersPage() {
   }
 
   function startEdit(customer: Customer) {
-    const stored = readCrmMap()[customer.id];
     setEditingId(customer.id);
     setForm(customerToForm(customer));
-    setCrm(stored || emptyCrm(customer));
+    setCrm((customer.crm as CustomerCrm | null) || emptyCrm(customer));
     setShowForm(true);
     setActiveTab("Algemeen");
     setMessage("");
@@ -383,7 +370,7 @@ export default function CustomersPage() {
     if (!isNetherlands(form.country) && !form.vatNumber.trim()) throw new Error("Bij een buitenlandse klant is het buitenlandse btw-nummer verplicht.");
   }
 
-  function saveCustomer() {
+  async function saveCustomer() {
     try {
       validate();
       const checkedAt = form.vatNumberStatus === "Geldig" ? today() : "";
@@ -416,7 +403,10 @@ export default function CustomersPage() {
         priceListId: form.priceListId,
         status: editingCustomer?.status || "Actief",
       };
-      commit(editingId ? items.map((item) => item.id === editingId ? nextCustomer : item) : [...items, nextCustomer]);
+      const savedCustomer = await saveCustomerCloud(nextCustomer, crm as unknown as Record<string, unknown>);
+      setItems((current) => editingId
+        ? current.map((item) => item.id === editingId ? savedCustomer : item)
+        : [...current, savedCustomer]);
       persistCrm(customerId, crm);
       setMessage(editingId ? "Klant bijgewerkt." : "Klant toegevoegd.");
       setEditingId(customerId);
@@ -461,15 +451,26 @@ export default function CustomersPage() {
     setNoteText("");
   }
 
-  function archiveCustomer(customer: Customer) {
-    commit(items.map((item) => item.id === customer.id ? { ...item, status: item.status === "Actief" ? "Inactief" : "Actief" } : item));
+  async function archiveCustomer(customer: Customer) {
+    try {
+      const nextCustomer = { ...customer, status: customer.status === "Actief" ? "Inactief" as const : "Actief" as const };
+      const savedCustomer = await saveCustomerCloud(nextCustomer, (customer.crm as Record<string, unknown> | null) || undefined);
+      setItems((current) => current.map((item) => item.id === customer.id ? savedCustomer : item));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Status wijzigen is niet gelukt.");
+    }
   }
 
-  function deleteCustomer(customer: Customer) {
+  async function deleteCustomer(customer: Customer) {
     const history = getCustomerHistoryCheck(customer.id);
     if (!history.canDelete) return setError(history.message);
     if (!window.confirm(`Klant ${customer.companyName} definitief verwijderen?`)) return;
-    commit(items.filter((item) => item.id !== customer.id));
+    try {
+      await deleteCustomerCloud(customer.id);
+      setItems((current) => current.filter((item) => item.id !== customer.id));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Verwijderen is niet gelukt.");
+    }
   }
 
   return (

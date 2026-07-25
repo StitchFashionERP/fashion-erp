@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useParams } from "next/navigation";
 import {
-  getSalesOrderById,
+  loadSalesOrderById,
   type SalesOrder,
 } from "@/lib/sales";
 import styles from "./packing-slip.module.css";
@@ -30,8 +30,7 @@ export default function PackingSlipPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setOrder(getSalesOrderById(params.id));
-    setLoaded(true);
+    void loadSalesOrderById(params.id).then(setOrder).finally(() => setLoaded(true));
   }, [params.id]);
 
   if (!loaded) {

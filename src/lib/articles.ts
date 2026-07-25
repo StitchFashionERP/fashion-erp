@@ -636,81 +636,22 @@ export function migrateProductsToPricingSettings(
 
 export function getStoredProducts(): Product[] {
   if (typeof window === "undefined") {
-    return defaultProducts.map((product) => ({
-      ...product,
-      vatCode: product.vatCode || "2V",
-      garmentType:
-        product.garmentType ||
-        product.category ||
-        "",
-      fit: product.fit || "",
-      colorFamily:
-        product.colorFamily || "",
-      seasonType:
-        product.seasonType ||
-        "Doorlopend",
-    }));
+    return [];
   }
 
   const stored = window.localStorage.getItem(storageKey);
-
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored) as Record<string, unknown>[];
-      const normalized = parsed.map(normalizeLegacyProduct);
-      saveProducts(normalized);
-      return normalized;
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
+  if (!stored) {
+    return [];
   }
 
-  const previousStored =
-    window.localStorage.getItem(previousStorageKey);
-
-  if (previousStored) {
-    try {
-      const previousProducts = JSON.parse(
-        previousStored,
-      ) as Record<string, unknown>[];
-
-      const migratedProducts = previousProducts.map(
-        normalizeLegacyProduct,
-      );
-
-      saveProducts(migratedProducts);
-      window.localStorage.setItem(
-        pricingMigrationKey,
-        "done",
-      );
-      return migratedProducts;
-    } catch {
-      window.localStorage.removeItem(previousStorageKey);
-    }
+  try {
+    return (JSON.parse(stored) as Record<string, unknown>[]).map(
+      normalizeLegacyProduct,
+    );
+  } catch {
+    window.localStorage.removeItem(storageKey);
+    return [];
   }
-
-  const legacyStored =
-    window.localStorage.getItem(legacyStorageKey);
-
-  if (legacyStored) {
-    try {
-      const legacyProducts = JSON.parse(
-        legacyStored,
-      ) as Record<string, unknown>[];
-
-      const migratedProducts = legacyProducts.map(
-        normalizeLegacyProduct,
-      );
-
-      saveProducts(migratedProducts);
-      return migratedProducts;
-    } catch {
-      window.localStorage.removeItem(legacyStorageKey);
-    }
-  }
-
-  saveProducts(defaultProducts);
-  return defaultProducts;
 }
 
 export function saveProducts(products: Product[]) {
@@ -718,24 +659,68 @@ export function saveProducts(products: Product[]) {
     return;
   }
 
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(products),
+  window.localStorage.setItem(storageKey, JSON.stringify(products));
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  const body = (await response.json().catch(() => null)) as
+    | { error?: string }
+    | T
+    | null;
+
+  if (!response.ok) {
+    const message =
+      body && typeof body === "object" && "error" in body
+        ? String(body.error ?? "De artikelbewerking is mislukt.")
+        : "De artikelbewerking is mislukt.";
+    throw new Error(message);
+  }
+
+  return body as T;
+}
+
+function replaceCachedProduct(product: Product) {
+  const products = getStoredProducts();
+  const exists = products.some((item) => item.id === product.id);
+  saveProducts(
+    exists
+      ? products.map((item) => (item.id === product.id ? product : item))
+      : [...products, product],
   );
+}
+
+export async function fetchProducts(): Promise<Product[]> {
+  const response = await fetch("/api/articles", {
+    method: "GET",
+    cache: "no-store",
+  });
+  const products = await parseResponse<Product[]>(response);
+  saveProducts(products);
+  return products;
+}
+
+export async function fetchProductById(id: string): Promise<Product | null> {
+  const response = await fetch(`/api/articles/${encodeURIComponent(id)}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  const product = await parseResponse<Product>(response);
+  replaceCachedProduct(product);
+  return product;
 }
 
 export function getProductById(id: string) {
-  return (
-    getStoredProducts().find(
-      (product) => product.id === id,
-    ) ?? null
-  );
+  return getStoredProducts().find((product) => product.id === id) ?? null;
 }
 
-export function addProduct(input: ProductInput) {
+export async function addProduct(input: ProductInput) {
   const now = new Date().toISOString();
-
-  const product: Product = {
+  const draft: Product = {
     id: createProductId(input.name, input.code),
     ...input,
     variants: generateVariants(input),
@@ -743,8 +728,13 @@ export function addProduct(input: ProductInput) {
     updatedAt: now,
   };
 
-  const products = getStoredProducts();
-  saveProducts([...products, product]);
+  const response = await fetch("/api/articles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(draft),
+  });
+  const product = await parseResponse<Product>(response);
+  replaceCachedProduct(product);
 
   recordPricingHistory({
     productId: product.id,
@@ -758,14 +748,9 @@ export function addProduct(input: ProductInput) {
   return product;
 }
 
-export function updateProduct(
-  id: string,
-  input: ProductInput,
-) {
-  const products = getStoredProducts();
-  const current = products.find(
-    (product) => product.id === id,
-  );
+export async function updateProduct(id: string, input: ProductInput) {
+  const current =
+    getProductById(id) ?? (await fetchProductById(id));
 
   if (!current) {
     throw new Error("Artikel niet gevonden.");
@@ -774,31 +759,29 @@ export function updateProduct(
   const updated: Product = {
     ...current,
     ...input,
-    variants: generateVariants(
-      input,
-      current.variants,
-    ),
+    variants: generateVariants(input, current.variants),
     updatedAt: new Date().toISOString(),
   };
 
-  saveProducts(
-    products.map((product) =>
-      product.id === id ? updated : product,
-    ),
-  );
+  const response = await fetch(`/api/articles/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updated),
+  });
+  const saved = await parseResponse<Product>(response);
+  replaceCachedProduct(saved);
 
   recordPricingHistory({
-    productId: updated.id,
-    productCode: updated.code,
-    productName: updated.name,
+    productId: saved.id,
+    productCode: saved.code,
+    productName: saved.name,
     action: "updated",
     before: getProductPricingSnapshot(current),
-    after: getProductPricingSnapshot(updated),
+    after: getProductPricingSnapshot(saved),
   });
 
-  return updated;
+  return saved;
 }
-
 
 export type BulkProductUpdate = {
   material?: string;
@@ -807,119 +790,74 @@ export type BulkProductUpdate = {
   status?: ProductStatus;
 };
 
-export function bulkUpdateProducts(
+export async function bulkUpdateProducts(
   ids: string[],
   changes: BulkProductUpdate,
 ) {
-  const selectedIds = new Set(ids);
-  const now = new Date().toISOString();
-  const products = getStoredProducts();
+  const products = await fetchProducts();
+  const selected = products.filter((product) => ids.includes(product.id));
 
-  const updatedProducts = products.map((product) => {
-    if (!selectedIds.has(product.id)) {
-      return product;
-    }
-
-    const updated: Product = {
-      ...product,
-      ...(changes.material !== undefined
-        ? { material: changes.material }
-        : {}),
-      ...(changes.collection !== undefined
-        ? { collection: changes.collection }
-        : {}),
-      ...(changes.garmentType !== undefined
-        ? { garmentType: changes.garmentType }
-        : {}),
-      ...(changes.status !== undefined
-        ? { status: changes.status }
-        : {}),
-      updatedAt: now,
-    };
-
-    if (changes.collection !== undefined) {
-      updated.variants = updated.variants.map((variant) => ({
-        ...variant,
-        sku: generateSku(
-          updated.collection,
-          updated.code,
-          variant.color,
-          variant.size,
-        ),
-      }));
-    }
-
-    return updated;
-  });
-
-  saveProducts(updatedProducts);
-  return updatedProducts.filter((product) =>
-    selectedIds.has(product.id),
+  return Promise.all(
+    selected.map((product) =>
+      updateProduct(product.id, {
+        ...product,
+        ...changes,
+        colors: [...product.colors],
+        sizes: [...product.sizes],
+      }),
+    ),
   );
 }
 
-export function setProductStatus(
+export async function setProductStatus(
   id: string,
   status: ProductStatus,
 ) {
-  const products = getStoredProducts();
-  const product = products.find(
-    (item) => item.id === id,
-  );
+  const product =
+    getProductById(id) ?? (await fetchProductById(id));
 
   if (!product) {
     throw new Error("Artikel niet gevonden.");
   }
 
-  const updated: Product = {
+  return updateProduct(id, {
     ...product,
     status,
-    updatedAt: new Date().toISOString(),
-  };
-
-  saveProducts(
-    products.map((item) =>
-      item.id === id ? updated : item,
-    ),
-  );
-
-  return updated;
+    colors: [...product.colors],
+    sizes: [...product.sizes],
+  });
 }
 
-export function deleteProduct(id: string) {
-  const products = getStoredProducts();
-
-  saveProducts(
-    products.filter((product) => product.id !== id),
-  );
+export async function deleteProduct(id: string) {
+  const response = await fetch(`/api/articles/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  await parseResponse<{ ok: true }>(response);
+  saveProducts(getStoredProducts().filter((product) => product.id !== id));
 }
 
-export function duplicateProduct(id: string) {
-  const source = getProductById(id);
+export async function duplicateProduct(id: string) {
+  const source =
+    getProductById(id) ?? (await fetchProductById(id));
 
   if (!source) {
     throw new Error("Artikel niet gevonden.");
   }
 
   const products = getStoredProducts();
-
   let newCode = `${source.code}-COPY`;
   let counter = 2;
 
   while (
     products.some(
-      (product) =>
-        product.code.toLowerCase() ===
-        newCode.toLowerCase(),
+      (product) => product.code.toLowerCase() === newCode.toLowerCase(),
     )
   ) {
     newCode = `${source.code}-COPY-${counter}`;
     counter += 1;
   }
 
-  const now = new Date().toISOString();
-
-  const duplicateInput: ProductInput = {
+  return addProduct({
     code: newCode,
     name: `${source.name} kopie`,
     collection: source.collection,
@@ -947,36 +885,19 @@ export function duplicateProduct(id: string) {
     colors: [...source.colors],
     sizes: [...source.sizes],
     stockByVariant: {},
-  };
-
-  const duplicate: Product = {
-    id: createProductId(
-      duplicateInput.name,
-      duplicateInput.code,
-    ),
-    ...duplicateInput,
-    variants: generateVariants(duplicateInput),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  saveProducts([...products, duplicate]);
-
-  return duplicate;
+  });
 }
 
 export function getProductStock(product: Product) {
   return product.variants.reduce(
-    (total, variant) =>
-      total + variant.physicalStock,
+    (total, variant) => total + variant.physicalStock,
     0,
   );
 }
 
 export function getReservedStock(product: Product) {
   return product.variants.reduce(
-    (total, variant) =>
-      total + variant.reservedStock,
+    (total, variant) => total + variant.reservedStock,
     0,
   );
 }

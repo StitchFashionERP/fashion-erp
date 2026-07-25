@@ -9,7 +9,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  getSalesOrders,
+  loadSalesOrders,
   getSalesOrderTotals,
   type SalesOrder,
   type SalesOrderStatus,
@@ -68,7 +68,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    setOrders(getSalesOrders());
+    void loadSalesOrders().then(setOrders);
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -217,14 +217,28 @@ export default function SalesPage() {
                   getSalesOrderTotals(order);
 
                 return (
-                  <tr key={order.id}>
+                  <tr
+                    key={order.id}
+                    onClick={() => {
+                      window.location.assign(
+                        `/verkoop/${encodeURIComponent(order.id)}`,
+                      );
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td>
-                      <Link
-                        href={`/verkoop/${order.id}`}
+                      <button
+                        type="button"
                         className="table-link"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          window.location.assign(
+                            `/verkoop/${encodeURIComponent(order.id)}`,
+                          );
+                        }}
                       >
                         {order.orderNumber}
-                      </Link>
+                      </button>
                     </td>
 
                     <td className="table-primary">

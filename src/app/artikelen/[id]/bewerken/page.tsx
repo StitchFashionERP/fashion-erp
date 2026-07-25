@@ -12,7 +12,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { ArticleForm } from "@/components/articles/article-form-fixed";
 import {
-  getProductById,
+  fetchProductById,
   updateProduct,
   type Product,
   type ProductInput,
@@ -29,12 +29,21 @@ export default function EditArticlePage() {
     useState(false);
 
   useEffect(() => {
-    setProduct(getProductById(params.id));
-    setIsLoaded(true);
+    let active = true;
+    void fetchProductById(params.id)
+      .then((loaded) => {
+        if (active) setProduct(loaded);
+      })
+      .finally(() => {
+        if (active) setIsLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [params.id]);
 
-  function handleSubmit(input: ProductInput) {
-    const updated = updateProduct(
+  async function handleSubmit(input: ProductInput) {
+    const updated = await updateProduct(
       params.id,
       input,
     );

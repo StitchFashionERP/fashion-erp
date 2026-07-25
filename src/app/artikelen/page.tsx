@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   deleteProduct,
   getProductStock,
-  getStoredProducts,
+  fetchProducts,
   getVariantKey,
   setProductStatus,
   updateProduct,
@@ -101,13 +101,19 @@ export default function ArtikelenPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  function reload() {
-    setProducts(getStoredProducts());
+  async function reload() {
+    try {
+      setError("");
+      setProducts(await fetchProducts());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Artikelen laden is mislukt.");
+    } finally {
+      setIsLoaded(true);
+    }
   }
 
   useEffect(() => {
-    reload();
-    setIsLoaded(true);
+    void reload();
   }, []);
 
   const collections = useMemo(
@@ -203,16 +209,16 @@ export default function ArtikelenPage() {
     });
   }
 
-  function archiveSelectedProducts() {
-    selectedProducts.forEach((product) =>
+  async function archiveSelectedProducts() {
+    await Promise.all(selectedProducts.map((product) =>
       setProductStatus(product.id, "Inactief"),
-    );
-    reload();
+    ));
+    await reload();
     setSelectedIds([]);
     setMessage("Geselecteerde artikelen gearchiveerd.");
   }
 
-  function deleteSelectedProducts() {
+  async function deleteSelectedProducts() {
     const blocked = selectedProducts.filter(
       (product) => !getArticleHistoryCheck(product.id).canDelete,
     );
@@ -231,8 +237,8 @@ export default function ArtikelenPage() {
     );
     if (!confirmed) return;
 
-    deletable.forEach((product) => deleteProduct(product.id));
-    reload();
+    await Promise.all(deletable.map((product) => deleteProduct(product.id)));
+    await reload();
     setSelectedIds([]);
     setError(blocked.length ? `${blocked.length} gebruikt(e) artikel(en) konden alleen worden gearchiveerd en zijn niet verwijderd.` : "");
     setMessage(`${deletable.length} artikel(en) definitief verwijderd.`);
@@ -282,15 +288,15 @@ export default function ArtikelenPage() {
     setStatus("Actief");
   }
 
-  function archiveProduct(product: Product) {
-    setProductStatus(
+  async function archiveProduct(product: Product) {
+    await setProductStatus(
       product.id,
       product.status === "Inactief"
         ? "Actief"
         : "Inactief",
     );
 
-    reload();
+    await reload();
     setError("");
     setMessage(
       product.status === "Inactief"
@@ -299,7 +305,7 @@ export default function ArtikelenPage() {
     );
   }
 
-  function removeProduct(product: Product) {
+  async function removeProduct(product: Product) {
     const history = getArticleHistoryCheck(product.id);
 
     if (!history.canDelete) {
@@ -316,8 +322,8 @@ export default function ArtikelenPage() {
       return;
     }
 
-    deleteProduct(product.id);
-    reload();
+    await deleteProduct(product.id);
+    await reload();
     setError("");
     setMessage("Artikel verwijderd.");
   }

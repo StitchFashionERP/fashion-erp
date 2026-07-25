@@ -17,7 +17,7 @@ import {
   deleteProduct,
   duplicateProduct,
   setProductStatus,
-  getProductById,
+  fetchProductById,
   getProductStock,
   getReservedStock,
   type Product,
@@ -119,31 +119,33 @@ export default function ProductDetailPage() {
     useState<string | null>(null);
 
   useEffect(() => {
-    const loadedProduct = getProductById(
-      params.id,
-    );
-
-    setProduct(loadedProduct);
-
-    if (loadedProduct) {
-      const settingsByVariant =
-        Object.fromEntries(
-          loadedProduct.variants.map(
-            (variant) => [
-              variant.id,
-              getBarcodeSettingsForVariant(
+    let active = true;
+    void fetchProductById(params.id)
+      .then((loadedProduct) => {
+        if (!active) return;
+        setProduct(loadedProduct);
+        if (loadedProduct) {
+          setBarcodeSettings(
+            Object.fromEntries(
+              loadedProduct.variants.map((variant) => [
                 variant.id,
-              ),
-            ],
-          ),
-        );
-
-      setBarcodeSettings(
-        settingsByVariant,
-      );
-    }
-
-    setIsLoaded(true);
+                getBarcodeSettingsForVariant(variant.id),
+              ]),
+            ),
+          );
+        }
+      })
+      .catch((loadError) => {
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : "Artikel laden is mislukt.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [params.id]);
 
   useEffect(() => {
@@ -173,12 +175,12 @@ export default function ProductDetailPage() {
     );
   }, [product, selectedVariantId]);
 
-  function handleDuplicate() {
+  async function handleDuplicate() {
     if (!product) {
       return;
     }
 
-    const duplicate = duplicateProduct(
+    const duplicate = await duplicateProduct(
       product.id,
     );
 
@@ -187,7 +189,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!product) {
       return;
     }
@@ -208,16 +210,16 @@ export default function ProductDetailPage() {
       return;
     }
 
-    deleteProduct(product.id);
+    await deleteProduct(product.id);
     router.push("/artikelen");
   }
 
-  function handleArchive() {
+  async function handleArchive() {
     if (!product) {
       return;
     }
 
-    const updated = setProductStatus(
+    const updated = await setProductStatus(
       product.id,
       product.status === "Inactief"
         ? "Actief"

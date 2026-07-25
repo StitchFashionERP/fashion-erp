@@ -19,7 +19,7 @@ import {
   confirmSalesOrder,
   deleteSalesOrder,
   getSalesOrderAvailability,
-  getSalesOrderById,
+  loadSalesOrderById,
   getSalesOrderTotals,
   markSalesOrderReady,
   shipSalesOrder,
@@ -57,8 +57,39 @@ export default function SalesOrderDetailPage() {
     useState("");
 
   useEffect(() => {
-    setOrder(getSalesOrderById(params.id));
-    setLoaded(true);
+    let active = true;
+
+    async function loadOrder() {
+      setLoaded(false);
+      setError("");
+
+      try {
+        const loadedOrder = await loadSalesOrderById(params.id);
+
+        if (active) {
+          setOrder(loadedOrder);
+        }
+      } catch (caughtError) {
+        if (active) {
+          setOrder(null);
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "De verkooporder kon niet worden geladen.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoaded(true);
+        }
+      }
+    }
+
+    void loadOrder();
+
+    return () => {
+      active = false;
+    };
   }, [params.id]);
 
 
@@ -121,14 +152,14 @@ export default function SalesOrderDetailPage() {
     );
   }
 
-  function execute(
-    action: () => SalesOrder,
+  async function execute(
+    action: () => Promise<SalesOrder>,
     successMessage?: string,
   ) {
     setError("");
 
     try {
-      const updated = action();
+      const updated = await action();
       setOrder(updated);
 
       if (successMessage) {
@@ -143,7 +174,7 @@ export default function SalesOrderDetailPage() {
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!order) {
       setError("Verkooporder niet gevonden.");
       return;
@@ -158,8 +189,9 @@ export default function SalesOrderDetailPage() {
     }
 
     try {
-      deleteSalesOrder(order.id);
+      await deleteSalesOrder(order.id);
       router.push("/verkoop");
+      router.refresh();
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -183,7 +215,7 @@ export default function SalesOrderDetailPage() {
       return;
     }
 
-    execute(
+    void execute(
       () => cancelSalesOrder(order.id),
       "De verkooporder is geannuleerd.",
     );
@@ -195,7 +227,7 @@ export default function SalesOrderDetailPage() {
       return;
     }
 
-    execute(
+    void execute(
       () =>
         allocateSalesOrderStock(order.id),
       "De beschikbare voorraad is opnieuw over de order verdeeld.",
@@ -235,7 +267,7 @@ export default function SalesOrderDetailPage() {
                 if (
                   order.status === "Concept"
                 ) {
-                  execute(
+                  void execute(
                     () =>
                       confirmSalesOrder(
                         order.id,
@@ -268,7 +300,7 @@ export default function SalesOrderDetailPage() {
                 className="button button-primary"
                 type="button"
                 onClick={() =>
-                  execute(
+                  void execute(
                     () =>
                       confirmSalesOrder(
                         order.id,
@@ -297,7 +329,7 @@ export default function SalesOrderDetailPage() {
                 className="button button-primary"
                 type="button"
                 onClick={() =>
-                  execute(
+                  void execute(
                     () =>
                       markSalesOrderReady(
                         order.id,
@@ -315,7 +347,7 @@ export default function SalesOrderDetailPage() {
                 className="button button-primary"
                 type="button"
                 onClick={() =>
-                  execute(
+                  void execute(
                     () =>
                       shipSalesOrder(
                         order.id,

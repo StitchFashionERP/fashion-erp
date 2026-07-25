@@ -147,7 +147,7 @@ export default function ArticleImportPage(){
           sizes:[size],
           importedVariants:[{color,size,stock:numberValue(text(row,mapping,"stock")),ean:ean||undefined,supplierVariantCode:text(row,mapping,"supplierSku")||undefined}],
         };
-        addProduct(input);added+=1;
+        await addProduct(input);added+=1;
         setProgress(Math.round(((index+1)/rows.length)*100));
         if(index%20===0)await new Promise(resolve=>setTimeout(resolve,0));
       }

@@ -56,7 +56,7 @@ export function NewArticleWizard() {
     setStep((value) => Math.min(value + 1, steps.length - 1));
   }
 
-  function createArticle() {
+  async function createArticle() {
     if (!brand || !collection || !productType) return;
     const defaults = getPricingDefaults();
     const pricing = calculatePricing({ supplierPurchasePrice: 0, shippingCosts: 0, otherCosts: 0, brandMarkup: defaults.brandMarkup, retailerMarkup: defaults.retailerMarkup });
@@ -89,7 +89,7 @@ export function NewArticleWizard() {
       colors,
       sizes,
     };
-    const product = addProduct(input);
+    const product = await addProduct(input);
     router.push(`/artikelen/${product.id}`);
   }
 
