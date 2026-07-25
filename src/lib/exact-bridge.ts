@@ -524,6 +524,8 @@ export function importCustomerFromExact(
     contactPerson: source.contactPerson,
     email: source.email,
     phone: source.phone,
+    address: "",
+    postalCode: "",
     city: source.city,
     country: "Nederland",
     chamberOfCommerceNumber: "",

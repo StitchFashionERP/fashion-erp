@@ -171,7 +171,7 @@ export async function restoreStitchBackup(file: File): Promise<void> {
   assertBrowser();
 
   const text = await file.text();
-  const parsed = JSON.parse(text) as Partial<StitchBackup> & {
+  const parsed = JSON.parse(text) as {
     version?: number;
     entries?: unknown;
   };

@@ -13,42 +13,235 @@ import {
 import { getCustomerHistoryCheck } from "@/lib/relation-history";
 import {
   CustomerGeneralTab,
+  type CustomerContact,
   type CustomerGeneralForm,
 } from "./components/CustomerGeneralTab";
 import styles from "./customers.module.css";
 
 type StatusFilter = "Actief" | "Gearchiveerd" | "Alles";
 
+type CustomerCrmData = {
+  street?: string;
+  houseNumber?: string;
+  houseNumberAddition?: string;
+  postalCode?: string;
+
+  invoiceStreet?: string;
+  invoiceHouseNumber?: string;
+  invoiceHouseNumberAddition?: string;
+  invoicePostalCode?: string;
+  invoiceCity?: string;
+  invoiceCountry?: string;
+
+  useDifferentDeliveryAddress?: boolean;
+  deliveryStreet?: string;
+  deliveryHouseNumber?: string;
+  deliveryHouseNumberAddition?: string;
+  deliveryPostalCode?: string;
+  deliveryCity?: string;
+  deliveryCountry?: string;
+
+  contacts?: CustomerContact[];
+};
+
 const emptyForm: CustomerGeneralForm = {
   companyName: "",
   contactPerson: "",
   email: "",
   phone: "",
+
+  street: "",
+  houseNumber: "",
+  houseNumberAddition: "",
+  postalCode: "",
   city: "",
   country: "Nederland",
+
+  invoiceStreet: "",
+  invoiceHouseNumber: "",
+  invoiceHouseNumberAddition: "",
+  invoicePostalCode: "",
+  invoiceCity: "",
+  invoiceCountry: "Nederland",
+
+  useDifferentDeliveryAddress: false,
+  deliveryStreet: "",
+  deliveryHouseNumber: "",
+  deliveryHouseNumberAddition: "",
+  deliveryPostalCode: "",
+  deliveryCity: "",
+  deliveryCountry: "Nederland",
+
+  contacts: [],
+
   chamberOfCommerceNumber: "",
   customerType: "Zakelijk",
   vatNumber: "",
   vatNumberStatus: "Niet gecontroleerd",
   transactionNature: "Goederen",
   language: "Nederlands",
+
+  paymentDays: "30",
+  paymentDiscountPercentage: "0",
+  paymentDiscountDays: "0",
+  discountPercentage: "0",
+  priceListId: "price-list-standard",
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function asString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asBoolean(value: unknown, fallback = false) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function asContacts(value: unknown): CustomerContact[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((contact): contact is CustomerContact => {
+    if (!contact || typeof contact !== "object") {
+      return false;
+    }
+
+    const candidate = contact as Partial<CustomerContact>;
+
+    return (
+      typeof candidate.id === "string" &&
+      typeof candidate.firstName === "string" &&
+      typeof candidate.lastName === "string" &&
+      typeof candidate.jobTitle === "string" &&
+      typeof candidate.email === "string" &&
+      typeof candidate.phone === "string" &&
+      typeof candidate.isPrimary === "boolean"
+    );
+  });
+}
+
 function customerToForm(customer: Customer): CustomerGeneralForm {
+  const crm = asRecord(customer.crm);
+
   return {
     companyName: customer.companyName,
     contactPerson: customer.contactPerson,
     email: customer.email,
     phone: customer.phone,
+
+    street: asString(crm.street),
+    houseNumber: asString(crm.houseNumber),
+    houseNumberAddition: asString(crm.houseNumberAddition),
+    postalCode: asString(crm.postalCode),
     city: customer.city,
     country: customer.country,
-    chamberOfCommerceNumber: customer.chamberOfCommerceNumber || "",
+
+    invoiceStreet: asString(crm.invoiceStreet),
+    invoiceHouseNumber: asString(crm.invoiceHouseNumber),
+    invoiceHouseNumberAddition: asString(
+      crm.invoiceHouseNumberAddition,
+    ),
+    invoicePostalCode: asString(crm.invoicePostalCode),
+    invoiceCity: asString(crm.invoiceCity),
+    invoiceCountry: asString(
+      crm.invoiceCountry,
+      customer.country,
+    ),
+
+    useDifferentDeliveryAddress: asBoolean(
+      crm.useDifferentDeliveryAddress,
+    ),
+    deliveryStreet: asString(crm.deliveryStreet),
+    deliveryHouseNumber: asString(crm.deliveryHouseNumber),
+    deliveryHouseNumberAddition: asString(
+      crm.deliveryHouseNumberAddition,
+    ),
+    deliveryPostalCode: asString(crm.deliveryPostalCode),
+    deliveryCity: asString(crm.deliveryCity),
+    deliveryCountry: asString(
+      crm.deliveryCountry,
+      customer.country,
+    ),
+
+    contacts: asContacts(crm.contacts),
+
+    chamberOfCommerceNumber:
+      customer.chamberOfCommerceNumber || "",
     customerType: customer.customerType,
     vatNumber: customer.vatNumber,
     vatNumberStatus: customer.vatNumberStatus,
     transactionNature: customer.transactionNature,
     language: customer.language,
+
+    paymentDays: String(customer.paymentDays ?? 30),
+    paymentDiscountPercentage: String(
+      customer.paymentDiscountPercentage ?? 0,
+    ),
+    paymentDiscountDays: String(
+      customer.paymentDiscountDays ?? 0,
+    ),
+    discountPercentage: String(
+      customer.discountPercentage ?? 0,
+    ),
+    priceListId:
+      customer.priceListId || "price-list-standard",
   };
+}
+
+function formToCrm(form: CustomerGeneralForm): CustomerCrmData {
+  return {
+    street: form.street?.trim() || "",
+    houseNumber: form.houseNumber?.trim() || "",
+    houseNumberAddition:
+      form.houseNumberAddition?.trim() || "",
+    postalCode: form.postalCode?.trim().toUpperCase() || "",
+
+    invoiceStreet: form.invoiceStreet?.trim() || "",
+    invoiceHouseNumber:
+      form.invoiceHouseNumber?.trim() || "",
+    invoiceHouseNumberAddition:
+      form.invoiceHouseNumberAddition?.trim() || "",
+    invoicePostalCode:
+      form.invoicePostalCode?.trim().toUpperCase() || "",
+    invoiceCity: form.invoiceCity?.trim() || "",
+    invoiceCountry:
+      form.invoiceCountry?.trim() || form.country,
+
+    useDifferentDeliveryAddress:
+      form.useDifferentDeliveryAddress ?? false,
+    deliveryStreet: form.deliveryStreet?.trim() || "",
+    deliveryHouseNumber:
+      form.deliveryHouseNumber?.trim() || "",
+    deliveryHouseNumberAddition:
+      form.deliveryHouseNumberAddition?.trim() || "",
+    deliveryPostalCode:
+      form.deliveryPostalCode?.trim().toUpperCase() || "",
+    deliveryCity: form.deliveryCity?.trim() || "",
+    deliveryCountry:
+      form.deliveryCountry?.trim() || form.country,
+
+    contacts: form.contacts ?? [],
+  };
+}
+
+function parseNumber(value: string | undefined, fallback = 0) {
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(",", ".");
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function createCustomerNumber(customers: Customer[]) {
@@ -67,8 +260,11 @@ function createCustomerNumber(customers: Customer[]) {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [form, setForm] = useState<CustomerGeneralForm>(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] =
+    useState<CustomerGeneralForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(
+    null,
+  );
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
@@ -81,7 +277,9 @@ export default function CustomersPage() {
   const editingCustomer = useMemo(
     () =>
       editingId
-        ? customers.find((customer) => customer.id === editingId) || null
+        ? customers.find(
+            (customer) => customer.id === editingId,
+          ) || null
         : null,
     [customers, editingId],
   );
@@ -106,6 +304,8 @@ export default function CustomersPage() {
           return true;
         }
 
+        const crm = asRecord(customer.crm);
+
         return [
           customer.customerNumber,
           customer.companyName,
@@ -116,12 +316,17 @@ export default function CustomersPage() {
           customer.country,
           customer.chamberOfCommerceNumber,
           customer.vatNumber,
+          asString(crm.street),
+          asString(crm.houseNumber),
+          asString(crm.postalCode),
         ]
           .join(" ")
           .toLowerCase()
           .includes(query);
       })
-      .sort((a, b) => a.companyName.localeCompare(b.companyName, "nl"));
+      .sort((a, b) =>
+        a.companyName.localeCompare(b.companyName, "nl"),
+      );
   }, [customers, search, statusFilter]);
 
   useEffect(() => {
@@ -156,7 +361,9 @@ export default function CustomersPage() {
     };
   }, []);
 
-  function updateForm(changes: Partial<CustomerGeneralForm>) {
+  function updateForm(
+    changes: Partial<CustomerGeneralForm>,
+  ) {
     setForm((current) => ({
       ...current,
       ...changes,
@@ -205,6 +412,32 @@ export default function CustomersPage() {
         "Vul bij een buitenlandse zakelijke klant een btw-nummer in.",
       );
     }
+
+    if (parseNumber(form.paymentDays, -1) < 0) {
+      throw new Error(
+        "De betaaltermijn mag niet negatief zijn.",
+      );
+    }
+
+    if (parseNumber(form.discountPercentage, -1) < 0) {
+      throw new Error(
+        "De standaardkorting mag niet negatief zijn.",
+      );
+    }
+
+    if (
+      parseNumber(form.paymentDiscountPercentage, -1) < 0
+    ) {
+      throw new Error(
+        "De betalingskorting mag niet negatief zijn.",
+      );
+    }
+
+    if (parseNumber(form.paymentDiscountDays, -1) < 0) {
+      throw new Error(
+        "Het aantal dagen voor betalingskorting mag niet negatief zijn.",
+      );
+    }
   }
 
   async function saveCustomer() {
@@ -219,6 +452,8 @@ export default function CustomersPage() {
         editingCustomer?.id ||
         createMasterId("customer", form.companyName);
 
+      const crm = formToCrm(form);
+
       const nextCustomer: Customer = {
         id: customerId,
         customerNumber:
@@ -228,8 +463,6 @@ export default function CustomersPage() {
         contactPerson: form.contactPerson.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        address: editingCustomer?.address || "",
-        postalCode: editingCustomer?.postalCode || "",
         city: form.city.trim(),
         country: form.country,
         chamberOfCommerceNumber:
@@ -239,29 +472,35 @@ export default function CustomersPage() {
         vatNumberStatus: form.vatNumberStatus,
         vatNumberCheckedAt:
           form.vatNumberStatus === "Geldig"
-            ? new Date().toISOString()
+            ? editingCustomer?.vatNumberStatus === "Geldig" &&
+              editingCustomer.vatNumberCheckedAt
+              ? editingCustomer.vatNumberCheckedAt
+              : new Date().toISOString()
             : "",
         transactionNature: form.transactionNature,
         language: form.language,
-        paymentDays: editingCustomer?.paymentDays ?? 30,
-        paymentDiscountPercentage:
-          editingCustomer?.paymentDiscountPercentage ?? 0,
-        paymentDiscountDays:
-          editingCustomer?.paymentDiscountDays ?? 0,
-        discountPercentage:
-          editingCustomer?.discountPercentage ?? 0,
+        paymentDays: parseNumber(form.paymentDays, 30),
+        paymentDiscountPercentage: parseNumber(
+          form.paymentDiscountPercentage,
+          0,
+        ),
+        paymentDiscountDays: parseNumber(
+          form.paymentDiscountDays,
+          0,
+        ),
+        discountPercentage: parseNumber(
+          form.discountPercentage,
+          0,
+        ),
         priceListId:
-          editingCustomer?.priceListId ||
-          "price-list-standard",
+          form.priceListId || "price-list-standard",
         status: editingCustomer?.status || "Actief",
+        crm,
       };
 
       const savedCustomer = await saveCustomerCloud(
         nextCustomer,
-        (editingCustomer?.crm as
-          | Record<string, unknown>
-          | null
-          | undefined) || undefined,
+        crm,
       );
 
       setCustomers((current) => {
@@ -312,12 +551,11 @@ export default function CustomersPage() {
             : "Actief",
       };
 
+      const crm = asRecord(customer.crm);
+
       const savedCustomer = await saveCustomerCloud(
         nextCustomer,
-        (customer.crm as
-          | Record<string, unknown>
-          | null
-          | undefined) || undefined,
+        crm,
       );
 
       setCustomers((current) =>
@@ -387,7 +625,7 @@ export default function CustomersPage() {
       <PageHeader
         eyebrow="Relaties"
         title="Klanten"
-        description="Beheer klanten en hun algemene relatiegegevens."
+        description="Beheer klanten, adressen, contactpersonen en financiële instellingen."
         action={
           <button
             type="button"
@@ -418,9 +656,7 @@ export default function CustomersPage() {
                   "Nieuwe relatie"}
               </div>
 
-              <h2>
-                {form.companyName || "Nieuwe klant"}
-              </h2>
+              <h2>{form.companyName || "Nieuwe klant"}</h2>
 
               <p>
                 {editingCustomer
@@ -491,7 +727,7 @@ export default function CustomersPage() {
             onChange={(event) =>
               setSearch(event.target.value)
             }
-            placeholder="Zoek op klantnummer, naam, plaats of e-mail..."
+            placeholder="Zoek op klantnummer, naam, adres, plaats of e-mail..."
           />
 
           <select
@@ -527,80 +763,132 @@ export default function CustomersPage() {
                   <th>Klantnummer</th>
                   <th>Bedrijfsnaam</th>
                   <th>Contactpersoon</th>
+                  <th>Adres</th>
                   <th>Plaats</th>
-                  <th>Land</th>
+                  <th>Betaaltermijn</th>
                   <th>Status</th>
                   <th>Acties</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td>{customer.customerNumber}</td>
+                {filteredCustomers.map((customer) => {
+                  const crm = asRecord(customer.crm);
+                  const street = asString(crm.street);
+                  const houseNumber = asString(
+                    crm.houseNumber,
+                  );
+                  const addition = asString(
+                    crm.houseNumberAddition,
+                  );
+                  const postalCode = asString(
+                    crm.postalCode,
+                  );
 
-                    <td>
-                      <strong>{customer.companyName}</strong>
-                      <div className={styles.meta}>
-                        {customer.email || "Geen e-mail"}
-                      </div>
-                    </td>
+                  const address = [
+                    street,
+                    [houseNumber, addition]
+                      .filter(Boolean)
+                      .join(""),
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
 
-                    <td>
-                      {customer.contactPerson || "—"}
-                    </td>
+                  return (
+                    <tr key={customer.id}>
+                      <td>{customer.customerNumber}</td>
 
-                    <td>{customer.city || "—"}</td>
-                    <td>{customer.country}</td>
+                      <td>
+                        <strong>{customer.companyName}</strong>
 
-                    <td>
-                      <StatusBadge
-                        label={
-                          customer.status === "Actief"
-                            ? "Actief"
-                            : "Gearchiveerd"
-                        }
-                        tone={
-                          customer.status === "Actief"
-                            ? "success"
-                            : "neutral"
-                        }
-                      />
-                    </td>
+                        <div className={styles.meta}>
+                          {customer.email || "Geen e-mail"}
+                        </div>
+                      </td>
 
-                    <td>
-                      <div className={styles.rowActions}>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(customer)}
-                        >
-                          Openen
-                        </button>
+                      <td>
+                        {customer.contactPerson || "—"}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void toggleStatus(customer)
+                        {customer.phone && (
+                          <div className={styles.meta}>
+                            {customer.phone}
+                          </div>
+                        )}
+                      </td>
+
+                      <td>
+                        {address || "—"}
+
+                        {postalCode && (
+                          <div className={styles.meta}>
+                            {postalCode}
+                          </div>
+                        )}
+                      </td>
+
+                      <td>
+                        {customer.city || "—"}
+
+                        <div className={styles.meta}>
+                          {customer.country}
+                        </div>
+                      </td>
+
+                      <td>
+                        {customer.paymentDays} dagen
+                      </td>
+
+                      <td>
+                        <StatusBadge
+                          label={
+                            customer.status === "Actief"
+                              ? "Actief"
+                              : "Gearchiveerd"
                           }
-                        >
-                          {customer.status === "Actief"
-                            ? "Archiveren"
-                            : "Activeren"}
-                        </button>
-
-                        <button
-                          type="button"
-                          className={styles.deleteAction}
-                          onClick={() =>
-                            void removeCustomer(customer)
+                          tone={
+                            customer.status === "Actief"
+                              ? "success"
+                              : "neutral"
                           }
-                        >
-                          Verwijderen
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        />
+                      </td>
+
+                      <td>
+                        <div className={styles.rowActions}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startEdit(customer)
+                            }
+                          >
+                            Openen
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void toggleStatus(customer)
+                            }
+                          >
+                            {customer.status === "Actief"
+                              ? "Archiveren"
+                              : "Activeren"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.deleteAction}
+                            onClick={() =>
+                              void removeCustomer(customer)
+                            }
+                          >
+                            Verwijderen
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

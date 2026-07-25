@@ -1,51 +1,895 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { createClient } from "@/lib/supabase/client";
+import { SupplierAddressesTab } from "./components/SupplierAddressesTab";
+import { SupplierContactsTab } from "./components/SupplierContactsTab";
+import { SupplierFinancialTab } from "./components/SupplierFinancialTab";
+import { SupplierGeneralTab } from "./components/SupplierGeneralTab";
+import { SupplierNotesTab } from "./components/SupplierNotesTab";
+import {
+  createEmptyAddress,
+  createEmptyPaymentTerm,
+  createEmptySupplier,
+  createSupplierId,
+  supplierTabs,
+  type Address,
+  type Contact,
+  type PaymentTerm,
+  type Supplier,
+  type SupplierNote,
+  type SupplierTab,
+} from "./components/types";
 import styles from "./suppliers.module.css";
 
-type Contact = { id:string; firstName:string; lastName:string; role:string; department:string; emails:string[]; phones:string[]; primary:boolean; notes:string };
-type Address = { id:string; label:string; type:"Bezoekadres"|"Factuuradres"|"Leveradres"|"Postadres"|"Retouradres"|"Overig"; street:string; houseNumber:string; postalCode:string; city:string; province:string; country:string; email:string; phone:string; instructions:string; primary:boolean };
-type Note = { id:string; text:string; createdAt:string };
-type PaymentTerm = { id:string; percentage:number; moment:"Voor levering"|"Bij levering"|"Na factuurdatum"; days:number; discountPercentage:number };
-type Supplier = { id:string; organizationId:string; supplierNumber:string; companyName:string; email:string; phone:string; website:string; vatNumber:string; eoriNumber:string; kvkNumber:string; legalForm:string; currency:string; moq:number|null; mov:number|null; leadTimeDays:number|null; contacts:Contact[]; addresses:Address[]; paymentTerms:PaymentTerm[]; notes:Note[]; status:"Actief"|"Inactief" };
-type KvkResult = { kvkNumber:string; branchNumber:string; companyName:string; street:string; houseNumber:string; postalCode:string; city:string; active:boolean };
+type SupplierRow = {
+  id: string;
+  organization_id: string;
+  supplier_number: string;
+  company_name: string;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  province?: string | null;
+  country_code?: string | null;
+  vat_number?: string | null;
+  eori_number?: string | null;
+  currency?: string | null;
+  moq?: number | string | null;
+  mov?: number | string | null;
+  lead_time_days?: number | null;
+  payment_terms?: unknown;
+  notes?: string | null;
+  active?: boolean | null;
+};
 
-const id = (p:string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-const emptyContact = ():Contact => ({ id:id("contact"), firstName:"", lastName:"", role:"Algemeen", department:"", emails:[""], phones:[""], primary:false, notes:"" });
-const emptyAddress = ():Address => ({ id:id("address"), label:"", type:"Leveradres", street:"", houseNumber:"", postalCode:"", city:"", province:"", country:"Nederland", email:"", phone:"", instructions:"", primary:false });
-const emptyPayment = ():PaymentTerm => ({ id:id("payment"), percentage:100, moment:"Na factuurdatum", days:30, discountPercentage:0 });
-const emptySupplier = ():Supplier => ({ id:"", organizationId:"", supplierNumber:"", companyName:"", email:"", phone:"", website:"", vatNumber:"", eoriNumber:"", kvkNumber:"", legalForm:"", currency:"EUR", moq:null, mov:null, leadTimeDays:null, contacts:[], addresses:[], paymentTerms:[emptyPayment()], notes:[], status:"Actief" });
-const countries = ["Nederland","België","Duitsland","Frankrijk","Italië","Spanje","Portugal","Verenigd Koninkrijk","Denemarken","Zweden","Noorwegen","Polen","Turkije","China","India","Bangladesh","Vietnam","Anders"];
+type SupplierCrmData = {
+  contacts?: Contact[];
+  addresses?: Address[];
+  notes?: SupplierNote[];
+};
 
-function parseSupplier(row:any):Supplier {
-  const raw = row.contacts;
-  const crm = raw && !Array.isArray(raw) && typeof raw === "object" ? raw : {};
-  const legacyContacts = Array.isArray(raw) ? raw.map((c:any)=>({ id:c.id||id("contact"), firstName:(c.name||"").split(" ")[0]||"", lastName:(c.name||"").split(" ").slice(1).join(" "), role:c.role||"Algemeen", department:"", emails:[c.email||""], phones:[c.phone||""], primary:false, notes:"" })) : [];
-  const fallbackAddress:Address[] = row.address || row.city ? [{ id:id("address"), label:"Hoofdadres", type:"Bezoekadres", street:row.address||"", houseNumber:"", postalCode:row.postal_code||"", city:row.city||"", province:row.province||"", country:row.country_code||"Nederland", email:row.email||"", phone:row.phone||"", instructions:"", primary:true }] : [];
-  return { id:row.id, organizationId:row.organization_id, supplierNumber:row.supplier_number, companyName:row.company_name, email:row.email||"", phone:row.phone||"", website:row.website||"", vatNumber:row.vat_number||"", eoriNumber:row.eori_number||"", kvkNumber:crm.kvkNumber||"", legalForm:crm.legalForm||"", currency:row.currency||"EUR", moq:row.moq==null?null:Number(row.moq), mov:row.mov==null?null:Number(row.mov), leadTimeDays:row.lead_time_days, contacts:crm.contacts||legacyContacts, addresses:crm.addresses||fallbackAddress, paymentTerms:Array.isArray(row.payment_terms)&&row.payment_terms.length?row.payment_terms:[emptyPayment()], notes:Array.isArray(crm.notes)?crm.notes:(row.notes?[{id:id("note"),text:row.notes,createdAt:new Date().toISOString()}]:[]), status:row.active?"Actief":"Inactief" };
+function isRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
 }
 
-export default function SuppliersPage(){
-  const supabase=useMemo(()=>createClient(),[]); const [items,setItems]=useState<Supplier[]>([]); const [form,setForm]=useState<Supplier>(emptySupplier()); const [show,setShow]=useState(false); const [tab,setTab]=useState("Algemeen"); const [search,setSearch]=useState(""); const [org,setOrg]=useState(""); const [message,setMessage]=useState(""); const [error,setError]=useState(""); const [note,setNote]=useState(""); const [kvkName,setKvkName]=useState(""); const [kvkCity,setKvkCity]=useState(""); const [kvkPostal,setKvkPostal]=useState(""); const [kvkHouse,setKvkHouse]=useState(""); const [kvkResults,setKvkResults]=useState<KvkResult[]>([]);
-  useEffect(()=>{void load()},[]);
-  async function organization(){ const {data:u}=await supabase.auth.getUser(); if(!u.user) throw new Error("Je bent niet ingelogd."); const {data:p}=await supabase.from("user_preferences").select("active_organization_id").eq("user_id",u.user.id).maybeSingle(); if(p?.active_organization_id)return p.active_organization_id; const {data:m}=await supabase.from("organization_members").select("organization_id").eq("user_id",u.user.id).eq("active",true).limit(1).maybeSingle(); if(!m?.organization_id)throw new Error("Geen actieve organisatie gevonden."); return m.organization_id; }
-  async function load(){try{const o=await organization();setOrg(o);const {data,error:e}=await supabase.from("suppliers").select("*").eq("organization_id",o).order("company_name");if(e)throw e;setItems((data||[]).map(parseSupplier));}catch(e){setError(e instanceof Error?e.message:"Laden mislukt.")}}
-  const filtered=items.filter(x=>[x.supplierNumber,x.companyName,x.email,x.phone,x.vatNumber,x.eoriNumber,x.kvkNumber,...x.contacts.flatMap(c=>[c.firstName,c.lastName,...c.emails,...c.phones]),...x.addresses.flatMap(a=>[a.city,a.postalCode])].join(" ").toLowerCase().includes(search.toLowerCase()));
-  function nextNumber(){return `LEV-${String(items.reduce((m,x)=>Math.max(m,Number(x.supplierNumber.match(/\d+$/)?.[0]||0)),0)+1).padStart(4,"0")}`}
-  async function save(){try{if(!form.companyName.trim())throw new Error("Vul een bedrijfsnaam in.");const total=form.paymentTerms.reduce((s,x)=>s+Number(x.percentage||0),0);if(Math.abs(total-100)>.01)throw new Error(`Betaalafspraken moeten samen 100% zijn. Nu ${total}%.`);const primary=form.addresses.find(a=>a.primary)||form.addresses[0];const contact=form.contacts.find(c=>c.primary)||form.contacts[0];const payload={organization_id:org,supplier_number:form.supplierNumber||nextNumber(),company_name:form.companyName,email:contact?.emails.find(Boolean)||form.email,phone:contact?.phones.find(Boolean)||form.phone,website:form.website,address:[primary?.street,primary?.houseNumber].filter(Boolean).join(" "),postal_code:primary?.postalCode||"",city:primary?.city||"",province:primary?.province||"",country_code:primary?.country||"Nederland",vat_number:form.vatNumber,eori_number:form.eoriNumber,currency:form.currency,moq:form.moq,mov:form.mov,lead_time_days:form.leadTimeDays,contacts:{kvkNumber:form.kvkNumber,legalForm:form.legalForm,contacts:form.contacts,addresses:form.addresses,notes:form.notes},payment_terms:form.paymentTerms,notes:form.notes[0]?.text||"",active:form.status==="Actief"}; let result;if(form.id)result=await supabase.from("suppliers").update(payload).eq("id",form.id).eq("organization_id",org).select().single();else result=await supabase.from("suppliers").insert(payload).select().single();if(result.error)throw result.error;const saved=parseSupplier(result.data);setItems(cur=>form.id?cur.map(x=>x.id===form.id?saved:x):[...cur,saved]);setForm(saved);setMessage("Leverancier opgeslagen.");}catch(e){setError(e instanceof Error?e.message:"Opslaan mislukt.")}}
-  async function kvkSearch(){try{const q=new URLSearchParams();if(kvkName)q.set("name",kvkName);if(kvkCity)q.set("city",kvkCity);if(kvkPostal)q.set("postalCode",kvkPostal);if(kvkHouse)q.set("houseNumber",kvkHouse);const r=await fetch(`/api/kvk?${q}`);const p=await r.json();if(!r.ok)throw new Error(p.error);setKvkResults(p.results||[]);}catch(e){setError(e instanceof Error?e.message:"KvK zoeken mislukt.")}}
-  async function useKvk(r:KvkResult){const p=await fetch(`/api/kvk?kvkNumber=${r.kvkNumber}&branchNumber=${r.branchNumber}`).then(x=>x.json());const a=p.visitAddress||{};const address:Address={...emptyAddress(),label:"Bezoekadres (KvK)",type:"Bezoekadres",street:a.street||r.street,houseNumber:a.houseNumber||r.houseNumber,postalCode:a.postalCode||r.postalCode,city:a.city||r.city,country:a.country||"Nederland",primary:true};setForm({...form,companyName:p.companyName||r.companyName,kvkNumber:r.kvkNumber,legalForm:p.legalForm||"",website:p.websites?.[0]||form.website,addresses:[address,...form.addresses.map(x=>({...x,primary:false}))]});setKvkResults([])}
-  const tabs=["Algemeen","Contactpersonen","Adressen","Financieel","Notities"];
-  return <div className="page-shell"><PageHeader eyebrow="Inkoop" title="Leveranciers" description="Complete leverancierskaarten met contacten, adressen, afspraken en notities." actions={<button className="button button-primary" onClick={()=>{setForm(emptySupplier());setShow(true)}}>+ Leverancier</button>}/>{message&&<div className={styles.success}>{message}</div>}{error&&<div className={styles.error}>{error}</div>}
-  {show&&<section className={`content-card ${styles.card}`}><div className={styles.header}><div><small>{form.supplierNumber||"Nieuwe leverancier"}</small><h2>{form.companyName||"Nieuwe leverancier"}</h2></div><button className="button button-secondary" onClick={()=>setShow(false)}>Sluiten</button></div><div className={styles.tabs}>{tabs.map(t=><button key={t} className={tab===t?styles.active:""} onClick={()=>setTab(t)}>{t}</button>)}</div><div className={styles.section}>
-  {tab==="Algemeen"&&<><h3>Bedrijfsgegevens</h3><div className={styles.grid}><label><span>Bedrijfsnaam</span><input value={form.companyName} onChange={e=>setForm({...form,companyName:e.target.value})}/></label><label><span>Website</span><input value={form.website} onChange={e=>setForm({...form,website:e.target.value})}/></label><label><span>KvK-nummer</span><input value={form.kvkNumber} onChange={e=>setForm({...form,kvkNumber:e.target.value})}/></label><label><span>Rechtsvorm</span><input value={form.legalForm} onChange={e=>setForm({...form,legalForm:e.target.value})}/></label><label><span>BTW-nummer</span><input value={form.vatNumber} onChange={e=>setForm({...form,vatNumber:e.target.value})}/></label><label><span>EORI</span><input value={form.eoriNumber} onChange={e=>setForm({...form,eoriNumber:e.target.value})}/></label></div><div className={styles.kvk}><h3>Zoek bedrijf bij KvK</h3><div className={styles.grid}><label><span>Naam</span><input value={kvkName} onChange={e=>setKvkName(e.target.value)}/></label><label><span>Plaats</span><input value={kvkCity} onChange={e=>setKvkCity(e.target.value)}/></label><label><span>Postcode</span><input value={kvkPostal} onChange={e=>setKvkPostal(e.target.value)}/></label><label><span>Huisnummer</span><input value={kvkHouse} onChange={e=>setKvkHouse(e.target.value)}/></label></div><button className="button button-secondary" onClick={kvkSearch}>Zoeken bij KvK</button>{kvkResults.map(r=><button key={`${r.kvkNumber}-${r.branchNumber}`} className={styles.result} onClick={()=>void useKvk(r)}><strong>{r.companyName}</strong><span>{r.postalCode} {r.city} · KvK {r.kvkNumber}</span></button>)}</div></>}
-  {tab==="Contactpersonen"&&<><div className={styles.sectionTitle}><h3>Contactpersonen</h3><button className="button button-primary" onClick={()=>setForm({...form,contacts:[...form.contacts,emptyContact()]})}>+ Contactpersoon</button></div>{form.contacts.map((c,i)=><div className={styles.editor} key={c.id}><div className={styles.grid}><label><span>Voornaam</span><input value={c.firstName} onChange={e=>{const x=[...form.contacts];x[i]={...c,firstName:e.target.value};setForm({...form,contacts:x})}}/></label><label><span>Achternaam</span><input value={c.lastName} onChange={e=>{const x=[...form.contacts];x[i]={...c,lastName:e.target.value};setForm({...form,contacts:x})}}/></label><label><span>Rol</span><input value={c.role} onChange={e=>{const x=[...form.contacts];x[i]={...c,role:e.target.value};setForm({...form,contacts:x})}}/></label><label><span>Afdeling</span><input value={c.department} onChange={e=>{const x=[...form.contacts];x[i]={...c,department:e.target.value};setForm({...form,contacts:x})}}/></label><label><span>E-mailadressen (komma)</span><input value={c.emails.join(", ")} onChange={e=>{const x=[...form.contacts];x[i]={...c,emails:e.target.value.split(",").map(v=>v.trim())};setForm({...form,contacts:x})}}/></label><label><span>Telefoonnummers (komma)</span><input value={c.phones.join(", ")} onChange={e=>{const x=[...form.contacts];x[i]={...c,phones:e.target.value.split(",").map(v=>v.trim())};setForm({...form,contacts:x})}}/></label><label className={styles.full}><span>Notitie</span><input value={c.notes} onChange={e=>{const x=[...form.contacts];x[i]={...c,notes:e.target.value};setForm({...form,contacts:x})}}/></label></div><div className={styles.actions}><label><input type="checkbox" checked={c.primary} onChange={()=>setForm({...form,contacts:form.contacts.map(x=>({...x,primary:x.id===c.id}))})}/> Standaard</label><button className={styles.delete} onClick={()=>setForm({...form,contacts:form.contacts.filter(x=>x.id!==c.id)})}>Verwijderen</button></div></div>)}</>}
-  {tab==="Adressen"&&<><div className={styles.sectionTitle}><h3>Adressen</h3><button className="button button-primary" onClick={()=>setForm({...form,addresses:[...form.addresses,emptyAddress()]})}>+ Adres</button></div>{form.addresses.map((a,i)=><div className={styles.editor} key={a.id}><div className={styles.grid}><label><span>Label</span><input value={a.label} onChange={e=>{const x=[...form.addresses];x[i]={...a,label:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Type</span><select value={a.type} onChange={e=>{const x=[...form.addresses];x[i]={...a,type:e.target.value as Address["type"]};setForm({...form,addresses:x})}}>{["Bezoekadres","Factuuradres","Leveradres","Postadres","Retouradres","Overig"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Straat</span><input value={a.street} onChange={e=>{const x=[...form.addresses];x[i]={...a,street:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Huisnummer</span><input value={a.houseNumber} onChange={e=>{const x=[...form.addresses];x[i]={...a,houseNumber:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Postcode</span><input value={a.postalCode} onChange={e=>{const x=[...form.addresses];x[i]={...a,postalCode:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Plaats</span><input value={a.city} onChange={e=>{const x=[...form.addresses];x[i]={...a,city:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Provincie</span><input value={a.province} onChange={e=>{const x=[...form.addresses];x[i]={...a,province:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Land</span><select value={a.country} onChange={e=>{const x=[...form.addresses];x[i]={...a,country:e.target.value};setForm({...form,addresses:x})}}>{countries.map(v=><option key={v}>{v}</option>)}</select></label><label><span>E-mail</span><input value={a.email} onChange={e=>{const x=[...form.addresses];x[i]={...a,email:e.target.value};setForm({...form,addresses:x})}}/></label><label><span>Telefoon</span><input value={a.phone} onChange={e=>{const x=[...form.addresses];x[i]={...a,phone:e.target.value};setForm({...form,addresses:x})}}/></label><label className={styles.full}><span>Instructies</span><input value={a.instructions} onChange={e=>{const x=[...form.addresses];x[i]={...a,instructions:e.target.value};setForm({...form,addresses:x})}}/></label></div><div className={styles.actions}><label><input type="checkbox" checked={a.primary} onChange={()=>setForm({...form,addresses:form.addresses.map(x=>({...x,primary:x.id===a.id}))})}/> Standaard</label><button className={styles.delete} onClick={()=>setForm({...form,addresses:form.addresses.filter(x=>x.id!==a.id)})}>Verwijderen</button></div></div>)}</>}
-  {tab==="Financieel"&&<><h3>Inkoop- en betaalafspraken</h3><div className={styles.grid}><label><span>Valuta</span><select value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}><option>EUR</option><option>USD</option><option>GBP</option></select></label><label><span>MOQ</span><input type="number" value={form.moq??""} onChange={e=>setForm({...form,moq:e.target.value?Number(e.target.value):null})}/></label><label><span>MOV</span><input type="number" value={form.mov??""} onChange={e=>setForm({...form,mov:e.target.value?Number(e.target.value):null})}/></label><label><span>Levertijd dagen</span><input type="number" value={form.leadTimeDays??""} onChange={e=>setForm({...form,leadTimeDays:e.target.value?Number(e.target.value):null})}/></label></div>{form.paymentTerms.map((p,i)=><div className={styles.editor} key={p.id}><div className={styles.grid}><label><span>Percentage</span><input type="number" value={p.percentage} onChange={e=>{const x=[...form.paymentTerms];x[i]={...p,percentage:Number(e.target.value)};setForm({...form,paymentTerms:x})}}/></label><label><span>Moment</span><select value={p.moment} onChange={e=>{const x=[...form.paymentTerms];x[i]={...p,moment:e.target.value as PaymentTerm["moment"]};setForm({...form,paymentTerms:x})}}><option>Voor levering</option><option>Bij levering</option><option>Na factuurdatum</option></select></label><label><span>Dagen</span><input type="number" value={p.days} onChange={e=>{const x=[...form.paymentTerms];x[i]={...p,days:Number(e.target.value)};setForm({...form,paymentTerms:x})}}/></label><label><span>Korting %</span><input type="number" value={p.discountPercentage} onChange={e=>{const x=[...form.paymentTerms];x[i]={...p,discountPercentage:Number(e.target.value)};setForm({...form,paymentTerms:x})}}/></label></div></div>)}<button className="button button-secondary" onClick={()=>setForm({...form,paymentTerms:[...form.paymentTerms,emptyPayment()]})}>+ Betaalregel</button></>}
-  {tab==="Notities"&&<><h3>Notities</h3><div className={styles.note}><textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Interne notitie..."/><button className="button button-primary" onClick={()=>{if(note.trim()){setForm({...form,notes:[{id:id("note"),text:note,createdAt:new Date().toISOString()},...form.notes]});setNote("")}}}>Toevoegen</button></div>{form.notes.map(n=><article className={styles.noteItem} key={n.id}><small>{new Date(n.createdAt).toLocaleString("nl-NL")}</small><p>{n.text}</p><button className={styles.delete} onClick={()=>setForm({...form,notes:form.notes.filter(x=>x.id!==n.id)})}>Verwijderen</button></article>)}</>}
-  </div><div className={styles.footer}><button className="button button-secondary" onClick={()=>setShow(false)}>Annuleren</button><button className="button button-primary" onClick={()=>void save()}>Leverancier opslaan</button></div></section>}
-  <section className="content-card"><div className="content-card-toolbar"><div className="table-search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Zoek leverancier, contact of adres..."/></div></div><div className="table-wrapper"><table className="data-table"><thead><tr><th>Nummer</th><th>Leverancier</th><th>Contact</th><th>Plaats</th><th>KvK / BTW</th><th>Status</th><th/></tr></thead><tbody>{filtered.map(s=><tr key={s.id}><td>{s.supplierNumber}</td><td className="table-primary">{s.companyName}</td><td>{s.contacts[0]?.emails.find(Boolean)||s.email||"—"}</td><td>{s.addresses[0]?.city||"—"}</td><td>{s.kvkNumber||s.vatNumber||"—"}</td><td><StatusBadge status={s.status}/></td><td><button className={styles.link} onClick={()=>{setForm(s);setShow(true);setTab("Algemeen")}}>Bewerken</button></td></tr>)}</tbody></table></div></section></div>
+function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (!isRecord(error)) {
+    return fallback;
+  }
+
+  const parts = [
+    typeof error.message === "string"
+      ? error.message
+      : "",
+    typeof error.details === "string"
+      ? error.details
+      : "",
+    typeof error.hint === "string"
+      ? error.hint
+      : "",
+    typeof error.code === "string"
+      ? `Code: ${error.code}`
+      : "",
+  ].filter(Boolean);
+
+  return parts.length > 0
+    ? parts.join(" — ")
+    : fallback;
+}
+
+function parseCrmData(
+  value: string | null | undefined,
+): SupplierCrmData {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(value);
+
+    if (!isRecord(parsedValue)) {
+      return {};
+    }
+
+    return {
+      contacts: Array.isArray(parsedValue.contacts)
+        ? (parsedValue.contacts as Contact[])
+        : undefined,
+      addresses: Array.isArray(parsedValue.addresses)
+        ? (parsedValue.addresses as Address[])
+        : undefined,
+      notes: Array.isArray(parsedValue.notes)
+        ? (parsedValue.notes as SupplierNote[])
+        : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function serializeCrmData(
+  supplier: Supplier,
+): string {
+  return JSON.stringify({
+    version: 1,
+    contacts: supplier.contacts,
+    addresses: supplier.addresses,
+    notes: supplier.notes,
+  });
+}
+
+function parsePaymentTerms(
+  value: unknown,
+): PaymentTerm[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return [createEmptyPaymentTerm()];
+  }
+
+  return value as PaymentTerm[];
+}
+
+function parseSupplier(
+  row: SupplierRow,
+): Supplier {
+  const crm = parseCrmData(row.notes);
+
+  const legacyContacts: Contact[] = [];
+
+  const fallbackAddresses: Address[] =
+    row.address || row.city
+      ? [
+          {
+            ...createEmptyAddress(),
+            label: "Hoofdadres",
+            type: "Bezoekadres",
+            street: row.address ?? "",
+            postalCode: row.postal_code ?? "",
+            city: row.city ?? "",
+            province: row.province ?? "",
+            country:
+              row.country_code ?? "Nederland",
+            email: row.email ?? "",
+            phone: row.phone ?? "",
+            primary: true,
+          },
+        ]
+      : [];
+
+  const fallbackNotes: SupplierNote[] =
+    row.notes && Object.keys(crm).length === 0
+      ? [
+          {
+            id: createSupplierId("note"),
+            text: row.notes,
+            createdAt: new Date().toISOString(),
+          },
+        ]
+      : [];
+
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    supplierNumber: row.supplier_number,
+    companyName: row.company_name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    website: row.website ?? "",
+    vatNumber: row.vat_number ?? "",
+    eoriNumber: row.eori_number ?? "",
+    currency: row.currency ?? "EUR",
+    moq:
+      row.moq === null ||
+      row.moq === undefined
+        ? null
+        : Number(row.moq),
+    mov:
+      row.mov === null ||
+      row.mov === undefined
+        ? null
+        : Number(row.mov),
+    leadTimeDays:
+      row.lead_time_days ?? null,
+    contacts:
+      crm.contacts ?? legacyContacts,
+    addresses:
+      crm.addresses ?? fallbackAddresses,
+    paymentTerms: parsePaymentTerms(
+      row.payment_terms,
+    ),
+    notes: crm.notes ?? fallbackNotes,
+    status:
+      row.active === false
+        ? "Inactief"
+        : "Actief",
+  };
+}
+
+export default function SuppliersPage() {
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
+
+  const [items, setItems] = useState<Supplier[]>([]);
+  const [form, setForm] = useState<Supplier>(
+    createEmptySupplier(),
+  );
+  const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] =
+    useState<SupplierTab>("Algemeen");
+  const [search, setSearch] = useState("");
+  const [organizationId, setOrganizationId] =
+    useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [newNote, setNewNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSuppliers() {
+      try {
+        setError("");
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw userError;
+        }
+
+        if (!user) {
+          throw new Error(
+            "Je bent niet ingelogd.",
+          );
+        }
+
+        const {
+          data: preferences,
+          error: preferencesError,
+        } = await supabase
+          .from("user_preferences")
+          .select("active_organization_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (preferencesError) {
+          throw preferencesError;
+        }
+
+        let currentOrganizationId =
+          preferences?.active_organization_id ?? "";
+
+        if (!currentOrganizationId) {
+          const {
+            data: membership,
+            error: membershipError,
+          } = await supabase
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", user.id)
+            .eq("active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (membershipError) {
+            throw membershipError;
+          }
+
+          currentOrganizationId =
+            membership?.organization_id ?? "";
+        }
+
+        if (!currentOrganizationId) {
+          throw new Error(
+            "Geen actieve organisatie gevonden.",
+          );
+        }
+
+        const {
+          data,
+          error: loadError,
+        } = await supabase
+          .from("suppliers")
+          .select("*")
+          .eq(
+            "organization_id",
+            currentOrganizationId,
+          )
+          .order("company_name");
+
+        if (loadError) {
+          throw loadError;
+        }
+
+        if (!cancelled) {
+          setOrganizationId(
+            currentOrganizationId,
+          );
+
+          setItems(
+            ((data ?? []) as SupplierRow[]).map(
+              parseSupplier,
+            ),
+          );
+        }
+      } catch (caughtError) {
+        if (!cancelled) {
+          setError(
+            getErrorMessage(
+              caughtError,
+              "Leveranciers laden is mislukt.",
+            ),
+          );
+        }
+      }
+    }
+
+    void loadSuppliers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return items;
+    }
+
+    return items.filter((supplier) => {
+      const searchableValues = [
+        supplier.supplierNumber,
+        supplier.companyName,
+        supplier.email,
+        supplier.phone,
+        supplier.vatNumber,
+        supplier.eoriNumber,
+        ...supplier.contacts.flatMap(
+          (contact) => [
+            contact.firstName,
+            contact.lastName,
+            contact.role,
+            contact.department,
+            ...contact.emails,
+            ...contact.phones,
+          ],
+        ),
+        ...supplier.addresses.flatMap(
+          (address) => [
+            address.label,
+            address.street,
+            address.houseNumber,
+            address.postalCode,
+            address.city,
+            address.province,
+            address.country,
+          ],
+        ),
+      ];
+
+      return searchableValues
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [items, search]);
+
+  function nextSupplierNumber(): string {
+    const highestNumber = items.reduce(
+      (highest, supplier) => {
+        const match =
+          supplier.supplierNumber.match(/\d+$/);
+
+        const value = Number(
+          match?.[0] ?? 0,
+        );
+
+        return Math.max(highest, value);
+      },
+      0,
+    );
+
+    return `LEV-${String(
+      highestNumber + 1,
+    ).padStart(4, "0")}`;
+  }
+
+  function startCreate() {
+    setForm({
+      ...createEmptySupplier(),
+      supplierNumber: nextSupplierNumber(),
+    });
+    setActiveTab("Algemeen");
+    setNewNote("");
+    setMessage("");
+    setError("");
+    setShowForm(true);
+  }
+
+  function startEdit(supplier: Supplier) {
+    setForm({
+      ...supplier,
+      contacts: supplier.contacts.map(
+        (contact) => ({
+          ...contact,
+          emails: [...contact.emails],
+          phones: [...contact.phones],
+        }),
+      ),
+      addresses: supplier.addresses.map(
+        (address) => ({
+          ...address,
+        }),
+      ),
+      paymentTerms:
+        supplier.paymentTerms.map(
+          (paymentTerm) => ({
+            ...paymentTerm,
+          }),
+        ),
+      notes: supplier.notes.map((note) => ({
+        ...note,
+      })),
+    });
+
+    setActiveTab("Algemeen");
+    setNewNote("");
+    setMessage("");
+    setError("");
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setForm(createEmptySupplier());
+    setActiveTab("Algemeen");
+    setNewNote("");
+    setError("");
+  }
+
+  async function saveSupplier() {
+    try {
+      setError("");
+      setMessage("");
+
+      if (!organizationId) {
+        throw new Error(
+          "Geen actieve organisatie gevonden.",
+        );
+      }
+
+      if (!form.companyName.trim()) {
+        throw new Error(
+          "Vul een bedrijfsnaam in.",
+        );
+      }
+
+      const paymentTotal =
+        form.paymentTerms.reduce(
+          (total, paymentTerm) =>
+            total +
+            Number(
+              paymentTerm.percentage || 0,
+            ),
+          0,
+        );
+
+      if (
+        form.paymentTerms.length > 0 &&
+        Math.abs(paymentTotal - 100) > 0.01
+      ) {
+        throw new Error(
+          `Betaalafspraken moeten samen 100% zijn. Nu ${paymentTotal}%.`,
+        );
+      }
+
+      const primaryAddress =
+        form.addresses.find(
+          (address) => address.primary,
+        ) ?? form.addresses[0];
+
+      const primaryContact =
+        form.contacts.find(
+          (contact) => contact.primary,
+        ) ?? form.contacts[0];
+
+      const supplierNumber =
+        form.supplierNumber.trim() ||
+        nextSupplierNumber();
+
+      const email =
+        primaryContact?.emails.find(
+          (value) => value.trim(),
+        )?.trim() ??
+        form.email.trim();
+
+      const phone =
+        primaryContact?.phones.find(
+          (value) => value.trim(),
+        )?.trim() ??
+        form.phone.trim();
+
+      const payload = {
+        organization_id: organizationId,
+        supplier_number: supplierNumber,
+        company_name:
+          form.companyName.trim(),
+        email,
+        phone,
+        website: form.website.trim(),
+        address: [
+          primaryAddress?.street,
+          primaryAddress?.houseNumber,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim(),
+        postal_code:
+          primaryAddress?.postalCode.trim() ??
+          "",
+        city:
+          primaryAddress?.city.trim() ?? "",
+        province:
+          primaryAddress?.province.trim() ??
+          "",
+        country_code:
+          primaryAddress?.country.trim() ||
+          "Nederland",
+        vat_number:
+          form.vatNumber.trim().toUpperCase(),
+        eori_number:
+          form.eoriNumber.trim().toUpperCase(),
+        currency: form.currency,
+        moq: form.moq,
+        mov: form.mov,
+        lead_time_days: form.leadTimeDays,
+        payment_terms: form.paymentTerms,
+        notes: serializeCrmData(form),
+        active: form.status === "Actief",
+      };
+
+      const result = form.id
+        ? await supabase
+            .from("suppliers")
+            .update(payload)
+            .eq("id", form.id)
+            .eq(
+              "organization_id",
+              organizationId,
+            )
+            .select("*")
+            .single()
+        : await supabase
+            .from("suppliers")
+            .insert(payload)
+            .select("*")
+            .single();
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      if (!result.data) {
+        throw new Error(
+          "De leverancier is niet teruggekomen uit de database.",
+        );
+      }
+
+      const savedSupplier = parseSupplier(
+        result.data as SupplierRow,
+      );
+
+      setItems((currentItems) => {
+        if (form.id) {
+          return currentItems.map(
+            (supplier) =>
+              supplier.id === form.id
+                ? savedSupplier
+                : supplier,
+          );
+        }
+
+        return [...currentItems, savedSupplier].sort(
+          (firstSupplier, secondSupplier) =>
+            firstSupplier.companyName.localeCompare(
+              secondSupplier.companyName,
+              "nl-NL",
+            ),
+        );
+      });
+
+      setForm(savedSupplier);
+      setMessage("Leverancier opgeslagen.");
+      setShowForm(false);
+    } catch (caughtError) {
+      setError(
+        getErrorMessage(
+          caughtError,
+          "Leverancier opslaan is mislukt.",
+        ),
+      );
+    }
+  }
+
+  return (
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Inkoop"
+        title="Leveranciers"
+        description="Complete leverancierskaarten met contacten, adressen, afspraken en notities."
+        action={
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={startCreate}
+          >
+            + Leverancier
+          </button>
+        }
+      />
+
+      {message && (
+        <div className={styles.success}>
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className={styles.error}>
+          {error}
+        </div>
+      )}
+
+      {showForm && (
+        <section
+          className={`content-card ${styles.card}`}
+        >
+          <div className={styles.header}>
+            <div>
+              <small>
+                {form.supplierNumber ||
+                  "Nieuwe leverancier"}
+              </small>
+
+              <h2>
+                {form.companyName ||
+                  "Nieuwe leverancier"}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={closeForm}
+            >
+              Sluiten
+            </button>
+          </div>
+
+          <div className={styles.tabs}>
+            {supplierTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={
+                  activeTab === tab
+                    ? styles.active
+                    : ""
+                }
+                onClick={() =>
+                  setActiveTab(tab)
+                }
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.section}>
+            {activeTab === "Algemeen" && (
+              <SupplierGeneralTab
+                supplier={form}
+                setSupplier={setForm}
+              />
+            )}
+
+            {activeTab ===
+              "Contactpersonen" && (
+              <SupplierContactsTab
+                supplier={form}
+                setSupplier={setForm}
+              />
+            )}
+
+            {activeTab === "Adressen" && (
+              <SupplierAddressesTab
+                supplier={form}
+                setSupplier={setForm}
+              />
+            )}
+
+            {activeTab === "Financieel" && (
+              <SupplierFinancialTab
+                supplier={form}
+                setSupplier={setForm}
+              />
+            )}
+
+            {activeTab === "Notities" && (
+              <SupplierNotesTab
+                supplier={form}
+                setSupplier={setForm}
+                newNote={newNote}
+                setNewNote={setNewNote}
+              />
+            )}
+          </div>
+
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={closeForm}
+            >
+              Annuleren
+            </button>
+
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => {
+                void saveSupplier();
+              }}
+            >
+              Leverancier opslaan
+            </button>
+          </div>
+        </section>
+      )}
+
+      <section className="content-card">
+        <div className="content-card-toolbar">
+          <div className="table-search">
+            <span>⌕</span>
+
+            <input
+              type="search"
+              value={search}
+              placeholder="Zoek leverancier, contact of adres."
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+            />
+          </div>
+        </div>
+
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nummer</th>
+                <th>Leverancier</th>
+                <th>Contact</th>
+                <th>Plaats</th>
+                <th>BTW-nummer</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredItems.map(
+                (supplier) => {
+                  const primaryContact =
+                    supplier.contacts.find(
+                      (contact) =>
+                        contact.primary,
+                    ) ??
+                    supplier.contacts[0];
+
+                  const primaryAddress =
+                    supplier.addresses.find(
+                      (address) =>
+                        address.primary,
+                    ) ??
+                    supplier.addresses[0];
+
+                  return (
+                    <tr key={supplier.id}>
+                      <td>
+                        {
+                          supplier.supplierNumber
+                        }
+                      </td>
+
+                      <td className="table-primary">
+                        {supplier.companyName}
+                      </td>
+
+                      <td>
+                        {primaryContact?.emails.find(
+                          Boolean,
+                        ) ||
+                          supplier.email ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {primaryAddress?.city ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {supplier.vatNumber ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        <StatusBadge
+                          label={
+                            supplier.status
+                          }
+                        />
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.link}
+                          onClick={() =>
+                            startEdit(supplier)
+                          }
+                        >
+                          Bewerken
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                },
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredItems.length === 0 && (
+          <div className={styles.emptyState}>
+            Geen leveranciers gevonden.
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }

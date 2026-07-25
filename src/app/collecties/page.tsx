@@ -124,10 +124,21 @@ export default function CollectionsPage() {
       return;
     }
 
+    const now = new Date().toISOString();
+
+    const existing = editingId
+      ? items.find((item) => item.id === editingId)
+      : undefined;
+
     const collection: Collection = {
       id: editingId ?? createMasterId("collection", name),
       code,
       name,
+      active: form.status !== "Gearchiveerd",
+      sortOrder: existing?.sortOrder ?? items.length + 1,
+      notes: existing?.notes ?? "",
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
       season: form.season,
       year: Number(form.year) || new Date().getFullYear(),
       status: form.status,
