@@ -85,6 +85,11 @@ export type Supplier = {
   moq: number | null;
   mov: number | null;
   leadTimeDays: number | null;
+  purchaseOrderEmail: string;
+  purchaseOrderCc: string;
+  deviationEmail: string;
+  deviationCc: string;
+  generalCc: string;
   contacts: Contact[];
   addresses: Address[];
   paymentTerms: PaymentTerm[];
@@ -206,6 +211,11 @@ export function createEmptySupplier(): Supplier {
     moq: null,
     mov: null,
     leadTimeDays: null,
+    purchaseOrderEmail: "",
+    purchaseOrderCc: "",
+    deviationEmail: "",
+    deviationCc: "",
+    generalCc: "",
     contacts: [],
     addresses: [],
     paymentTerms: [

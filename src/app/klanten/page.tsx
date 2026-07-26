@@ -12,13 +12,20 @@ import {
 } from "@/lib/customers";
 import { getCustomerHistoryCheck } from "@/lib/relation-history";
 import {
+  CustomerAddressesTab,
+  CustomerContactsTab,
+  CustomerFinancialTab,
   CustomerGeneralTab,
+  CustomerNotesTab,
+  CustomerOrdersTab,
   type CustomerContact,
   type CustomerGeneralForm,
-} from "./components/CustomerGeneralTab";
+} from "./components/CustomerTabs";
 import styles from "./customers.module.css";
 
 type StatusFilter = "Actief" | "Gearchiveerd" | "Alles";
+type CustomerTab = "Algemeen" | "Contactpersonen" | "Adressen" | "Financieel" | "Orders" | "Notities";
+const customerTabs: CustomerTab[] = ["Algemeen", "Contactpersonen", "Adressen", "Financieel", "Orders", "Notities"];
 
 type CustomerCrmData = {
   street?: string;
@@ -42,6 +49,15 @@ type CustomerCrmData = {
   deliveryCountry?: string;
 
   contacts?: CustomerContact[];
+
+  pricingPolicy?: "company" | "custom";
+  retailerMarkup?: number;
+  invoiceEmail?: string;
+  invoiceCc?: string;
+  orderEmail?: string;
+  orderCc?: string;
+  deliveryEmail?: string;
+  deliveryCc?: string;
 };
 
 const emptyForm: CustomerGeneralForm = {
@@ -86,6 +102,14 @@ const emptyForm: CustomerGeneralForm = {
   paymentDiscountDays: "0",
   discountPercentage: "0",
   priceListId: "price-list-standard",
+  pricingPolicy: "company",
+  retailerMarkup: "",
+  invoiceEmail: "",
+  invoiceCc: "",
+  orderEmail: "",
+  orderCc: "",
+  deliveryEmail: "",
+  deliveryCc: "",
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -191,6 +215,18 @@ function customerToForm(customer: Customer): CustomerGeneralForm {
     ),
     priceListId:
       customer.priceListId || "price-list-standard",
+    pricingPolicy:
+      crm.pricingPolicy === "custom" ? "custom" : "company",
+    retailerMarkup:
+      typeof crm.retailerMarkup === "number"
+        ? String(crm.retailerMarkup).replace(".", ",")
+        : "",
+    invoiceEmail: asString(crm.invoiceEmail),
+    invoiceCc: asString(crm.invoiceCc),
+    orderEmail: asString(crm.orderEmail),
+    orderCc: asString(crm.orderCc),
+    deliveryEmail: asString(crm.deliveryEmail),
+    deliveryCc: asString(crm.deliveryCc),
   };
 }
 
@@ -227,6 +263,19 @@ function formToCrm(form: CustomerGeneralForm): CustomerCrmData {
       form.deliveryCountry?.trim() || form.country,
 
     contacts: form.contacts ?? [],
+
+    pricingPolicy:
+      form.pricingPolicy === "custom" ? "custom" : "company",
+    retailerMarkup:
+      form.pricingPolicy === "custom"
+        ? parseNumber(form.retailerMarkup, 0)
+        : undefined,
+    invoiceEmail: form.invoiceEmail?.trim() || "",
+    invoiceCc: form.invoiceCc?.trim() || "",
+    orderEmail: form.orderEmail?.trim() || "",
+    orderCc: form.orderCc?.trim() || "",
+    deliveryEmail: form.deliveryEmail?.trim() || "",
+    deliveryCc: form.deliveryCc?.trim() || "",
   };
 }
 
@@ -266,6 +315,7 @@ export default function CustomersPage() {
     null,
   );
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<CustomerTab>("Algemeen");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Actief");
@@ -374,6 +424,7 @@ export default function CustomersPage() {
     setForm(emptyForm);
     setEditingId(null);
     setShowForm(false);
+    setActiveTab("Algemeen");
     setError("");
   }
 
@@ -381,6 +432,7 @@ export default function CustomersPage() {
     setForm(emptyForm);
     setEditingId(null);
     setShowForm(true);
+    setActiveTab("Algemeen");
     setMessage("");
     setError("");
   }
@@ -389,6 +441,7 @@ export default function CustomersPage() {
     setForm(customerToForm(customer));
     setEditingId(customer.id);
     setShowForm(true);
+    setActiveTab("Algemeen");
     setMessage("");
     setError("");
 
@@ -436,6 +489,15 @@ export default function CustomersPage() {
     if (parseNumber(form.paymentDiscountDays, -1) < 0) {
       throw new Error(
         "Het aantal dagen voor betalingskorting mag niet negatief zijn.",
+      );
+    }
+
+    if (
+      form.pricingPolicy === "custom" &&
+      parseNumber(form.retailerMarkup, 0) <= 0
+    ) {
+      throw new Error(
+        "Vul bij een eigen retailmarkup een waarde groter dan 0 in.",
       );
     }
   }
@@ -691,14 +753,40 @@ export default function CustomersPage() {
             </div>
           </div>
 
+          <div className={styles.tabs}>
+            {customerTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={activeTab === tab ? styles.activeTab : ""}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
           <div className={styles.tabContent}>
-            <CustomerGeneralTab
-              form={form}
-              updateForm={updateForm}
-            />
+            {activeTab === "Algemeen" && <CustomerGeneralTab form={form} updateForm={updateForm} />}
+            {activeTab === "Contactpersonen" && <CustomerContactsTab form={form} updateForm={updateForm} />}
+            {activeTab === "Adressen" && <CustomerAddressesTab form={form} updateForm={updateForm} />}
+            {activeTab === "Financieel" && <CustomerFinancialTab form={form} updateForm={updateForm} />}
+            {activeTab === "Orders" && <CustomerOrdersTab />}
+            {activeTab === "Notities" && <CustomerNotesTab />}
           </div>
 
           <div className={styles.formActions}>
+            <div className={styles.formDangerActions}>
+              {editingCustomer && (
+                <>
+                  <button type="button" className="button button-secondary" onClick={() => void toggleStatus(editingCustomer)}>
+                    {editingCustomer.status === "Actief" ? "Archiveren" : "Activeren"}
+                  </button>
+                  <button type="button" className="button button-danger" onClick={() => void removeCustomer(editingCustomer)}>Verwijderen</button>
+                </>
+              )}
+            </div>
+            <div className={styles.formSaveActions}>
             <button
               type="button"
               className="button button-secondary"
@@ -715,6 +803,7 @@ export default function CustomersPage() {
             >
               {saving ? "Opslaan..." : "Klant opslaan"}
             </button>
+            </div>
           </div>
         </section>
       )}
@@ -767,7 +856,6 @@ export default function CustomersPage() {
                   <th>Plaats</th>
                   <th>Betaaltermijn</th>
                   <th>Status</th>
-                  <th>Acties</th>
                 </tr>
               </thead>
 
@@ -796,10 +884,10 @@ export default function CustomersPage() {
 
                   return (
                     <tr key={customer.id}>
-                      <td>{customer.customerNumber}</td>
+                      <td><button type="button" className={styles.tableLink} onClick={() => startEdit(customer)}>{customer.customerNumber}</button></td>
 
                       <td>
-                        <strong>{customer.companyName}</strong>
+                        <button type="button" className={`${styles.tableLink} ${styles.companyLink}`} onClick={() => startEdit(customer)}>{customer.companyName}</button>
 
                         <div className={styles.meta}>
                           {customer.email || "Geen e-mail"}
@@ -853,39 +941,7 @@ export default function CustomersPage() {
                         />
                       </td>
 
-                      <td>
-                        <div className={styles.rowActions}>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              startEdit(customer)
-                            }
-                          >
-                            Openen
-                          </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void toggleStatus(customer)
-                            }
-                          >
-                            {customer.status === "Actief"
-                              ? "Archiveren"
-                              : "Activeren"}
-                          </button>
-
-                          <button
-                            type="button"
-                            className={styles.deleteAction}
-                            onClick={() =>
-                              void removeCustomer(customer)
-                            }
-                          >
-                            Verwijderen
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}

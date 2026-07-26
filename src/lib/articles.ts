@@ -1,5 +1,11 @@
 import { getPricingDefaults } from "@/lib/company-settings";
-import { calculatePricing } from "@/lib/pricing-engine";
+import {
+  calculatePricing,
+  calculatePricingV2,
+  defaultPricingLocks,
+  type PricingLocks,
+  type PricingStrategy,
+} from "@/lib/pricing-engine";
 import type { VatCode } from "@/lib/vat-engine";
 import {
   getProductPricingSnapshot,
@@ -25,6 +31,8 @@ export type ProductVariant = {
   brandMarkup: number;
   recommendedRetailPrice: number;
   retailerMarkup: number;
+  pricingStrategy: PricingStrategy;
+  pricingLocks: PricingLocks;
 };
 
 export type Product = {
@@ -58,6 +66,8 @@ export type Product = {
   brandMarkup: number;
   recommendedRetailPrice: number;
   retailerMarkup: number;
+  pricingStrategy: PricingStrategy;
+  pricingLocks: PricingLocks;
 
   colors: string[];
   sizes: string[];
@@ -97,6 +107,8 @@ export type ProductInput = {
   brandMarkup: number;
   recommendedRetailPrice: number;
   retailerMarkup: number;
+  pricingStrategy?: PricingStrategy;
+  pricingLocks?: Partial<PricingLocks>;
 
   colors: string[];
   sizes: string[];
@@ -114,7 +126,7 @@ export type ProductInput = {
 const storageKey = "fashion-erp-products-v3";
 const previousStorageKey = "fashion-erp-products-v2";
 const legacyStorageKey = "fashion-erp-products";
-const pricingMigrationKey = "fashion-erp-products-pricing-migration-v1";
+const pricingMigrationKey = "fashion-erp-products-pricing-migration-v2";
 
 function cleanCodePart(value: string, maxLength = 5) {
   return value
@@ -129,17 +141,32 @@ function cleanCodePart(value: string, maxLength = 5) {
 export function generateArticleNumber({
   collectionCode,
   productTypeCode,
+  existingCodes = [],
 }: {
-  collectionCode: string;
-  productTypeCode: string;
+  collectionCode?: string;
+  productTypeCode?: string;
+  existingCodes?: string[];
 }) {
-  const prefix = `${cleanCodePart(collectionCode, 4)}${cleanCodePart(productTypeCode, 2).padStart(2, "0")}`;
-  const existing = getStoredProducts()
-    .map((product) => product.code)
+  const seasonPart = cleanCodePart(collectionCode ?? "", 4) || "XXXX";
+  const typePart = cleanCodePart(productTypeCode ?? "", 2) || "XX";
+  const prefix = `${seasonPart}${typePart}`;
+
+  const usedCodes = [
+    ...getStoredProducts().map((product) => product.code),
+    ...existingCodes,
+  ];
+
+  const existingSequences = usedCodes
+    .map((code) => code.trim().toUpperCase())
     .filter((code) => code.startsWith(prefix))
-    .map((code) => Number(code.slice(prefix.length, prefix.length + 2)))
-    .filter((value) => Number.isFinite(value));
-  const next = (existing.length ? Math.max(...existing) : 0) + 1;
+    .map((code) => code.slice(prefix.length))
+    .filter((sequence) => /^\d+$/.test(sequence))
+    .map(Number)
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  const next =
+    (existingSequences.length ? Math.max(...existingSequences) : 0) + 1;
+
   return `${prefix}${String(next).padStart(2, "0")}`;
 }
 
@@ -176,6 +203,49 @@ export function createProductId(name: string, code: string) {
     .replace(/^-|-$/g, "");
 
   return `${slug}-${Date.now()}`;
+}
+
+type NormalizedProductInput = Omit<
+  ProductInput,
+  "pricingStrategy" | "pricingLocks"
+> & {
+  pricingStrategy: PricingStrategy;
+  pricingLocks: PricingLocks;
+};
+
+function normalizePricingInput(
+  input: ProductInput,
+): NormalizedProductInput {
+  const defaults = getPricingDefaults();
+  const pricing = calculatePricingV2(
+    {
+      supplierPurchasePrice: input.purchasePrice,
+      shippingCosts: input.shippingCosts,
+      otherCosts: input.otherCosts,
+      brandMarkup: input.brandMarkup,
+      salesPrice: input.wholesalePrice,
+      retailerMarkup: input.retailerMarkup,
+      recommendedRetailPrice: input.recommendedRetailPrice,
+      strategy: input.pricingStrategy ?? "automatic",
+      locks: input.pricingLocks ?? defaultPricingLocks,
+      changedField: null,
+    },
+    defaults,
+  );
+
+  return {
+    ...input,
+    purchasePrice: pricing.supplierPurchasePrice,
+    wholesalePrice: pricing.salesPrice,
+    shippingCosts: pricing.shippingCosts,
+    otherCosts: pricing.otherCosts,
+    totalCost: pricing.totalCost,
+    brandMarkup: pricing.brandMarkup,
+    recommendedRetailPrice: pricing.recommendedRetailPrice,
+    retailerMarkup: pricing.retailerMarkup,
+    pricingStrategy: pricing.strategy,
+    pricingLocks: pricing.locks,
+  };
 }
 
 export function generateVariants(
@@ -236,12 +306,17 @@ export function generateVariants(
       brandMarkup: input.brandMarkup,
       recommendedRetailPrice: input.recommendedRetailPrice,
       retailerMarkup: input.retailerMarkup,
+      pricingStrategy: input.pricingStrategy ?? "automatic",
+      pricingLocks: {
+        ...defaultPricingLocks,
+        ...input.pricingLocks,
+      },
     };
   });
 }
 
 function makeDefaultProduct(
-  partial: Omit<ProductInput, "stockByVariant" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
+  partial: Omit<ProductInput, "stockByVariant" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
     id: string;
     stockByVariant?: Record<string, number>;
   },
@@ -280,15 +355,22 @@ function makeDefaultProduct(
     retailerMarkup:
       partial.retailerMarkup ??
       getPricingDefaults().retailerMarkup,
+    pricingStrategy: partial.pricingStrategy ?? "automatic",
+    pricingLocks: {
+      ...defaultPricingLocks,
+      ...partial.pricingLocks,
+    },
     colors: partial.colors,
     sizes: partial.sizes,
     stockByVariant: partial.stockByVariant,
   };
 
+  const normalizedInput = normalizePricingInput(input);
+
   return {
     id: partial.id,
-    ...input,
-    variants: generateVariants(input),
+    ...normalizedInput,
+    variants: generateVariants(normalizedInput),
     createdAt: now,
     updatedAt: now,
   };
@@ -523,9 +605,18 @@ function normalizeLegacyProduct(
     recommendedRetailPrice:
       finalPricing.recommendedRetailPrice,
     retailerMarkup: finalPricing.retailerMarkup,
+    pricingStrategy:
+      (product.pricingStrategy as PricingStrategy | undefined) ??
+      "automatic",
+    pricingLocks: {
+      ...defaultPricingLocks,
+      ...(product.pricingLocks as Partial<PricingLocks> | undefined),
+    },
     colors,
     sizes,
   };
+
+  const normalizedInput = normalizePricingInput(input);
 
   const storedVariants = Array.isArray(product.variants)
     ? (product.variants as Record<string, unknown>[]).map(
@@ -540,21 +631,27 @@ function normalizeLegacyProduct(
           reservedStock: Number(
             variant.reservedStock ?? 0,
           ),
-          purchasePrice: input.purchasePrice,
-          wholesalePrice: input.wholesalePrice,
-          shippingCosts: input.shippingCosts,
-          otherCosts: input.otherCosts,
-          totalCost: input.totalCost,
-          brandMarkup: input.brandMarkup,
+          purchasePrice: normalizedInput.purchasePrice,
+          wholesalePrice: normalizedInput.wholesalePrice,
+          shippingCosts: normalizedInput.shippingCosts,
+          otherCosts: normalizedInput.otherCosts,
+          totalCost: normalizedInput.totalCost,
+          brandMarkup: normalizedInput.brandMarkup,
           recommendedRetailPrice:
-            input.recommendedRetailPrice,
-          retailerMarkup: input.retailerMarkup,
+            normalizedInput.recommendedRetailPrice,
+          retailerMarkup: normalizedInput.retailerMarkup,
+          pricingStrategy:
+            normalizedInput.pricingStrategy ?? "automatic",
+          pricingLocks: {
+            ...defaultPricingLocks,
+            ...normalizedInput.pricingLocks,
+          },
         }),
       )
     : [];
 
   const generatedVariants = generateVariants(
-    input,
+    normalizedInput,
     storedVariants,
   );
   const legacyStock = Number(product.stock ?? 0);
@@ -569,9 +666,10 @@ function normalizeLegacyProduct(
 
   return {
     id: String(
-      product.id ?? createProductId(input.name, input.code),
+      product.id ??
+        createProductId(normalizedInput.name, normalizedInput.code),
     ),
-    ...input,
+    ...normalizedInput,
     variants: generatedVariants,
     createdAt: String(product.createdAt ?? now),
     updatedAt: String(product.updatedAt ?? now),
@@ -720,10 +818,11 @@ export function getProductById(id: string) {
 
 export async function addProduct(input: ProductInput) {
   const now = new Date().toISOString();
+  const normalizedInput = normalizePricingInput(input);
   const draft: Product = {
-    id: createProductId(input.name, input.code),
-    ...input,
-    variants: generateVariants(input),
+    id: createProductId(normalizedInput.name, normalizedInput.code),
+    ...normalizedInput,
+    variants: generateVariants(normalizedInput),
     createdAt: now,
     updatedAt: now,
   };
@@ -756,10 +855,11 @@ export async function updateProduct(id: string, input: ProductInput) {
     throw new Error("Artikel niet gevonden.");
   }
 
+  const normalizedInput = normalizePricingInput(input);
   const updated: Product = {
     ...current,
-    ...input,
-    variants: generateVariants(input, current.variants),
+    ...normalizedInput,
+    variants: generateVariants(normalizedInput, current.variants),
     updatedAt: new Date().toISOString(),
   };
 
@@ -882,6 +982,8 @@ export async function duplicateProduct(id: string) {
     brandMarkup: source.brandMarkup,
     recommendedRetailPrice: source.recommendedRetailPrice,
     retailerMarkup: source.retailerMarkup,
+    pricingStrategy: source.pricingStrategy,
+    pricingLocks: { ...source.pricingLocks },
     colors: [...source.colors],
     sizes: [...source.sizes],
     stockByVariant: {},

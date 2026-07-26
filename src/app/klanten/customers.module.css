@@ -545,3 +545,79 @@ textarea:focus {
     gap: 10px;
   }
 }
+.formActions {
+  justify-content: space-between;
+}
+
+.formDangerActions,
+.formSaveActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tableLink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+}
+
+.tableLink:hover,
+.textLink:hover {
+  text-decoration: underline;
+}
+
+.companyLink {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.textLink {
+  color: var(--primary);
+  font-size: 9px;
+  text-decoration: none;
+}
+
+:global(.table-wrapper):has(.tableLink) {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--border-light);
+}
+
+:global(table):has(.tableLink) {
+  width: 100%;
+  min-width: 970px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+:global(table):has(.tableLink) th,
+:global(table):has(.tableLink) td {
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-light);
+  padding: 12px 14px;
+  text-align: left;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+:global(table):has(.tableLink) th {
+  background: #fafbfc;
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+:global(table):has(.tableLink) td {
+  color: var(--text-primary);
+  font-size: 10px;
+}
+
+:global(table):has(.tableLink) tbody tr:hover {
+  background: #f8fafc;
+}

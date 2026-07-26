@@ -37,3 +37,9 @@ prisma/dev.db-journal
 
 # Lokale uploads (indien aanwezig)
 uploads/
+# STiTch tijdelijke bestanden
+stitch-*.zip
+storage-audit-output/
+storage-audit.csv
+storage-audit.md
+storage-references.txt

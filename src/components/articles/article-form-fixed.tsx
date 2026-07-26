@@ -14,7 +14,16 @@ import {
   type ProductInput,
   type ProductStatus,
 } from "@/lib/articles";
-import { calculatePricing } from "@/lib/pricing-engine";
+import {
+  calculatePricingV2,
+  defaultPricingLocks,
+  type PricingLocks,
+  type PricingStrategy,
+} from "@/lib/pricing-engine";
+import {
+  PricingCalculator,
+  type PricingCalculatorValue,
+} from "@/components/pricing/PricingCalculator";
 import {
   articleVatCodes,
   type VatCode,
@@ -130,23 +139,52 @@ export function ArticleForm({
 
   const settings = useMemo(() => getCompanySettings(), []);
 
+  const [pricingStrategy, setPricingStrategy] =
+    useState<PricingStrategy>(
+      initialProduct?.pricingStrategy ?? "automatic",
+    );
+  const [pricingLocks, setPricingLocks] =
+    useState<PricingLocks>({
+      ...defaultPricingLocks,
+      ...initialProduct?.pricingLocks,
+    });
+
   const [shippingCosts, setShippingCosts] = useState(
-    initialProduct ? String(initialProduct.shippingCosts ?? 0).replace(".", ",") : "",
+    initialProduct
+      ? String(initialProduct.shippingCosts ?? 0).replace(".", ",")
+      : "",
   );
   const [otherCosts, setOtherCosts] = useState(
-    initialProduct ? String(initialProduct.otherCosts ?? 0).replace(".", ",") : "",
+    initialProduct
+      ? String(initialProduct.otherCosts ?? 0).replace(".", ",")
+      : "",
   );
   const [brandMarkup, setBrandMarkup] = useState(
-    String(initialProduct?.brandMarkup || settings.pricing.brandMarkup).replace(".", ","),
+    String(
+      initialProduct?.brandMarkup ||
+        settings.pricing.brandMarkup,
+    ).replace(".", ","),
   );
   const [salesPrice, setSalesPrice] = useState(
-    initialProduct ? String(initialProduct.wholesalePrice).replace(".", ",") : "",
+    initialProduct
+      ? String(initialProduct.wholesalePrice).replace(".", ",")
+      : "",
   );
   const [retailerMarkup, setRetailerMarkup] = useState(
-    String(initialProduct?.retailerMarkup || settings.pricing.retailerMarkup).replace(".", ","),
+    String(
+      initialProduct?.retailerMarkup ||
+        settings.pricing.retailerMarkup,
+    ).replace(".", ","),
   );
-  const [recommendedRetailPrice, setRecommendedRetailPrice] = useState(
-    initialProduct ? String(initialProduct.recommendedRetailPrice ?? 0).replace(".", ",") : "",
+  const [
+    recommendedRetailPrice,
+    setRecommendedRetailPrice,
+  ] = useState(
+    initialProduct
+      ? String(
+          initialProduct.recommendedRetailPrice ?? 0,
+        ).replace(".", ",")
+      : "",
   );
 
   function parseNumber(value: string) {
@@ -155,7 +193,7 @@ export function ArticleForm({
 
   const pricing = useMemo(
     () =>
-      calculatePricing(
+      calculatePricingV2(
         {
           supplierPurchasePrice: parseNumber(purchasePrice),
           shippingCosts: parseNumber(shippingCosts),
@@ -164,144 +202,50 @@ export function ArticleForm({
           salesPrice: parseNumber(salesPrice),
           retailerMarkup: parseNumber(retailerMarkup),
           recommendedRetailPrice: parseNumber(recommendedRetailPrice),
+          strategy: pricingStrategy,
+          locks: pricingLocks,
+          changedField: null,
         },
-        parseNumber(salesPrice) > 0
-          ? "sales-price"
-          : "targets",
         settings.pricing,
       ),
-    [purchasePrice, shippingCosts, otherCosts, brandMarkup, salesPrice, retailerMarkup, recommendedRetailPrice, settings.pricing],
+    [
+      purchasePrice,
+      shippingCosts,
+      otherCosts,
+      brandMarkup,
+      salesPrice,
+      retailerMarkup,
+      recommendedRetailPrice,
+      pricingStrategy,
+      pricingLocks,
+      settings.pricing,
+    ],
   );
 
-  function displayNumber(value: number) {
-    return String(Math.round(value * 100) / 100).replace(".", ",");
+  const pricingCalculatorValue: PricingCalculatorValue = {
+    supplierPurchasePrice: purchasePrice,
+    shippingCosts,
+    otherCosts,
+    brandMarkup,
+    salesPrice,
+    retailerMarkup,
+    recommendedRetailPrice,
+    pricingStrategy,
+    pricingLocks,
+  };
+
+  function updatePricingCalculator(next: PricingCalculatorValue) {
+    setPurchasePrice(next.supplierPurchasePrice);
+    setShippingCosts(next.shippingCosts);
+    setOtherCosts(next.otherCosts);
+    setBrandMarkup(next.brandMarkup);
+    setSalesPrice(next.salesPrice);
+    setRetailerMarkup(next.retailerMarkup);
+    setRecommendedRetailPrice(next.recommendedRetailPrice);
+    setPricingStrategy(next.pricingStrategy);
+    setPricingLocks(next.pricingLocks);
   }
 
-  function updateCosts(
-    field: "purchase" | "shipping" | "other",
-    value: string,
-  ) {
-    const nextPurchasePrice =
-      field === "purchase"
-        ? parseNumber(value)
-        : parseNumber(purchasePrice);
-    const nextShippingCosts =
-      field === "shipping"
-        ? parseNumber(value)
-        : parseNumber(shippingCosts);
-    const nextOtherCosts =
-      field === "other"
-        ? parseNumber(value)
-        : parseNumber(otherCosts);
-
-    if (field === "purchase") {
-      setPurchasePrice(value);
-    } else if (field === "shipping") {
-      setShippingCosts(value);
-    } else {
-      setOtherCosts(value);
-    }
-
-    const shouldApplyTargets =
-      !initialProduct ||
-      settings.pricing.mode === "automatic";
-
-    if (!shouldApplyTargets) {
-      return;
-    }
-
-    const next = calculatePricing(
-      {
-        supplierPurchasePrice: nextPurchasePrice,
-        shippingCosts: nextShippingCosts,
-        otherCosts: nextOtherCosts,
-        brandMarkup: parseNumber(brandMarkup),
-        retailerMarkup: parseNumber(retailerMarkup),
-      },
-      "targets",
-      settings.pricing,
-    );
-
-    setSalesPrice(displayNumber(next.salesPrice));
-    setRecommendedRetailPrice(
-      displayNumber(next.recommendedRetailPrice),
-    );
-  }
-
-  function applyCompanyPricingTargets() {
-    const next = calculatePricing(
-      {
-        supplierPurchasePrice: parseNumber(purchasePrice),
-        shippingCosts: parseNumber(shippingCosts),
-        otherCosts: parseNumber(otherCosts),
-        brandMarkup: settings.pricing.brandMarkup,
-        retailerMarkup: settings.pricing.retailerMarkup,
-      },
-      "targets",
-      settings.pricing,
-    );
-
-    setBrandMarkup(
-      displayNumber(settings.pricing.brandMarkup),
-    );
-    setRetailerMarkup(
-      displayNumber(settings.pricing.retailerMarkup),
-    );
-    setSalesPrice(displayNumber(next.salesPrice));
-    setRecommendedRetailPrice(
-      displayNumber(next.recommendedRetailPrice),
-    );
-  }
-
-  function updateFromBrandMarkup(value: string) {
-    setBrandMarkup(value);
-    const next = calculatePricing({
-      supplierPurchasePrice: parseNumber(purchasePrice),
-      shippingCosts: parseNumber(shippingCosts),
-      otherCosts: parseNumber(otherCosts),
-      brandMarkup: parseNumber(value),
-      retailerMarkup: parseNumber(retailerMarkup),
-    }, "brand-markup", settings.pricing);
-    setSalesPrice(displayNumber(next.salesPrice));
-    setRecommendedRetailPrice(displayNumber(next.recommendedRetailPrice));
-  }
-
-  function updateFromSalesPrice(value: string) {
-    setSalesPrice(value);
-    const next = calculatePricing({
-      supplierPurchasePrice: parseNumber(purchasePrice),
-      shippingCosts: parseNumber(shippingCosts),
-      otherCosts: parseNumber(otherCosts),
-      salesPrice: parseNumber(value),
-      retailerMarkup: parseNumber(retailerMarkup),
-    }, "sales-price", settings.pricing);
-    setBrandMarkup(displayNumber(next.brandMarkup));
-    setRecommendedRetailPrice(displayNumber(next.recommendedRetailPrice));
-  }
-
-  function updateFromRetailerMarkup(value: string) {
-    setRetailerMarkup(value);
-    const next = calculatePricing({
-      supplierPurchasePrice: parseNumber(purchasePrice),
-      shippingCosts: parseNumber(shippingCosts),
-      otherCosts: parseNumber(otherCosts),
-      salesPrice: parseNumber(salesPrice),
-      retailerMarkup: parseNumber(value),
-    }, "retailer-markup", settings.pricing);
-    setRecommendedRetailPrice(displayNumber(next.recommendedRetailPrice));
-  }
-
-  function updateFromRetailPrice(value: string) {
-    setRecommendedRetailPrice(value);
-    const next = calculatePricing({
-      supplierPurchasePrice: parseNumber(purchasePrice),
-      shippingCosts: parseNumber(shippingCosts),
-      otherCosts: parseNumber(otherCosts),
-      salesPrice: parseNumber(salesPrice),
-      recommendedRetailPrice: parseNumber(value),
-    }, "retail-price", settings.pricing);
-    setRetailerMarkup(displayNumber(next.retailerMarkup));
-  }
 
   const [selectedColors, setSelectedColors] =
     useState<string[]>(
@@ -604,6 +548,8 @@ export function ArticleForm({
       brandMarkup: parseNumber(brandMarkup),
       recommendedRetailPrice: parseNumber(recommendedRetailPrice),
       retailerMarkup: parseNumber(retailerMarkup),
+      pricingStrategy,
+      pricingLocks,
       colors: selectedColors,
       sizes: selectedSizes,
       stockByVariant,
@@ -824,47 +770,11 @@ export function ArticleForm({
             </div>
           </article>
 
-          <article className="content-card">
-            <div className="content-card-header">
-              <div>
-                <h2 className="content-card-title">Pricing Engine</h2>
-                <p className="content-card-description">Pas een markup of prijs aan; het gekoppelde veld rekent direct mee.</p>
-              </div>
-              <button type="button" className="button button-secondary" onClick={applyCompanyPricingTargets}>Bedrijfstargets toepassen</button>
-            </div>
-
-            <div className={styles.pricingSections}>
-              <section className={styles.pricingBlock}>
-                <div className={styles.pricingBlockHeader}><span>Kostprijs</span><strong>{new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(pricing.totalCost)}</strong></div>
-                <div className={styles.pricingGrid}>
-                  <label className={styles.field}><span>Inkoopprijs leverancier</span><div className={styles.currencyInput}><span>€</span><input type="text" value={purchasePrice} onChange={(event) => updateCosts("purchase", event.target.value)} /></div></label>
-                  <label className={styles.field}><span>Verzendkosten</span><div className={styles.currencyInput}><span>€</span><input type="text" value={shippingCosts} onChange={(event) => updateCosts("shipping", event.target.value)} /></div></label>
-                  <label className={styles.field}><span>Overige kosten</span><div className={styles.currencyInput}><span>€</span><input type="text" value={otherCosts} onChange={(event) => updateCosts("other", event.target.value)} /></div></label>
-                  <div className={styles.calculatedField}><span>Totale kostprijs</span><strong>{new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(pricing.totalCost)}</strong></div>
-                </div>
-              </section>
-
-              <section className={styles.pricingBlock}>
-                <div className={styles.pricingBlockHeader}><span>Verkoop aan winkels</span><strong>excl. btw</strong></div>
-                <div className={styles.pricingGrid}>
-                  <label className={styles.field}><span>Markup merk</span><div className={styles.markupInput}><input type="text" value={brandMarkup} onChange={(event) => updateFromBrandMarkup(event.target.value)} /><span>×</span></div></label>
-                  <label className={styles.field}><span>Verkoopprijs</span><div className={styles.currencyInput}><span>€</span><input type="text" value={salesPrice} onChange={(event) => updateFromSalesPrice(event.target.value)} /></div></label>
-                  <div className={styles.calculatedField}><span>Marge</span><strong>{new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(pricing.ownMarginAmount)}</strong></div>
-                  <div className={styles.calculatedField}><span>Margepercentage</span><strong>{pricing.ownMarginPercentage.toLocaleString("nl-NL")}%</strong></div>
-                </div>
-              </section>
-
-              <section className={styles.pricingBlock}>
-                <div className={styles.pricingBlockHeader}><span>Adviesverkoopprijs</span><strong>incl. {pricing.vatPercentage}% btw</strong></div>
-                <div className={styles.pricingGrid}>
-                  <label className={styles.field}><span>Markup retailer</span><div className={styles.markupInput}><input type="text" value={retailerMarkup} onChange={(event) => updateFromRetailerMarkup(event.target.value)} /><span>×</span></div></label>
-                  <label className={styles.field}><span>Adviesverkoopprijs</span><div className={styles.currencyInput}><span>€</span><input type="text" value={recommendedRetailPrice} onChange={(event) => updateFromRetailPrice(event.target.value)} /></div></label>
-                  <div className={styles.calculatedField}><span>Retailermarge excl. btw</span><strong>{new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(pricing.retailerMarginAmount)}</strong></div>
-                  <div className={styles.calculatedField}><span>Retailermargepercentage</span><strong>{pricing.retailerMarginPercentage.toLocaleString("nl-NL")}%</strong></div>
-                </div>
-              </section>
-            </div>
-          </article>
+          <PricingCalculator
+            value={pricingCalculatorValue}
+            defaults={settings.pricing}
+            onChange={updatePricingCalculator}
+          />
 
           <article className="content-card">
             <div className="content-card-header">

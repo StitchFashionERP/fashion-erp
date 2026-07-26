@@ -56,6 +56,11 @@ type SupplierCrmData = {
   contacts?: Contact[];
   addresses?: Address[];
   notes?: SupplierNote[];
+  purchaseOrderEmail?: string;
+  purchaseOrderCc?: string;
+  deviationEmail?: string;
+  deviationCc?: string;
+  generalCc?: string;
 };
 
 function isRecord(
@@ -124,6 +129,11 @@ function parseCrmData(
       notes: Array.isArray(parsedValue.notes)
         ? (parsedValue.notes as SupplierNote[])
         : undefined,
+      purchaseOrderEmail: typeof parsedValue.purchaseOrderEmail === "string" ? parsedValue.purchaseOrderEmail : undefined,
+      purchaseOrderCc: typeof parsedValue.purchaseOrderCc === "string" ? parsedValue.purchaseOrderCc : undefined,
+      deviationEmail: typeof parsedValue.deviationEmail === "string" ? parsedValue.deviationEmail : undefined,
+      deviationCc: typeof parsedValue.deviationCc === "string" ? parsedValue.deviationCc : undefined,
+      generalCc: typeof parsedValue.generalCc === "string" ? parsedValue.generalCc : undefined,
     };
   } catch {
     return {};
@@ -138,6 +148,11 @@ function serializeCrmData(
     contacts: supplier.contacts,
     addresses: supplier.addresses,
     notes: supplier.notes,
+    purchaseOrderEmail: supplier.purchaseOrderEmail,
+    purchaseOrderCc: supplier.purchaseOrderCc,
+    deviationEmail: supplier.deviationEmail,
+    deviationCc: supplier.deviationCc,
+    generalCc: supplier.generalCc,
   });
 }
 
@@ -212,6 +227,11 @@ function parseSupplier(
         : Number(row.mov),
     leadTimeDays:
       row.lead_time_days ?? null,
+    purchaseOrderEmail: crm.purchaseOrderEmail ?? "",
+    purchaseOrderCc: crm.purchaseOrderCc ?? "",
+    deviationEmail: crm.deviationEmail ?? "",
+    deviationCc: crm.deviationCc ?? "",
+    generalCc: crm.generalCc ?? "",
     contacts:
       crm.contacts ?? legacyContacts,
     addresses:
@@ -225,6 +245,53 @@ function parseSupplier(
         ? "Inactief"
         : "Actief",
   };
+}
+
+async function executeSupplierMutation(
+  supabase: ReturnType<typeof createClient>,
+  mode: "insert" | "update",
+  payload: Record<string, unknown>,
+  supplierId: string,
+  organizationId: string,
+) {
+  const mutablePayload = { ...payload };
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const query = mode === "update"
+      ? supabase.from("suppliers").update(mutablePayload).eq("id", supplierId).eq("organization_id", organizationId)
+      : supabase.from("suppliers").insert(mutablePayload);
+    const result = await query.select("*").single();
+
+    if (!result.error) return result;
+
+    const errorText = [
+      result.error.message,
+      result.error.details,
+      result.error.hint,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const missingColumn =
+      errorText.match(
+        /Could not find the ["']([a-zA-Z0-9_]+)["'] column/i,
+      )?.[1] ??
+      errorText.match(
+        /(?:column|field) ["']?([a-zA-Z0-9_]+)["']?/i,
+      )?.[1];
+
+    if (
+      result.error.code !== "PGRST204" ||
+      !missingColumn ||
+      !(missingColumn in mutablePayload)
+    ) {
+      return result;
+    }
+
+    delete mutablePayload[missingColumn];
+  }
+
+  throw new Error("Leverancier kon niet worden opgeslagen door meerdere ontbrekende databasevelden.");
 }
 
 export default function SuppliersPage() {
@@ -581,22 +648,13 @@ export default function SuppliersPage() {
         active: form.status === "Actief",
       };
 
-      const result = form.id
-        ? await supabase
-            .from("suppliers")
-            .update(payload)
-            .eq("id", form.id)
-            .eq(
-              "organization_id",
-              organizationId,
-            )
-            .select("*")
-            .single()
-        : await supabase
-            .from("suppliers")
-            .insert(payload)
-            .select("*")
-            .single();
+      const result = await executeSupplierMutation(
+        supabase,
+        form.id ? "update" : "insert",
+        payload,
+        form.id,
+        organizationId,
+      );
 
       if (result.error) {
         throw result.error;
@@ -642,6 +700,25 @@ export default function SuppliersPage() {
         ),
       );
     }
+  }
+
+  async function toggleSupplierStatus() {
+    if (!form.id) return;
+    const nextStatus = form.status === "Actief" ? "Inactief" : "Actief";
+    const { error: statusError } = await supabase.from("suppliers").update({ active: nextStatus === "Actief" }).eq("id", form.id).eq("organization_id", organizationId);
+    if (statusError) { setError(getErrorMessage(statusError, "Status wijzigen is mislukt.")); return; }
+    setItems(current => current.map(item => item.id === form.id ? { ...item, status: nextStatus } : item));
+    setForm(current => ({ ...current, status: nextStatus }));
+    setMessage(nextStatus === "Actief" ? "Leverancier geactiveerd." : "Leverancier gearchiveerd.");
+  }
+
+  async function deleteSupplier() {
+    if (!form.id || !window.confirm(`Leverancier ${form.companyName} definitief verwijderen?`)) return;
+    const { error: deleteError } = await supabase.from("suppliers").delete().eq("id", form.id).eq("organization_id", organizationId);
+    if (deleteError) { setError(getErrorMessage(deleteError, "Leverancier verwijderen is mislukt.")); return; }
+    setItems(current => current.filter(item => item.id !== form.id));
+    closeForm();
+    setMessage("Leverancier verwijderd.");
   }
 
   return (
@@ -759,6 +836,13 @@ export default function SuppliersPage() {
           </div>
 
           <div className={styles.footer}>
+            <div className={styles.footerDanger}>
+              {form.id && (<>
+                <button type="button" className="button button-secondary" onClick={() => void toggleSupplierStatus()}>{form.status === "Actief" ? "Archiveren" : "Activeren"}</button>
+                <button type="button" className="button button-danger" onClick={() => void deleteSupplier()}>Verwijderen</button>
+              </>)}
+            </div>
+            <div className={styles.footerSave}>
             <button
               type="button"
               className="button button-secondary"
@@ -776,6 +860,7 @@ export default function SuppliersPage() {
             >
               Leverancier opslaan
             </button>
+            </div>
           </div>
         </section>
       )}
@@ -806,7 +891,6 @@ export default function SuppliersPage() {
                 <th>Plaats</th>
                 <th>BTW-nummer</th>
                 <th>Status</th>
-                <th />
               </tr>
             </thead>
 
@@ -829,15 +913,9 @@ export default function SuppliersPage() {
 
                   return (
                     <tr key={supplier.id}>
-                      <td>
-                        {
-                          supplier.supplierNumber
-                        }
-                      </td>
+                      <td><button type="button" className={styles.tableLink} onClick={() => startEdit(supplier)}>{supplier.supplierNumber}</button></td>
 
-                      <td className="table-primary">
-                        {supplier.companyName}
-                      </td>
+                      <td className="table-primary"><button type="button" className={`${styles.tableLink} ${styles.companyLink}`} onClick={() => startEdit(supplier)}>{supplier.companyName}</button></td>
 
                       <td>
                         {primaryContact?.emails.find(
@@ -865,17 +943,7 @@ export default function SuppliersPage() {
                         />
                       </td>
 
-                      <td>
-                        <button
-                          type="button"
-                          className={styles.link}
-                          onClick={() =>
-                            startEdit(supplier)
-                          }
-                        >
-                          Bewerken
-                        </button>
-                      </td>
+
                     </tr>
                   );
                 },

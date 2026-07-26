@@ -17,7 +17,7 @@ import styles from "./article-import.module.css";
 
 type Row = Record<string, string | number>;
 type Step = 1 | 2 | 3 | 4;
-type PreviewStatus = "ready" | "completed" | "error";
+type RowStatus = "ready" | "completed" | "error";
 
 type ImportResult = {
   added: number;
@@ -29,83 +29,39 @@ type ImportResult = {
 
 type PreviewRow = {
   rowNumber: number;
-  articleCode: string;
-  productName: string;
-  collection: string;
-  garmentType: string;
+  name: string;
   color: string;
   size: string;
-  supplier: string;
+  collection: string;
+  garmentType: string;
+  articleCode: string;
   ean: string;
-  purchasePrice: number;
-  status: PreviewStatus;
-  errors: string[];
+  status: RowStatus;
+  messages: string[];
   completions: string[];
 };
 
 const fields = [
-  [
-    "code",
-    "Artikelnummer",
-    false,
-    ["artikelnummer", "artikelcode", "article number", "product code", "sku"],
-  ],
+  ["code", "Artikelnummer", false, ["artikelnummer", "article number", "sku", "product code"]],
   ["productName", "Productnaam", true, ["productnaam", "product name", "naam"]],
   ["brand", "Merk", false, ["merk", "brand"]],
-  [
-    "collection",
-    "Collectie",
-    false,
-    ["collectie", "collection", "season", "seizoen"],
-  ],
-  [
-    "garmentType",
-    "Artikeltype",
-    false,
-    [
-      "artikeltype",
-      "product type",
-      "garment type",
-      "type",
-      "categorie",
-      "category",
-    ],
-  ],
+  ["collection", "Collectie", false, ["collectie", "collection", "season", "seizoen"]],
+  ["garmentType", "Artikeltype", false, ["artikeltype", "product type", "garment type", "type", "categorie", "category"]],
   ["color", "Kleur", true, ["kleur", "color", "colour"]],
   ["colorCode", "Kleurcode", false, ["kleurcode", "color code"]],
   ["size", "Maat", true, ["maat", "size"]],
   ["supplier", "Leverancier", false, ["leverancier", "supplier"]],
-  [
-    "supplierSku",
-    "Leveranciersartikelnummer",
-    false,
-    ["leveranciersartikelnummer", "supplier sku"],
-  ],
-  [
-    "purchasePrice",
-    "Inkoopprijs",
-    false,
-    ["inkoopprijs", "kostprijs", "purchase price", "cost price", "cost"],
-  ],
+  ["supplierSku", "Leveranciersartikelnummer", false, ["leveranciersartikelnummer", "supplier sku"]],
+  ["purchasePrice", "Inkoopprijs", false, ["inkoopprijs", "purchase price", "cost"]],
   ["salesPrice", "Verkoopprijs", false, ["verkoopprijs", "sales price"]],
   ["markup", "Markup", false, ["markup", "factor"]],
   ["vat", "BTW-percentage", false, ["btw-percentage", "btw", "vat"]],
   ["ean", "EAN", false, ["ean", "barcode", "gtin"]],
   ["stock", "Voorraad", false, ["voorraad", "stock"]],
-  [
-    "stockLocation",
-    "Voorraadlocatie",
-    false,
-    ["voorraadlocatie", "location"],
-  ],
+  ["stockLocation", "Voorraadlocatie", false, ["voorraadlocatie", "location"]],
   ["active", "Actief", false, ["actief", "active", "status"]],
   ["description", "Omschrijving", false, ["omschrijving", "description"]],
-  [
-    "imageUrl",
-    "Afbeeldings-URL",
-    false,
-    ["afbeeldings-url", "image url", "afbeelding"],
-  ],
+  ["imageUrl", "Afbeeldings-URL", false, ["afbeeldings-url", "image url", "afbeelding"]],
 ] as const;
 
 const norm = (value: string) =>
@@ -122,42 +78,20 @@ const text = (
   key: string,
 ) => String(row[mapping[key]] ?? "").trim();
 
-const normalizeCode = (value: string) => value.trim().toUpperCase();
-const normalizeEan = (value: string) => value.replace(/\s+/g, "");
+const normalizedCode = (value: string) => value.trim().toUpperCase();
+const normalizedEan = (value: string) => value.replace(/\s+/g, "");
 
-function parseLocalizedNumber(value: string) {
-  const raw = value
-    .trim()
-    .replace(/\s/g, "")
-    .replace(/[€$£]/g, "");
+function parseNumber(value: string) {
+  const trimmed = value.trim();
 
-  if (!raw) {
+  if (!trimmed) {
     return { value: 0, valid: true };
   }
 
-  const commaIndex = raw.lastIndexOf(",");
-  const dotIndex = raw.lastIndexOf(".");
-  let normalized = raw;
-
-  if (commaIndex >= 0 && dotIndex >= 0) {
-    if (commaIndex > dotIndex) {
-      normalized = raw.replace(/\./g, "").replace(",", ".");
-    } else {
-      normalized = raw.replace(/,/g, "");
-    }
-  } else if (commaIndex >= 0) {
-    const decimals = raw.length - commaIndex - 1;
-    normalized =
-      decimals === 3 && commaIndex > 0
-        ? raw.replace(/,/g, "")
-        : raw.replace(",", ".");
-  } else if (dotIndex >= 0) {
-    const decimals = raw.length - dotIndex - 1;
-    normalized =
-      decimals === 3 && dotIndex > 0
-        ? raw.replace(/\./g, "")
-        : raw;
-  }
+  const normalized =
+    trimmed.includes(",")
+      ? trimmed.replace(/\./g, "").replace(",", ".")
+      : trimmed;
 
   const parsed = Number(normalized);
 
@@ -183,88 +117,72 @@ function buildPreview(
   mapping: Record<string, string>,
 ): PreviewRow[] {
   const products = getStoredProducts();
-
   const usedCodes = new Set(
-    products.map((product) => normalizeCode(product.code)),
+    products.map((product) => normalizedCode(product.code)),
   );
-
   const usedEans = new Set(
     products.flatMap((product) =>
       product.variants
         .map((variant) => variant.ean)
         .filter((ean): ean is string => Boolean(ean))
-        .map(normalizeEan),
+        .map(normalizedEan),
     ),
   );
 
   return rows.map((row, index) => {
-    const errors: string[] = [];
+    const messages: string[] = [];
     const completions: string[] = [];
 
-    const productName = text(row, mapping, "productName");
+    const name = text(row, mapping, "productName");
     const color = text(row, mapping, "color");
     const size = text(row, mapping, "size");
-    const supplier = text(row, mapping, "supplier");
-    const suppliedCollection = text(row, mapping, "collection");
-    const suppliedGarmentType = text(row, mapping, "garmentType");
-    const collection = suppliedCollection || "XXXX";
-    const garmentType = suppliedGarmentType || "XX";
-    const suppliedCode = normalizeCode(text(row, mapping, "code"));
-    const ean = normalizeEan(text(row, mapping, "ean"));
+    const collection = text(row, mapping, "collection");
+    const garmentType = text(row, mapping, "garmentType");
+    const requestedCode = normalizedCode(text(row, mapping, "code"));
+    const ean = normalizedEan(text(row, mapping, "ean"));
 
-    if (!productName) {
-      errors.push("Productnaam ontbreekt.");
-    }
+    if (!name) messages.push("Productnaam ontbreekt.");
+    if (!color) messages.push("Kleur ontbreekt.");
+    if (!size) messages.push("Maat ontbreekt.");
 
-    if (!color) {
-      errors.push("Kleur ontbreekt.");
-    }
-
-    if (!size) {
-      errors.push("Maat ontbreekt.");
-    }
-
-    const numericFields = [
-      ["purchasePrice", "Inkoopprijs"],
-      ["salesPrice", "Verkoopprijs"],
-      ["markup", "Markup"],
-      ["stock", "Voorraad"],
-    ] as const;
-
-    numericFields.forEach(([key, label]) => {
-      const raw = text(row, mapping, key);
-
-      if (raw && !parseLocalizedNumber(raw).valid) {
-        errors.push(`${label} bevat geen geldig getal.`);
+    for (const field of ["purchasePrice", "salesPrice", "markup", "stock"]) {
+      const rawValue = text(row, mapping, field);
+      if (!parseNumber(rawValue).valid) {
+        messages.push(`${field} bevat geen geldig getal.`);
       }
-    });
+    }
 
-    let articleCode = suppliedCode;
+    let articleCode = requestedCode;
 
-    if (suppliedCode) {
-      if (usedCodes.has(suppliedCode)) {
-        errors.push(
-          `Artikelcode ${suppliedCode} bestaat al of staat dubbel in het bestand.`,
-        );
+    if (requestedCode) {
+      if (usedCodes.has(requestedCode)) {
+        messages.push(`Artikelcode ${requestedCode} bestaat al of staat dubbel in het bestand.`);
       } else {
-        usedCodes.add(suppliedCode);
+        usedCodes.add(requestedCode);
       }
     } else {
       articleCode = generateArticleNumber({
-        collectionCode: suppliedCollection,
-        productTypeCode: suppliedGarmentType,
+        collectionCode: collection,
+        productTypeCode: garmentType,
         existingCodes: Array.from(usedCodes),
       });
-
-      usedCodes.add(normalizeCode(articleCode));
-      completions.push(`Artikelnummer automatisch aangemaakt: ${articleCode}.`);
+      usedCodes.add(normalizedCode(articleCode));
+      completions.push(
+        collection
+          ? garmentType
+            ? `Artikelcode automatisch gegenereerd: ${articleCode}.`
+            : `Artikeltype ontbrak; XX gebruikt in ${articleCode}.`
+          : garmentType
+            ? `Collectie ontbrak; XXXX gebruikt in ${articleCode}.`
+            : `Collectie en artikeltype ontbraken; XXXXXX gebruikt in ${articleCode}.`,
+      );
     }
 
-    if (!suppliedCollection) {
+    if (!collection) {
       completions.push("Collectie automatisch aangevuld met XXXX.");
     }
 
-    if (!suppliedGarmentType) {
+    if (!garmentType) {
       completions.push("Artikeltype automatisch aangevuld met XX.");
     }
 
@@ -274,7 +192,7 @@ function buildPreview(
 
     if (ean) {
       if (usedEans.has(ean)) {
-        errors.push(`EAN ${ean} bestaat al of staat dubbel in het bestand.`);
+        messages.push(`EAN ${ean} bestaat al of staat dubbel in het bestand.`);
       } else {
         usedEans.add(ean);
       }
@@ -282,24 +200,20 @@ function buildPreview(
 
     return {
       rowNumber: index + 2,
-      articleCode,
-      productName,
-      collection,
-      garmentType,
+      name,
       color,
       size,
-      supplier,
+      collection: collection || "XXXX",
+      garmentType: garmentType || "XX",
+      articleCode,
       ean,
-      purchasePrice: parseLocalizedNumber(
-        text(row, mapping, "purchasePrice"),
-      ).value,
       status:
-        errors.length > 0
+        messages.length > 0
           ? "error"
           : completions.length > 0
             ? "completed"
             : "ready",
-      errors,
+      messages,
       completions: Array.from(new Set(completions)),
     };
   });
@@ -317,7 +231,7 @@ export default function ArticleImportPage() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  const missing = useMemo(
+  const missingMappings = useMemo(
     () =>
       fields.filter(
         ([key, , required]) => required && !mapping[key],
@@ -343,31 +257,29 @@ export default function ArticleImportPage() {
   const completionSummary = useMemo(() => {
     const summary: Record<string, number> = {};
 
-    rows.forEach((row) => {
-      if (!text(row, mapping, "code")) {
-        incrementCounter(summary, "Artikelnummer gegenereerd");
-      }
-
-      if (!text(row, mapping, "collection")) {
+    previewRows.forEach((row) => {
+      if (!text(rows[row.rowNumber - 2], mapping, "collection")) {
         incrementCounter(summary, "Collectie → XXXX");
       }
 
-      if (!text(row, mapping, "garmentType")) {
+      if (!text(rows[row.rowNumber - 2], mapping, "garmentType")) {
         incrementCounter(summary, "Artikeltype → XX");
       }
 
-      if (!text(row, mapping, "brand")) {
+      if (!text(rows[row.rowNumber - 2], mapping, "code")) {
+        incrementCounter(summary, "Artikelcode gegenereerd");
+      }
+
+      if (!text(rows[row.rowNumber - 2], mapping, "brand")) {
         incrementCounter(summary, "Merk → Onbekend");
       }
     });
 
     return summary;
-  }, [rows, mapping]);
+  }, [previewRows, rows, mapping]);
 
   async function handleFile(file?: File) {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const extension = file.name.split(".").pop()?.toLowerCase();
 
@@ -380,7 +292,7 @@ export default function ArticleImportPage() {
       const parsed =
         extension === "csv"
           ? parseCsv(await file.text())
-          : await parseXlsx(await file.arrayBuffer());
+          : await parseXlsx(file);
 
       if (!parsed.length) {
         throw new Error("Het bestand bevat geen regels.");
@@ -434,25 +346,23 @@ export default function ArticleImportPage() {
         if (preview.status === "error") {
           skipped += 1;
           errors.push(
-            ...preview.errors.map(
+            ...preview.messages.map(
               (message) => `Regel ${preview.rowNumber}: ${message}`,
             ),
           );
           continue;
         }
 
-        const purchasePrice = parseLocalizedNumber(
+        const purchasePrice = parseNumber(
           text(row, mapping, "purchasePrice"),
         ).value;
-        const suppliedSalesPrice = parseLocalizedNumber(
+        const suppliedSalesPrice = parseNumber(
           text(row, mapping, "salesPrice"),
         ).value;
-        const suppliedMarkup = parseLocalizedNumber(
+        const suppliedMarkup = parseNumber(
           text(row, mapping, "markup"),
         ).value;
-        const stock = parseLocalizedNumber(
-          text(row, mapping, "stock"),
-        ).value;
+        const stock = parseNumber(text(row, mapping, "stock")).value;
 
         const pricing = calculatePricing(
           {
@@ -468,18 +378,17 @@ export default function ArticleImportPage() {
           text(row, mapping, "collection") || "XXXX";
         const garmentType =
           text(row, mapping, "garmentType") || "XX";
-        const brand =
-          text(row, mapping, "brand") || "Onbekend";
+        const brand = text(row, mapping, "brand") || "Onbekend";
         const supplier = text(row, mapping, "supplier");
         const color = text(row, mapping, "color");
         const size = text(row, mapping, "size");
-        const ean = normalizeEan(text(row, mapping, "ean"));
+        const ean = normalizedEan(text(row, mapping, "ean"));
 
         const input: ProductInput = {
           code: preview.articleCode,
           name: text(row, mapping, "productName"),
           collection,
-          category: garmentType,
+          category: garmentType === "XX" ? "" : garmentType,
           supplier,
           supplierProductCode: text(row, mapping, "supplierSku"),
           status: truthy(text(row, mapping, "active"))
@@ -488,7 +397,7 @@ export default function ArticleImportPage() {
           vatCode: "2V",
           brand,
           material: "",
-          garmentType,
+          garmentType: garmentType === "XX" ? "" : garmentType,
           fit: "",
           colorFamily: color,
           seasonType: "Doorlopend",
@@ -522,10 +431,6 @@ export default function ArticleImportPage() {
         if (preview.status === "completed") {
           completed += 1;
 
-          if (!text(row, mapping, "code")) {
-            incrementCounter(completions, "Artikelnummer gegenereerd");
-          }
-
           if (!text(row, mapping, "collection")) {
             incrementCounter(completions, "Collectie → XXXX");
           }
@@ -534,14 +439,16 @@ export default function ArticleImportPage() {
             incrementCounter(completions, "Artikeltype → XX");
           }
 
+          if (!text(row, mapping, "code")) {
+            incrementCounter(completions, "Artikelcode gegenereerd");
+          }
+
           if (!text(row, mapping, "brand")) {
             incrementCounter(completions, "Merk → Onbekend");
           }
         }
 
-        setProgress(
-          Math.round(((index + 1) / rows.length) * 100),
-        );
+        setProgress(Math.round(((index + 1) / rows.length) * 100));
 
         if (index % 20 === 0) {
           await new Promise((resolve) => setTimeout(resolve, 0));
@@ -592,9 +499,7 @@ export default function ArticleImportPage() {
   }
 
   function downloadLog() {
-    if (!result) {
-      return;
-    }
+    if (!result) return;
 
     const completionLines = Object.entries(result.completions).map(
       ([label, count]) => `Automatisch aangevuld;${label};${count}`,
@@ -660,9 +565,8 @@ export default function ArticleImportPage() {
             <div className={styles.templateText}>
               <h2>Gebruik het STiTch Excel-sjabloon</h2>
               <p>
-                Het artikelnummer mag leeg blijven. STiTch gebruikt dan
-                automatisch dezelfde nummergenerator als bij handmatig
-                aanmaken.
+                Een artikelnummer mag leeg blijven. STiTch gebruikt dan
+                dezelfde nummergenerator als bij handmatig aanmaken.
               </p>
               <div className={styles.requiredFields}>
                 Verplicht: productnaam, kleur en maat
@@ -732,7 +636,6 @@ export default function ArticleImportPage() {
                 {fileName} · {rows.length} regels gevonden
               </p>
             </div>
-
             <button
               className={styles.textButton}
               onClick={() => setStep(1)}
@@ -755,9 +658,7 @@ export default function ArticleImportPage() {
                 <div className={styles.mappingRow} key={key}>
                   <div>
                     <strong>{label}</strong>
-                    {required && (
-                      <span className={styles.required}> *</span>
-                    )}
+                    {required && <span className={styles.required}> *</span>}
                   </div>
 
                   <select
@@ -785,10 +686,10 @@ export default function ArticleImportPage() {
             })}
           </div>
 
-          {missing.length > 0 && (
+          {missingMappings.length > 0 && (
             <p className={styles.error}>
               Koppel eerst:{" "}
-              {missing.map(([, label]) => label).join(", ")}.
+              {missingMappings.map(([, label]) => label).join(", ")}.
             </p>
           )}
 
@@ -801,7 +702,7 @@ export default function ArticleImportPage() {
             </button>
             <button
               className={styles.primaryButton}
-              disabled={missing.length > 0}
+              disabled={missingMappings.length > 0}
               onClick={() => setStep(3)}
             >
               Controleren <AppIcon name="arrowRight" size={15} />
@@ -815,8 +716,8 @@ export default function ArticleImportPage() {
           <div>
             <h2>Import controleren</h2>
             <p>
-              De artikelcodes en ingelezen kostprijzen worden vóór de import
-              getoond. Alleen echte fouten blokkeren de verwerking.
+              Alleen echte fouten blokkeren de import. Ontbrekende collectie,
+              artikeltype, artikelcode en merk vult STiTch automatisch aan.
             </p>
           </div>
 
@@ -840,13 +741,15 @@ export default function ArticleImportPage() {
           </div>
 
           {Object.keys(completionSummary).length > 0 && (
-            <div className={styles.errorList}>
+            <div className={styles.completionBox}>
               <strong>Automatisch aan te vullen</strong>
-              {Object.entries(completionSummary).map(([label, count]) => (
-                <div key={label}>
-                  {label}: {count}
-                </div>
-              ))}
+              <div className={styles.completionList}>
+                {Object.entries(completionSummary).map(([label, count]) => (
+                  <span key={label}>
+                    {label}: <strong>{count}</strong>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
@@ -855,13 +758,13 @@ export default function ArticleImportPage() {
               <thead>
                 <tr>
                   <th>Status</th>
-                  <th>Artikelnummer</th>
+                  <th>Regel</th>
+                  <th>Artikelcode</th>
                   <th>Productnaam</th>
                   <th>Collectie</th>
                   <th>Type</th>
                   <th>Kleur</th>
                   <th>Maat</th>
-                  <th>Kostprijs</th>
                   <th>EAN</th>
                 </tr>
               </thead>
@@ -878,7 +781,7 @@ export default function ArticleImportPage() {
                               ? styles.warn
                               : styles.ok
                         }
-                        title={[...row.errors, ...row.completions].join(" ")}
+                        title={[...row.messages, ...row.completions].join(" ")}
                       >
                         {row.status === "error"
                           ? "Fout"
@@ -887,20 +790,15 @@ export default function ArticleImportPage() {
                             : "Gereed"}
                       </span>
                     </td>
+                    <td>{row.rowNumber}</td>
                     <td>
                       <strong>{row.articleCode || "—"}</strong>
                     </td>
-                    <td>{row.productName || "—"}</td>
+                    <td>{row.name || "—"}</td>
                     <td>{row.collection}</td>
                     <td>{row.garmentType}</td>
                     <td>{row.color || "—"}</td>
                     <td>{row.size || "—"}</td>
-                    <td>
-                      {new Intl.NumberFormat("nl-NL", {
-                        style: "currency",
-                        currency: "EUR",
-                      }).format(row.purchasePrice)}
-                    </td>
                     <td>{row.ean || "—"}</td>
                   </tr>
                 ))}
@@ -908,13 +806,19 @@ export default function ArticleImportPage() {
             </table>
           </div>
 
+          {previewRows.length > 50 && (
+            <p className={styles.previewNote}>
+              De eerste 50 van {previewRows.length} regels worden getoond.
+            </p>
+          )}
+
           {stats.errors > 0 && (
             <div className={styles.errorList}>
               {previewRows
                 .filter((row) => row.status === "error")
                 .slice(0, 12)
                 .flatMap((row) =>
-                  row.errors.map((message) => (
+                  row.messages.map((message) => (
                     <div key={`${row.rowNumber}-${message}`}>
                       Regel {row.rowNumber}: {message}
                     </div>
@@ -950,7 +854,9 @@ export default function ArticleImportPage() {
               </span>
               <h2>{rows.length} artikelen klaarzetten</h2>
               <p>
-                De artikelcodes uit de controle worden ongewijzigd opgeslagen.
+                STiTch gebruikt dezelfde artikelnummergenerator als bij
+                handmatig aanmaken. Ontbrekende codes worden zichtbaar
+                aangevuld met XXXX en XX.
               </p>
 
               {importing && (
@@ -1016,6 +922,21 @@ export default function ArticleImportPage() {
                   <span>Foutmeldingen</span>
                 </div>
               </div>
+
+              {Object.keys(result.completions).length > 0 && (
+                <div className={styles.completionBox}>
+                  <strong>Automatisch aangevuld</strong>
+                  <div className={styles.completionList}>
+                    {Object.entries(result.completions).map(
+                      ([label, count]) => (
+                        <span key={label}>
+                          {label}: <strong>{count}</strong>
+                        </span>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
 
               {result.errors.length > 0 && (
                 <div className={styles.errorList}>

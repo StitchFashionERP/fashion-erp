@@ -69,6 +69,21 @@ export function SupplierFinancialTab({
     <>
       <div className={styles.sectionHeader}>
         <div>
+          <h3>E-mailinstellingen</h3>
+          <p>Standaard ontvangers en CC-adressen per leveranciersmail.</p>
+        </div>
+      </div>
+
+      <div className={styles.grid}>
+        <label><span>Inkooporder e-mailadres</span><input type="email" value={supplier.purchaseOrderEmail} placeholder={supplier.email || "orders@leverancier.nl"} onChange={(event) => setSupplier((current) => ({ ...current, purchaseOrderEmail: event.target.value }))} /></label>
+        <label><span>CC inkooporders</span><input value={supplier.purchaseOrderCc} placeholder="contact@leverancier.nl, inkoper@bedrijf.nl" onChange={(event) => setSupplier((current) => ({ ...current, purchaseOrderCc: event.target.value }))} /></label>
+        <label><span>Algemene CC</span><input value={supplier.generalCc} onChange={(event) => setSupplier((current) => ({ ...current, generalCc: event.target.value }))} /></label>
+        <label><span>Afwijkingsmelding e-mailadres</span><input type="email" value={supplier.deviationEmail} placeholder={supplier.email || "quality@leverancier.nl"} onChange={(event) => setSupplier((current) => ({ ...current, deviationEmail: event.target.value }))} /></label>
+        <label><span>CC afwijkingsmeldingen</span><input value={supplier.deviationCc} onChange={(event) => setSupplier((current) => ({ ...current, deviationCc: event.target.value }))} /></label>
+      </div>
+
+      <div className={styles.sectionHeader}>
+        <div>
           <h3>Financiële gegevens</h3>
           <p>
             Beheer valuta, bestelvoorwaarden en

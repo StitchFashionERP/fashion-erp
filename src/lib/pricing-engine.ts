@@ -40,6 +40,48 @@ export type PricingDriver =
   | "retailer-markup"
   | "retail-price";
 
+export type PricingStrategy =
+  | "automatic"
+  | "manual"
+  | "protect-brand-margin"
+  | "protect-retailer-margin"
+  | "protect-sales-price"
+  | "protect-retail-price";
+
+export type PricingLockField =
+  | "supplierPurchasePrice"
+  | "shippingCosts"
+  | "otherCosts"
+  | "brandMarkup"
+  | "salesPrice"
+  | "retailerMarkup"
+  | "recommendedRetailPrice";
+
+export type PricingLocks = Record<PricingLockField, boolean>;
+
+export type PricingV2Input = PricingInput & {
+  strategy?: PricingStrategy;
+  locks?: Partial<PricingLocks>;
+  changedField?: PricingLockField | null;
+};
+
+export type PricingV2Result = PricingValues & {
+  strategy: PricingStrategy;
+  locks: PricingLocks;
+  changedField: PricingLockField | null;
+  recalculatedFields: PricingLockField[];
+};
+
+export const defaultPricingLocks: PricingLocks = {
+  supplierPurchasePrice: false,
+  shippingCosts: false,
+  otherCosts: false,
+  brandMarkup: false,
+  salesPrice: false,
+  retailerMarkup: false,
+  recommendedRetailPrice: false,
+};
+
 function safeNumber(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -50,7 +92,7 @@ function money(value: number) {
 }
 
 function ratio(value: number) {
-  return Math.round(safeNumber(value) * 100) / 100;
+  return Math.round(safeNumber(value) * 10000) / 10000;
 }
 
 function percentage(value: number) {
@@ -68,78 +110,66 @@ function positiveOrFallback(
     : fallback;
 }
 
-export function calculatePricing(
-  input: PricingInput,
-  source: PricingDriver = "targets",
-  defaults: PricingDefaults = getPricingDefaults(),
-): PricingValues {
-  const vatPercentage = defaults.vatPercentage;
-  const vatFactor = 1 + vatPercentage / 100;
+function normalizeLocks(
+  locks?: Partial<PricingLocks>,
+): PricingLocks {
+  return {
+    ...defaultPricingLocks,
+    ...locks,
+  };
+}
 
-  const supplierPurchasePrice = Math.max(
-    0,
-    safeNumber(input.supplierPurchasePrice),
+function addRecalculatedField(
+  fields: PricingLockField[],
+  field: PricingLockField,
+) {
+  if (!fields.includes(field)) {
+    fields.push(field);
+  }
+}
+
+function isAnchored(
+  field: PricingLockField,
+  changedField: PricingLockField | null,
+  locks: PricingLocks,
+) {
+  return field === changedField || locks[field];
+}
+
+function normalizeStrategy(
+  strategy: PricingStrategy | undefined,
+): "automatic" | "manual" {
+  return strategy === "manual" ? "manual" : "automatic";
+}
+
+function buildPricingValues(
+  input: {
+    supplierPurchasePrice: number;
+    shippingCosts: number;
+    otherCosts: number;
+    brandMarkup: number;
+    salesPrice: number;
+    retailerMarkup: number;
+    recommendedRetailPrice: number;
+  },
+  defaults: PricingDefaults,
+): PricingValues {
+  const supplierPurchasePrice = money(
+    Math.max(0, input.supplierPurchasePrice),
   );
-  const shippingCosts = Math.max(
-    0,
-    safeNumber(input.shippingCosts),
+  const shippingCosts = money(
+    Math.max(0, input.shippingCosts),
   );
-  const otherCosts = Math.max(
-    0,
-    safeNumber(input.otherCosts),
-  );
+  const otherCosts = money(Math.max(0, input.otherCosts));
   const totalCost = money(
     supplierPurchasePrice + shippingCosts + otherCosts,
   );
-
-  let brandMarkup = Math.max(
-    0,
-    positiveOrFallback(
-      input.brandMarkup,
-      defaults.brandMarkup,
-    ),
+  const salesPrice = money(Math.max(0, input.salesPrice));
+  const recommendedRetailPrice = money(
+    Math.max(0, input.recommendedRetailPrice),
   );
-  let salesPrice = Math.max(
-    0,
-    safeNumber(input.salesPrice),
-  );
-
-  if (source === "sales-price") {
-    brandMarkup =
-      totalCost > 0 ? ratio(salesPrice / totalCost) : 0;
-  } else {
-    salesPrice = roundCommercialPrice(
-      totalCost * brandMarkup,
-      defaults.rounding,
-    );
-  }
-
-  let retailerMarkup = Math.max(
-    0,
-    positiveOrFallback(
-      input.retailerMarkup,
-      defaults.retailerMarkup,
-    ),
-  );
-  let recommendedRetailPrice = Math.max(
-    0,
-    safeNumber(input.recommendedRetailPrice),
-  );
-
-  if (source === "retail-price") {
-    const retailPriceExVat =
-      recommendedRetailPrice / vatFactor;
-    retailerMarkup =
-      salesPrice > 0
-        ? ratio(retailPriceExVat / salesPrice)
-        : 0;
-  } else {
-    recommendedRetailPrice = roundCommercialPrice(
-      salesPrice * retailerMarkup * vatFactor,
-      defaults.rounding,
-    );
-  }
-
+  const vatPercentage = defaults.vatPercentage;
+  const vatFactor = 1 + vatPercentage / 100;
   const recommendedRetailPriceExVat = money(
     recommendedRetailPrice / vatFactor,
   );
@@ -161,18 +191,18 @@ export function calculatePricing(
       : 0;
 
   return {
-    supplierPurchasePrice: money(supplierPurchasePrice),
-    shippingCosts: money(shippingCosts),
-    otherCosts: money(otherCosts),
+    supplierPurchasePrice,
+    shippingCosts,
+    otherCosts,
     totalCost,
-    brandMarkup,
-    salesPrice: money(salesPrice),
+    brandMarkup: ratio(Math.max(0, input.brandMarkup)),
+    salesPrice,
     ownMarginAmount,
     ownMarginPercentage,
-    retailerMarkup,
-    recommendedRetailPrice: money(
-      recommendedRetailPrice,
+    retailerMarkup: ratio(
+      Math.max(0, input.retailerMarkup),
     ),
+    recommendedRetailPrice,
     recommendedRetailPriceExVat,
     retailerMarginAmount,
     retailerMarginPercentage,
@@ -180,24 +210,309 @@ export function calculatePricing(
   };
 }
 
-export function calculatePricingFromDefaults(
-  input: Pick<
-    PricingInput,
-    "supplierPurchasePrice" | "shippingCosts" | "otherCosts"
-  >,
+export function calculatePricing(
+  input: PricingInput,
+  source: PricingDriver = "targets",
   defaults: PricingDefaults = getPricingDefaults(),
-) {
-  return calculatePricing(
+): PricingValues {
+  const vatFactor = 1 + defaults.vatPercentage / 100;
+  const supplierPurchasePrice = Math.max(
+    0,
+    safeNumber(input.supplierPurchasePrice),
+  );
+  const shippingCosts = Math.max(
+    0,
+    safeNumber(input.shippingCosts),
+  );
+  const otherCosts = Math.max(
+    0,
+    safeNumber(input.otherCosts),
+  );
+  const totalCost = money(
+    supplierPurchasePrice + shippingCosts + otherCosts,
+  );
+
+  let brandMarkup = positiveOrFallback(
+    input.brandMarkup,
+    defaults.brandMarkup,
+  );
+  let salesPrice = Math.max(
+    0,
+    safeNumber(input.salesPrice),
+  );
+  let retailerMarkup = positiveOrFallback(
+    input.retailerMarkup,
+    defaults.retailerMarkup,
+  );
+  let recommendedRetailPrice = Math.max(
+    0,
+    safeNumber(input.recommendedRetailPrice),
+  );
+
+  if (source === "sales-price") {
+    brandMarkup =
+      totalCost > 0 ? salesPrice / totalCost : 0;
+  } else {
+    salesPrice = money(totalCost * brandMarkup);
+  }
+
+  if (source === "retail-price") {
+    retailerMarkup =
+      salesPrice > 0
+        ? recommendedRetailPrice /
+          vatFactor /
+          salesPrice
+        : 0;
+  } else {
+    recommendedRetailPrice = roundCommercialPrice(
+      salesPrice * retailerMarkup * vatFactor,
+      defaults.rounding,
+    );
+  }
+
+  return buildPricingValues(
     {
-      ...input,
-      brandMarkup: defaults.brandMarkup,
-      retailerMarkup: defaults.retailerMarkup,
+      supplierPurchasePrice,
+      shippingCosts,
+      otherCosts,
+      brandMarkup,
+      salesPrice,
+      retailerMarkup,
+      recommendedRetailPrice,
     },
-    "targets",
     defaults,
   );
 }
 
+export function calculatePricingV2(
+  input: PricingV2Input,
+  defaults: PricingDefaults = getPricingDefaults(),
+): PricingV2Result {
+  const strategy = normalizeStrategy(input.strategy);
+  const locks = normalizeLocks(input.locks);
+  const changedField = input.changedField ?? null;
+  const recalculatedFields: PricingLockField[] = [];
+  const vatFactor = 1 + defaults.vatPercentage / 100;
+
+  const supplierPurchasePrice = Math.max(
+    0,
+    safeNumber(input.supplierPurchasePrice),
+  );
+  const shippingCosts = Math.max(
+    0,
+    safeNumber(input.shippingCosts),
+  );
+  const otherCosts = Math.max(
+    0,
+    safeNumber(input.otherCosts),
+  );
+  const totalCost = money(
+    supplierPurchasePrice + shippingCosts + otherCosts,
+  );
+
+  let brandMarkup = positiveOrFallback(
+    input.brandMarkup,
+    defaults.brandMarkup,
+  );
+  let salesPrice = Math.max(0, safeNumber(input.salesPrice));
+  let retailerMarkup = positiveOrFallback(
+    input.retailerMarkup,
+    defaults.retailerMarkup,
+  );
+  let recommendedRetailPrice = Math.max(
+    0,
+    safeNumber(input.recommendedRetailPrice),
+  );
+
+  const locked = (field: PricingLockField) => locks[field];
+  const changed = (field: PricingLockField) => changedField === field;
+  const anchored = (field: PricingLockField) =>
+    locked(field) || changed(field);
+
+  const recalc = (field: PricingLockField) =>
+    addRecalculatedField(recalculatedFields, field);
+
+  const salesFromCostAndBrand = () => {
+    salesPrice = money(totalCost * brandMarkup);
+    recalc("salesPrice");
+  };
+
+  const brandFromCostAndSales = () => {
+    brandMarkup = totalCost > 0 ? salesPrice / totalCost : 0;
+    recalc("brandMarkup");
+  };
+
+  const capFromSalesAndRetailer = () => {
+    recommendedRetailPrice = roundCommercialPrice(
+      salesPrice * retailerMarkup * vatFactor,
+      defaults.rounding,
+    );
+    recalc("recommendedRetailPrice");
+  };
+
+  const retailerFromCapAndSales = () => {
+    retailerMarkup =
+      salesPrice > 0
+        ? recommendedRetailPrice / vatFactor / salesPrice
+        : 0;
+    recalc("retailerMarkup");
+  };
+
+  const salesFromCapAndRetailer = () => {
+    const rawSalesPrice =
+      retailerMarkup > 0
+        ? recommendedRetailPrice / vatFactor / retailerMarkup
+        : 0;
+
+    // Bij terugrekenen vanuit een vaste CAP en vaste retailermarkup
+    // ronden we naar beneden op centen. Zo komt ieder afrondingsverschil
+    // voor rekening van het merk en behoudt de retailer minimaal zijn markup.
+    salesPrice = Math.floor((rawSalesPrice + Number.EPSILON) * 100) / 100;
+    recalc("salesPrice");
+  };
+
+  /*
+   * Hoogste prioriteit: CAP + retailermarkup staan vast.
+   * Dit is ook de ordercontext: CAP blijft overal gelijk en een hogere
+   * klantmarkup gaat volledig ten koste van de merkmarkup.
+   */
+  if (
+    locked("recommendedRetailPrice") &&
+    locked("retailerMarkup") &&
+    retailerMarkup > 0
+  ) {
+    salesFromCapAndRetailer();
+    brandFromCostAndSales();
+  } else if (
+    anchored("recommendedRetailPrice") &&
+    anchored("retailerMarkup") &&
+    retailerMarkup > 0
+  ) {
+    salesFromCapAndRetailer();
+    brandFromCostAndSales();
+  } else if (
+    anchored("recommendedRetailPrice") &&
+    anchored("salesPrice")
+  ) {
+    retailerFromCapAndSales();
+    brandFromCostAndSales();
+  } else if (
+    anchored("recommendedRetailPrice") &&
+    anchored("brandMarkup")
+  ) {
+    salesFromCostAndBrand();
+    retailerFromCapAndSales();
+  } else if (anchored("recommendedRetailPrice")) {
+    // Bij alleen een vaste/gewijzigde CAP gebruiken we eerst de bestaande
+    // retailermarkup. Verkoopprijs en merkmarkup bewegen mee.
+    salesFromCapAndRetailer();
+    brandFromCostAndSales();
+  } else if (
+    anchored("salesPrice") &&
+    anchored("retailerMarkup")
+  ) {
+    brandFromCostAndSales();
+    capFromSalesAndRetailer();
+  } else if (
+    anchored("salesPrice") &&
+    anchored("brandMarkup")
+  ) {
+    // Beide waarden zijn expliciet vastgezet. We laten ze staan en rekenen
+    // alleen de rechterkant van de keten door.
+    capFromSalesAndRetailer();
+  } else if (anchored("salesPrice")) {
+    brandFromCostAndSales();
+    capFromSalesAndRetailer();
+  } else if (
+    anchored("brandMarkup") &&
+    anchored("retailerMarkup")
+  ) {
+    salesFromCostAndBrand();
+    capFromSalesAndRetailer();
+  } else if (anchored("brandMarkup")) {
+    salesFromCostAndBrand();
+    capFromSalesAndRetailer();
+  } else if (anchored("retailerMarkup")) {
+    // Een gewijzigde retailermarkup zonder vaste CAP laat de merkzijde staan
+    // en berekent alleen een nieuwe commerciële CAP.
+    if (salesPrice <= 0) {
+      salesFromCostAndBrand();
+    } else if (!locked("salesPrice")) {
+      brandFromCostAndSales();
+    }
+    capFromSalesAndRetailer();
+  } else {
+    // Standaard automatische keten: kostprijs -> merkmarkup -> verkoopprijs
+    // -> retailermarkup -> commercieel afgeronde CAP.
+    salesFromCostAndBrand();
+    capFromSalesAndRetailer();
+  }
+
+  const values = buildPricingValues(
+    {
+      supplierPurchasePrice,
+      shippingCosts,
+      otherCosts,
+      brandMarkup,
+      salesPrice,
+      retailerMarkup,
+      recommendedRetailPrice,
+    },
+    defaults,
+  );
+
+  return {
+    ...values,
+    strategy,
+    locks,
+    changedField,
+    recalculatedFields,
+  };
+}
+
+export function resetPricingToCompanyDefaults(
+  input: Pick<
+    PricingInput,
+    | "supplierPurchasePrice"
+    | "shippingCosts"
+    | "otherCosts"
+  >,
+  defaults: PricingDefaults = getPricingDefaults(),
+): PricingV2Result {
+  return calculatePricingV2(
+    {
+      ...input,
+      brandMarkup: defaults.brandMarkup,
+      retailerMarkup: defaults.retailerMarkup,
+      strategy: "automatic",
+      locks: defaultPricingLocks,
+      changedField: "brandMarkup",
+    },
+    defaults,
+  );
+}
+
+export function calculatePricingFromDefaults(
+  input: Pick<
+    PricingInput,
+    | "supplierPurchasePrice"
+    | "shippingCosts"
+    | "otherCosts"
+  >,
+  defaults: PricingDefaults = getPricingDefaults(),
+) {
+  return calculatePricingV2(
+    {
+      ...input,
+      brandMarkup: defaults.brandMarkup,
+      retailerMarkup: defaults.retailerMarkup,
+      strategy: "automatic",
+      locks: defaultPricingLocks,
+      changedField: "brandMarkup",
+    },
+    defaults,
+  );
+}
 
 export type PaymentConditionInput = {
   paymentDays: number;
@@ -205,9 +520,7 @@ export type PaymentConditionInput = {
   paymentDiscountDays?: number;
 };
 
-export function getPaymentConditionText(
-  input: PaymentConditionInput,
-) {
+export function getPaymentConditionText(input: PaymentConditionInput) {
   const paymentDays = Math.max(
     1,
     Math.floor(Number(input.paymentDays) || 30),
@@ -220,15 +533,10 @@ export function getPaymentConditionText(
 
   const discountDays = Math.max(
     0,
-    Math.floor(
-      Number(input.paymentDiscountDays) || 0,
-    ),
+    Math.floor(Number(input.paymentDiscountDays) || 0),
   );
 
-  if (
-    discountPercentage > 0 &&
-    discountDays > 0
-  ) {
+  if (discountPercentage > 0 && discountDays > 0) {
     return `${discountPercentage.toLocaleString(
       "nl-NL",
     )}% betalingskorting bij betaling binnen ${discountDays} dagen, anders ${paymentDays} dagen netto`;
@@ -241,14 +549,10 @@ export function calculatePaymentDiscount(
   amount: number,
   percentageValue: number,
 ) {
-  const percentage = Math.max(
-    0,
-    Number(percentageValue) || 0,
-  );
+  const percentage = Math.max(0, Number(percentageValue) || 0);
 
   const discountAmount = money(
-    Math.max(0, Number(amount) || 0) *
-      (percentage / 100),
+    Math.max(0, Number(amount) || 0) * (percentage / 100),
   );
 
   return {
@@ -260,7 +564,11 @@ export function calculatePaymentDiscount(
   };
 }
 
-export type PricingHealthTone = "success" | "warning" | "danger" | "neutral";
+export type PricingHealthTone =
+  | "success"
+  | "warning"
+  | "danger"
+  | "neutral";
 
 export type PricingHealth = {
   tone: PricingHealthTone;
@@ -283,27 +591,43 @@ export function getPricingHealth(
   const messages: string[] = [];
 
   if (pricing.totalCost <= 0) {
-    messages.push("Vul een kostprijs in om de prijsstatus te beoordelen.");
+    messages.push(
+      "Vul een kostprijs in om de prijsstatus te beoordelen.",
+    );
   }
 
   if (pricing.brandMarkup + 0.0001 < defaults.brandMarkup) {
     messages.push(
-      `Merk-markup ligt ${Math.abs(brandMarkupDifference).toLocaleString("nl-NL")}× onder het target.`,
+      `Merk-markup ligt ${Math.abs(
+        brandMarkupDifference,
+      ).toLocaleString("nl-NL")}× onder het target.`,
     );
   }
 
   if (pricing.retailerMarkup + 0.0001 < defaults.retailerMarkup) {
     messages.push(
-      `Retailer-markup ligt ${Math.abs(retailerMarkupDifference).toLocaleString("nl-NL")}× onder het target.`,
+      `Retailer-markup ligt ${Math.abs(
+        retailerMarkupDifference,
+      ).toLocaleString("nl-NL")}× onder het target.`,
     );
   }
 
-  if (pricing.salesPrice <= pricing.totalCost && pricing.totalCost > 0) {
-    messages.push("De verkoopprijs is niet hoger dan de totale kostprijs.");
+  if (
+    pricing.salesPrice <= pricing.totalCost &&
+    pricing.totalCost > 0
+  ) {
+    messages.push(
+      "De verkoopprijs is niet hoger dan de totale kostprijs.",
+    );
   }
 
-  if (pricing.recommendedRetailPriceExVat <= pricing.salesPrice && pricing.salesPrice > 0) {
-    messages.push("De adviesverkoopprijs biedt de retailer geen positieve marge.");
+  if (
+    pricing.recommendedRetailPriceExVat <= pricing.salesPrice &&
+    pricing.salesPrice > 0
+  ) {
+    messages.push(
+      "De adviesverkoopprijs biedt de retailer geen positieve marge.",
+    );
   }
 
   if (pricing.totalCost <= 0) {
@@ -342,7 +666,9 @@ export function getPricingHealth(
   return {
     tone: "success",
     label: "Targets behaald",
-    messages: ["Merk- en retailer-markup voldoen aan de bedrijfsinstellingen."],
+    messages: [
+      "Merk- en retailer-markup voldoen aan de bedrijfsinstellingen.",
+    ],
     brandMarkupDifference,
     retailerMarkupDifference,
   };
