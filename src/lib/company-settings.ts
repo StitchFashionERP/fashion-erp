@@ -1,5 +1,7 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
+
 export type PriceMode =
   | "automatic"
   | "semi-automatic"
@@ -62,7 +64,13 @@ export type CompanySettings = {
 
 export type PricingDefaults = CompanySettings["pricing"];
 
-const storageKey = "fashion-erp-company-settings-v1";
+type CompanySettingsRow = {
+  organization_id: string;
+  settings: unknown;
+};
+
+const legacyStorageKey = "fashion-erp-company-settings-v1";
+
 export const companySettingsChangedEvent =
   "fashion-erp-company-settings-changed";
 
@@ -117,6 +125,9 @@ export const defaultCompanySettings: CompanySettings = {
   },
 };
 
+let cachedSettings: CompanySettings = defaultCompanySettings;
+let cachedOrganizationId = "";
+
 function positiveNumber(value: unknown, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0
@@ -129,6 +140,16 @@ function percentage(value: unknown, fallback: number) {
   return Number.isFinite(parsed) && parsed >= 0
     ? Math.min(parsed, 100)
     : fallback;
+}
+
+function isRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
 }
 
 function mergeSettings(
@@ -177,55 +198,206 @@ function mergeSettings(
   };
 }
 
-export function getCompanySettings(): CompanySettings {
-  if (typeof window === "undefined") {
-    return defaultCompanySettings;
-  }
-
-  const stored = window.localStorage.getItem(storageKey);
-
-  if (!stored) {
-    return defaultCompanySettings;
-  }
-
-  try {
-    return mergeSettings(
-      JSON.parse(stored) as Partial<CompanySettings>,
-    );
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return defaultCompanySettings;
-  }
+function parseSettings(value: unknown): CompanySettings {
+  return mergeSettings(
+    isRecord(value)
+      ? (value as Partial<CompanySettings>)
+      : {},
+  );
 }
 
-export function getPricingDefaults(): PricingDefaults {
-  return getCompanySettings().pricing;
-}
-
-export function saveCompanySettings(
-  settings: CompanySettings,
-) {
+function dispatchSettingsChanged(settings: CompanySettings) {
   if (typeof window === "undefined") {
     return;
   }
 
-  const normalized = mergeSettings(settings);
-
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(normalized),
-  );
-
   window.dispatchEvent(
     new CustomEvent(companySettingsChangedEvent, {
-      detail: normalized,
+      detail: settings,
     }),
   );
 }
 
-export function resetCompanySettings() {
-  saveCompanySettings(defaultCompanySettings);
-  return defaultCompanySettings;
+async function getActiveOrganizationId(): Promise<string> {
+  if (cachedOrganizationId) {
+    return cachedOrganizationId;
+  }
+
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Je bent niet ingelogd.");
+  }
+
+  const {
+    data: preferences,
+    error: preferencesError,
+  } = await supabase
+    .from("user_preferences")
+    .select("active_organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (preferencesError) {
+    throw preferencesError;
+  }
+
+  let organizationId =
+    preferences?.active_organization_id ?? "";
+
+  if (!organizationId) {
+    const {
+      data: membership,
+      error: membershipError,
+    } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError) {
+      throw membershipError;
+    }
+
+    organizationId = membership?.organization_id ?? "";
+  }
+
+  if (!organizationId) {
+    throw new Error("Geen actieve organisatie gevonden.");
+  }
+
+  cachedOrganizationId = organizationId;
+  return organizationId;
+}
+
+function readLegacySettings(): CompanySettings | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = window.localStorage.getItem(legacyStorageKey);
+
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    return parseSettings(JSON.parse(stored));
+  } catch {
+    window.localStorage.removeItem(legacyStorageKey);
+    return null;
+  }
+}
+
+function removeLegacySettings() {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(legacyStorageKey);
+  }
+}
+
+export function getCompanySettings(): CompanySettings {
+  return cachedSettings;
+}
+
+export function getPricingDefaults(): PricingDefaults {
+  return cachedSettings.pricing;
+}
+
+export async function loadCompanySettings(): Promise<CompanySettings> {
+  const supabase = createClient();
+  const organizationId = await getActiveOrganizationId();
+
+  const { data, error } = await supabase
+    .from("company_settings")
+    .select("organization_id, settings")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const row = data as CompanySettingsRow | null;
+
+  if (row?.settings) {
+    cachedSettings = parseSettings(row.settings);
+    removeLegacySettings();
+    dispatchSettingsChanged(cachedSettings);
+    return cachedSettings;
+  }
+
+  const legacySettings = readLegacySettings();
+  const initialSettings =
+    legacySettings ?? defaultCompanySettings;
+
+  const { error: insertError } = await supabase
+    .from("company_settings")
+    .upsert(
+      {
+        organization_id: organizationId,
+        settings: initialSettings,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "organization_id",
+      },
+    );
+
+  if (insertError) {
+    throw insertError;
+  }
+
+  cachedSettings = mergeSettings(initialSettings);
+  removeLegacySettings();
+  dispatchSettingsChanged(cachedSettings);
+
+  return cachedSettings;
+}
+
+export async function saveCompanySettings(
+  settings: CompanySettings,
+): Promise<CompanySettings> {
+  const normalized = mergeSettings(settings);
+  const supabase = createClient();
+  const organizationId = await getActiveOrganizationId();
+
+  const { error } = await supabase
+    .from("company_settings")
+    .upsert(
+      {
+        organization_id: organizationId,
+        settings: normalized,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "organization_id",
+      },
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  cachedSettings = normalized;
+  removeLegacySettings();
+  dispatchSettingsChanged(normalized);
+
+  return normalized;
+}
+
+export async function resetCompanySettings(): Promise<CompanySettings> {
+  return saveCompanySettings(defaultCompanySettings);
 }
 
 export function roundCommercialPrice(

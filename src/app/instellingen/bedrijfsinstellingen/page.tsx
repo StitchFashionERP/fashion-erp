@@ -89,7 +89,7 @@ export default function CompanySettingsPage() {
     useState<Section>("company");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [migrationMessage, setMigrationMessage] =
     useState("");
   const [countries, setCountries] = useState(() => getCountries());
@@ -99,7 +99,7 @@ export default function CompanySettingsPage() {
 
     async function loadSettings() {
       try {
-        setErrorMessage("");
+        setLoadError("");
         const loadedSettings = await loadCompanySettings();
 
         if (!cancelled) {
@@ -107,7 +107,7 @@ export default function CompanySettingsPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorMessage(
+          setLoadError(
             error instanceof Error
               ? error.message
               : "Bedrijfsinstellingen laden is mislukt.",
@@ -128,12 +128,21 @@ export default function CompanySettingsPage() {
     };
   }, []);
 
+  if (loadError) {
+    return (
+      <section className="content-card">
+        <div className={styles.errorNotification}>
+          <strong>Bedrijfsinstellingen konden niet worden geladen.</strong>
+          <span>{loadError}</span>
+        </div>
+      </section>
+    );
+  }
+
   if (!settings) {
     return (
       <section className="content-card">
-        {errorMessage
-          ? `Bedrijfsinstellingen laden is mislukt: ${errorMessage}`
-          : "Bedrijfsinstellingen uit Supabase laden..."}
+        Bedrijfsinstellingen uit Supabase laden...
       </section>
     );
   }
@@ -158,17 +167,10 @@ export default function CompanySettingsPage() {
   }
 
   async function handleSave() {
-    if (!settings) {
-      return;
-    }
-
     try {
       setSaving(true);
-      setErrorMessage("");
-
-      const savedSettings =
-        await saveCompanySettings(settings);
-
+      setLoadError("");
+      const savedSettings = await saveCompanySettings(settings!);
       setSettings(savedSettings);
       setSaved(true);
 
@@ -176,7 +178,7 @@ export default function CompanySettingsPage() {
         setSaved(false);
       }, 2800);
     } catch (error) {
-      setErrorMessage(
+      setLoadError(
         error instanceof Error
           ? error.message
           : "Bedrijfsinstellingen opslaan is mislukt.",
@@ -187,37 +189,33 @@ export default function CompanySettingsPage() {
   }
 
   async function handlePricingMigration() {
-    if (!settings) {
+    try {
+      setSaving(true);
+      setLoadError("");
+      await saveCompanySettings(settings!);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Prijsinstellingen opslaan is mislukt.",
+      );
+      setSaving(false);
       return;
     }
 
-    try {
-      setSaving(true);
-      setErrorMessage("");
+    const result = migrateProductsToPricingSettings(true);
 
-      await saveCompanySettings(settings);
+    setMigrationMessage(
+      result.migratedProducts > 0
+        ? `${result.migratedProducts} van ${result.totalProducts} artikelen zijn aangevuld met de centrale prijsinstellingen.`
+        : `Alle ${result.totalProducts} artikelen beschikken al over volledige prijsgegevens.`,
+    );
 
-      const result =
-        migrateProductsToPricingSettings(true);
+    window.setTimeout(() => {
+      setMigrationMessage("");
+    }, 4200);
 
-      setMigrationMessage(
-        result.migratedProducts > 0
-          ? `${result.migratedProducts} van ${result.totalProducts} artikelen zijn aangevuld met de centrale prijsinstellingen.`
-          : `Alle ${result.totalProducts} artikelen beschikken al over volledige prijsgegevens.`,
-      );
-
-      window.setTimeout(() => {
-        setMigrationMessage("");
-      }, 4200);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Prijsinstellingen verwerken is mislukt.",
-      );
-    } finally {
-      setSaving(false);
-    }
+    setSaving(false);
   }
 
   async function handleReset() {
@@ -231,15 +229,12 @@ export default function CompanySettingsPage() {
 
     try {
       setSaving(true);
-      setErrorMessage("");
-
-      const resetSettings =
-        await resetCompanySettings();
-
+      setLoadError("");
+      const resetSettings = await resetCompanySettings();
       setSettings(resetSettings);
       setSaved(true);
     } catch (error) {
-      setErrorMessage(
+      setLoadError(
         error instanceof Error
           ? error.message
           : "Standaardinstellingen herstellen is mislukt.",
@@ -292,13 +287,6 @@ export default function CompanySettingsPage() {
           </div>
         }
       />
-
-      {errorMessage && (
-        <div className={styles.notification}>
-          <span>!</span>
-          {errorMessage}
-        </div>
-      )}
 
       {saved && (
         <div className={styles.notification}>
