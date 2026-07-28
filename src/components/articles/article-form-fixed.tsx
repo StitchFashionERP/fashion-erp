@@ -40,7 +40,7 @@ import {
   getSizes,
   type NamedMasterData,
 } from "@/lib/master-data";
-import { getSuppliers } from "@/lib/suppliers";
+import { fetchSuppliers } from "@/lib/suppliers";
 import styles from "./article-form.module.css";
 
 type EanAssignmentMode = "AUTO" | "MANUAL" | "NONE";
@@ -293,6 +293,8 @@ export function ArticleForm({
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const collectionValues = getCollections()
       .filter((item) => item.status !== "Gearchiveerd")
       .map((item) => item.code);
@@ -300,10 +302,6 @@ export function ArticleForm({
     const categoryValues = getCategories()
       .filter((item) => item.isActive)
       .map((item) => item.name);
-
-    const supplierValues = getSuppliers()
-      .filter((item) => item.status === "Actief")
-      .map((item) => item.companyName);
 
     const activeColors = getColors().filter(
       (item) => item.isActive,
@@ -315,7 +313,6 @@ export function ArticleForm({
 
     setCollections(collectionValues);
     setCategories(categoryValues);
-    setSuppliers(supplierValues);
     setColorOptions(activeColors);
     setSizeOptions(activeSizes);
 
@@ -327,10 +324,49 @@ export function ArticleForm({
       (current) =>
         current || categoryValues[0] || "",
     );
-    setSupplier(
-      (current) =>
-        current || supplierValues[0] || "",
-    );
+
+    async function loadSuppliers() {
+      try {
+        const cloudSuppliers = await fetchSuppliers();
+        if (cancelled) return;
+
+        const activeSupplierNames = cloudSuppliers
+          .filter((item) => item.status === "Actief")
+          .map((item) => item.companyName.trim())
+          .filter(Boolean);
+
+        // Een leverancier die al op een bestaand artikel staat, blijft zichtbaar
+        // ook wanneer die inmiddels inactief is. Daardoor wordt de opgeslagen
+        // waarde niet stilzwijgend vervangen.
+        const currentSupplier = initialProduct?.supplier?.trim() ?? "";
+        const supplierValues = Array.from(
+          new Set(
+            currentSupplier
+              ? [currentSupplier, ...activeSupplierNames]
+              : activeSupplierNames,
+          ),
+        );
+
+        setSuppliers(supplierValues);
+        setSupplier((current) => current || supplierValues[0] || "");
+      } catch (supplierError) {
+        if (cancelled) return;
+        setSuppliers(
+          initialProduct?.supplier ? [initialProduct.supplier] : [],
+        );
+        setError(
+          supplierError instanceof Error
+            ? supplierError.message
+            : "Leveranciers ophalen is mislukt.",
+        );
+      }
+    }
+
+    void loadSuppliers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialProduct]);
 
   useEffect(() => {

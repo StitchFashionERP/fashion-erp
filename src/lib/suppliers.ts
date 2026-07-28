@@ -261,6 +261,46 @@ function readLegacyMasterDataSuppliers(): Supplier[] {
   }
 }
 
+
+async function parseSupplierResponse(response: Response): Promise<Supplier[]> {
+  const body = (await response.json().catch(() => null)) as
+    | Supplier[]
+    | { error?: string }
+    | null;
+
+  if (!response.ok) {
+    const message =
+      body && !Array.isArray(body) && typeof body === "object" && "error" in body
+        ? String(body.error ?? "Leveranciers ophalen is mislukt.")
+        : "Leveranciers ophalen is mislukt.";
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(body)) {
+    throw new Error("De leveranciersrespons heeft een ongeldig formaat.");
+  }
+
+  return body.map((value, index) =>
+    normalizeSupplier((value ?? {}) as unknown as Record<string, unknown>, index),
+  );
+}
+
+/**
+ * Centrale cloudbron voor leveranciers. Gebruik deze functie in schermen die
+ * actuele, gedeelde leveranciersdata nodig hebben. localStorage blijft alleen
+ * een cache/fallback voor oudere modules.
+ */
+export async function fetchSuppliers(): Promise<Supplier[]> {
+  const suppliers = await parseSupplierResponse(
+    await fetch("/api/suppliers", { method: "GET", cache: "no-store" }),
+  );
+
+  // Houd de bestaande lokale cache synchroon voor modules die nog niet zijn
+  // gemigreerd. Supabase/API blijft de bron van waarheid.
+  saveSuppliers(suppliers);
+  return suppliers;
+}
+
 export function getSuppliers(): Supplier[] {
   const stored = readStoredArray(
     [STORAGE_KEY, "stitch-suppliers", "fashion-erp-suppliers", "suppliers"],
