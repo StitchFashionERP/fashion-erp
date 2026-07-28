@@ -38,9 +38,9 @@ import {
   getCollections,
   getColors,
   getSizes,
-  getSuppliers,
   type NamedMasterData,
 } from "@/lib/master-data";
+import { getSuppliers } from "@/lib/suppliers";
 import styles from "./article-form.module.css";
 
 type EanAssignmentMode = "AUTO" | "MANUAL" | "NONE";
@@ -245,7 +245,6 @@ export function ArticleForm({
     setPricingStrategy(next.pricingStrategy);
     setPricingLocks(next.pricingLocks);
   }
-
 
   const [selectedColors, setSelectedColors] =
     useState<string[]>(
@@ -541,13 +540,13 @@ export function ArticleForm({
         countryOfOrigin.trim(),
       description: description.trim(),
       purchasePrice: parseNumber(purchasePrice),
-      wholesalePrice: parseNumber(salesPrice),
+      wholesalePrice: pricing.salesPrice,
       shippingCosts: parseNumber(shippingCosts),
       otherCosts: parseNumber(otherCosts),
       totalCost: pricing.totalCost,
-      brandMarkup: parseNumber(brandMarkup),
-      recommendedRetailPrice: parseNumber(recommendedRetailPrice),
-      retailerMarkup: parseNumber(retailerMarkup),
+      brandMarkup: pricing.brandMarkup,
+      recommendedRetailPrice: pricing.recommendedRetailPrice,
+      retailerMarkup: pricing.retailerMarkup,
       pricingStrategy,
       pricingLocks,
       colors: selectedColors,

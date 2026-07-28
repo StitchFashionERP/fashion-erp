@@ -68,7 +68,7 @@ function parseNumber(value: string) {
 }
 
 function displayNumber(value: number) {
-  return String(Math.round(value * 100) / 100).replace(".", ",");
+  return String(Math.round(value * 10000) / 10000).replace(".", ",");
 }
 
 function formatCurrency(value: number) {
@@ -78,11 +78,14 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function LockControl({
-  field,
-  checked,
-  onToggle,
-}: LockControlProps) {
+function formatPercentage(value: number) {
+  return `${value.toLocaleString("nl-NL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+}
+
+function LockControl({ field, checked, onToggle }: LockControlProps) {
   return (
     <label className={styles.lockControl}>
       <input
@@ -104,9 +107,9 @@ function CurrencyField({
   onToggleLock,
 }: CurrencyFieldProps) {
   return (
-    <label className={styles.field}>
-      <span>{label}</span>
-      <div className={styles.inputWithLock}>
+    <div className={styles.field}>
+      <span className={styles.fieldLabel}>{label}</span>
+      <div className={styles.fieldRow}>
         <div className={styles.currencyInput}>
           <span>€</span>
           <input
@@ -116,13 +119,9 @@ function CurrencyField({
             onChange={(event) => onValueChange(field, event.target.value)}
           />
         </div>
-        <LockControl
-          field={field}
-          checked={locked}
-          onToggle={onToggleLock}
-        />
+        <LockControl field={field} checked={locked} onToggle={onToggleLock} />
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -135,9 +134,9 @@ function MarkupField({
   onToggleLock,
 }: MarkupFieldProps) {
   return (
-    <label className={styles.field}>
-      <span>{label}</span>
-      <div className={styles.inputWithLock}>
+    <div className={styles.field}>
+      <span className={styles.fieldLabel}>{label}</span>
+      <div className={styles.fieldRow}>
         <div className={styles.markupInput}>
           <input
             type="text"
@@ -147,13 +146,18 @@ function MarkupField({
           />
           <span>×</span>
         </div>
-        <LockControl
-          field={field}
-          checked={locked}
-          onToggle={onToggleLock}
-        />
+        <LockControl field={field} checked={locked} onToggle={onToggleLock} />
       </div>
-    </label>
+    </div>
+  );
+}
+
+function CalculatedField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={styles.calculatedField}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -223,10 +227,7 @@ export function PricingCalculator({
   }
 
   function updateField(field: PricingLockField, fieldValue: string) {
-    const nextValue = {
-      ...value,
-      [field]: fieldValue,
-    };
+    const nextValue = { ...value, [field]: fieldValue };
     const result = calculate(nextValue, field);
     onChange(syncResult(nextValue, result, field), result);
   }
@@ -244,10 +245,7 @@ export function PricingCalculator({
   }
 
   function changeStrategy(strategy: PricingStrategy) {
-    const nextValue = {
-      ...value,
-      pricingStrategy: strategy,
-    };
+    const nextValue = { ...value, pricingStrategy: strategy };
     const result = calculate(nextValue, null);
     onChange(syncResult(nextValue, result), result);
   }
@@ -267,6 +265,7 @@ export function PricingCalculator({
       pricingStrategy: "automatic",
       pricingLocks: { ...defaultPricingLocks },
     };
+
     onChange(syncResult(nextValue, result), result);
   }
 
@@ -292,8 +291,8 @@ export function PricingCalculator({
         </button>
       </div>
 
-      <div className={styles.strategyRow}>
-        <label className={styles.field}>
+      <div className={styles.content}>
+        <label className={styles.strategyField}>
           <span>Prijsstrategie</span>
           <select
             value={value.pricingStrategy}
@@ -305,15 +304,10 @@ export function PricingCalculator({
             <option value="manual">Handmatig</option>
           </select>
         </label>
-      </div>
 
-      <div className={styles.sections}>
-        <section className={styles.block}>
-          <div className={styles.blockHeader}>
-            <span>Kostprijs</span>
-            <strong>{formatCurrency(pricing.totalCost)}</strong>
-          </div>
-          <div className={styles.grid}>
+        <section className={styles.section}>
+          <h3>Kostprijs {formatCurrency(pricing.totalCost)}</h3>
+          <div className={styles.costGrid}>
             <CurrencyField
               label="Inkoopprijs leverancier"
               field="supplierPurchasePrice"
@@ -338,19 +332,16 @@ export function PricingCalculator({
               onValueChange={updateField}
               onToggleLock={toggleLock}
             />
-            <div className={styles.calculatedField}>
-              <span>Totale kostprijs</span>
-              <strong>{formatCurrency(pricing.totalCost)}</strong>
-            </div>
+            <CalculatedField
+              label="Totale kostprijs"
+              value={formatCurrency(pricing.totalCost)}
+            />
           </div>
         </section>
 
-        <section className={styles.block}>
-          <div className={styles.blockHeader}>
-            <span>Verkoop aan winkels</span>
-            <strong>excl. btw</strong>
-          </div>
-          <div className={styles.grid}>
+        <section className={styles.section}>
+          <h3>Verkoop aan winkels excl. btw</h3>
+          <div className={styles.salesGrid}>
             <MarkupField
               label="Markup merk"
               field="brandMarkup"
@@ -367,25 +358,20 @@ export function PricingCalculator({
               onValueChange={updateField}
               onToggleLock={toggleLock}
             />
-            <div className={styles.calculatedField}>
-              <span>Marge</span>
-              <strong>{formatCurrency(pricing.ownMarginAmount)}</strong>
-            </div>
-            <div className={styles.calculatedField}>
-              <span>Margepercentage</span>
-              <strong>
-                {pricing.ownMarginPercentage.toLocaleString("nl-NL")}%
-              </strong>
-            </div>
+            <CalculatedField
+              label="Marge"
+              value={formatCurrency(pricing.ownMarginAmount)}
+            />
+            <CalculatedField
+              label="Margepercentage"
+              value={formatPercentage(pricing.ownMarginPercentage)}
+            />
           </div>
         </section>
 
-        <section className={styles.block}>
-          <div className={styles.blockHeader}>
-            <span>Adviesverkoopprijs</span>
-            <strong>incl. {pricing.vatPercentage}% btw</strong>
-          </div>
-          <div className={styles.grid}>
+        <section className={styles.section}>
+          <h3>Adviesverkoopprijs incl. {pricing.vatPercentage}% btw</h3>
+          <div className={styles.salesGrid}>
             <MarkupField
               label="Markup retailer"
               field="retailerMarkup"
@@ -402,18 +388,34 @@ export function PricingCalculator({
               onValueChange={updateField}
               onToggleLock={toggleLock}
             />
-            <div className={styles.calculatedField}>
-              <span>Retailermarge excl. btw</span>
-              <strong>{formatCurrency(pricing.retailerMarginAmount)}</strong>
-            </div>
-            <div className={styles.calculatedField}>
-              <span>Retailermargepercentage</span>
-              <strong>
-                {pricing.retailerMarginPercentage.toLocaleString("nl-NL")}%
-              </strong>
-            </div>
+            <CalculatedField
+              label="Retailermarge excl. btw"
+              value={formatCurrency(pricing.retailerMarginAmount)}
+            />
+            <CalculatedField
+              label="Retailermargepercentage"
+              value={formatPercentage(pricing.retailerMarginPercentage)}
+            />
           </div>
         </section>
+
+        <section className={styles.resultSection}>
+          <div>
+            <h3>Resultaat</h3>
+            <p>De uiteindelijke consumentenprijs inclusief btw.</p>
+          </div>
+          <CalculatedField
+            label="Adviesprijs incl. btw"
+            value={formatCurrency(
+              pricing.recommendedRetailPrice * (1 + pricing.vatPercentage / 100),
+            )}
+          />
+        </section>
+
+        <div className={styles.infoBar}>
+          Alle bedragen worden automatisch berekend op basis van je instellingen
+          en vastgezette velden.
+        </div>
       </div>
     </article>
   );
