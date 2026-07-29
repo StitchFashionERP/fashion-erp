@@ -46,12 +46,12 @@ export default function NewInvoicePage() {
     setOrders(getInvoiceableSalesOrders());
   }, []);
 
-  function createInvoice(orderId: string) {
+  async function createInvoice(orderId: string) {
     setError("");
 
     try {
       const invoice =
-        createInvoiceFromSalesOrder(orderId);
+        await createInvoiceFromSalesOrder(orderId);
 
       router.push(`/facturen/${invoice.id}`);
     } catch (caughtError) {

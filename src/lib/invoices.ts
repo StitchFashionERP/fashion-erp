@@ -13,12 +13,17 @@ import {
   validateForeignVatProfile,
   type VatCode,
 } from "@/lib/vat-engine";
+import { claimNextNumber } from "@/lib/number-series";
 import {
   getSalesOrderById,
   getSalesOrders,
   getSalesOrderTotals,
   type SalesOrder,
 } from "@/lib/sales";
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
 
 export type InvoiceStatus =
   | "Concept"
@@ -111,6 +116,7 @@ export type Invoice = {
 };
 
 const storageKey = "fashion-erp-invoices";
+export const invoiceSharedStateKeys = [storageKey] as const;
 
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random()
@@ -125,107 +131,65 @@ function addDays(dateValue: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function getNextInvoiceNumber(invoices: Invoice[]) {
-  const year = new Date().getFullYear();
-
-  const highest = invoices.reduce((current, invoice) => {
-    const match = invoice.invoiceNumber.match(
-      new RegExp(`^F${year}-(\\d+)$`),
-    );
-
-    if (!match) {
-      return current;
-    }
-
-    return Math.max(current, Number(match[1]));
-  }, 0);
-
-  return `F${year}-${String(highest + 1).padStart(5, "0")}`;
-}
-
 export function getInvoices(): Invoice[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
+  const stored = getSharedStateValue<Invoice[]>(storageKey, []);
 
-  const stored = window.localStorage.getItem(storageKey);
+  return stored.map((invoice) => ({
+    ...invoice,
+    paymentDays:
+      typeof invoice.paymentDays === "number" && invoice.paymentDays > 0
+        ? invoice.paymentDays
+        : 30,
+    paymentDiscountPercentage:
+      typeof invoice.paymentDiscountPercentage === "number"
+        ? Math.max(0, invoice.paymentDiscountPercentage)
+        : 0,
+    paymentDiscountDays:
+      typeof invoice.paymentDiscountDays === "number"
+        ? Math.max(0, invoice.paymentDiscountDays)
+        : 0,
+    customerCountry: invoice.customerCountry || "Nederland",
+    customerVatNumber: invoice.customerVatNumber || "",
+    customerVatNumberStatus:
+      invoice.customerVatNumberStatus || "Niet gecontroleerd",
+    vatInvoiceText: invoice.vatInvoiceText || "",
+    vatSummary: invoice.vatSummary || [
+      {
+        vatCode: "2V",
+        vatRate: typeof invoice.vatRate === "number" ? invoice.vatRate : 21,
+        taxableAmount: invoice.subtotal || 0,
+        vatAmount: invoice.vatAmount || 0,
+      },
+    ],
+    lines: (invoice.lines || []).map((line) => {
+      const vatCode = line.vatCode || "2V";
+      const vatRate = typeof line.vatRate === "number" ? line.vatRate : 21;
+      const vatAmount =
+        typeof line.vatAmount === "number"
+          ? line.vatAmount
+          : calculateVatAmount(line.lineSubtotal, vatRate);
 
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return (JSON.parse(stored) as Invoice[]).map((invoice) => ({
-      ...invoice,
-      paymentDays: typeof invoice.paymentDays === "number" && invoice.paymentDays > 0 ? invoice.paymentDays : 30,
-      paymentDiscountPercentage: typeof invoice.paymentDiscountPercentage === "number" ? Math.max(0, invoice.paymentDiscountPercentage) : 0,
-      paymentDiscountDays: typeof invoice.paymentDiscountDays === "number" ? Math.max(0, invoice.paymentDiscountDays) : 0,
-      customerCountry:
-        invoice.customerCountry || "Nederland",
-      customerVatNumber:
-        invoice.customerVatNumber || "",
-      customerVatNumberStatus:
-        invoice.customerVatNumberStatus ||
-        "Niet gecontroleerd",
-      vatInvoiceText:
-        invoice.vatInvoiceText || "",
-      vatSummary:
-        invoice.vatSummary || [
+      return {
+        ...line,
+        vatCode,
+        vatRate,
+        vatAmount,
+        vatSummary: line.vatSummary || [
           {
-            vatCode: "2V",
-            vatRate:
-              typeof invoice.vatRate === "number"
-                ? invoice.vatRate
-                : 21,
-            taxableAmount:
-              invoice.subtotal || 0,
-            vatAmount:
-              invoice.vatAmount || 0,
+            vatCode,
+            vatRate,
+            taxableAmount: line.lineSubtotal || 0,
+            vatAmount,
           },
         ],
-      lines: invoice.lines.map((line) => {
-        const vatCode = line.vatCode || "2V";
-        const vatRate =
-          typeof line.vatRate === "number"
-            ? line.vatRate
-            : 21;
-        const vatAmount =
-          typeof line.vatAmount === "number"
-            ? line.vatAmount
-            : calculateVatAmount(
-                line.lineSubtotal,
-                vatRate,
-              );
-
-        return {
-          ...line,
-          vatCode,
-          vatRate,
-          vatAmount,
-          vatSummary:
-            line.vatSummary || [
-              {
-                vatCode,
-                vatRate,
-                taxableAmount:
-                  line.lineSubtotal || 0,
-                vatAmount,
-              },
-            ],
-        };
-      }),
-    }));
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
+      };
+    }),
+    payments: invoice.payments || [],
+  }));
 }
 
 export function saveInvoices(invoices: Invoice[]) {
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(invoices),
-  );
+  setSharedStateValue(storageKey, invoices);
 }
 
 export function getInvoiceById(id: string) {
@@ -264,7 +228,7 @@ export function getInvoiceableSalesOrders() {
   );
 }
 
-export function createInvoiceFromSalesOrder(
+export async function createInvoiceFromSalesOrder(
   salesOrderId: string,
 ) {
   const existingInvoice =
@@ -291,7 +255,7 @@ export function createInvoiceFromSalesOrder(
   return createInvoiceFromOrder(order);
 }
 
-function createInvoiceFromOrder(order: SalesOrder) {
+async function createInvoiceFromOrder(order: SalesOrder) {
   const invoices = getInvoices();
   const now = new Date().toISOString();
   const invoiceDate = now.slice(0, 10);
@@ -441,10 +405,11 @@ function createInvoiceFromOrder(order: SalesOrder) {
     )
     .find(Boolean) || "";
 
+  const invoiceNumber = await claimNextNumber("invoice");
+
   const invoice: Invoice = {
     id: createId("invoice"),
-    invoiceNumber:
-      getNextInvoiceNumber(invoices),
+    invoiceNumber,
     salesOrderId: order.id,
     salesOrderNumber: order.orderNumber,
 

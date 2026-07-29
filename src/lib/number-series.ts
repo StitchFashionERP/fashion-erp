@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
+
 export type NumberSeriesKey =
   | "article"
   | "salesOrder"
@@ -21,6 +26,7 @@ export type NumberSeries = {
 };
 
 const storageKey = "stitch-number-series-v1";
+export const numberSeriesSharedStateKeys = [storageKey] as const;
 export const numberSeriesChangedEvent = "stitch-number-series-changed";
 
 export const defaultNumberSeries: NumberSeries[] = [
@@ -52,33 +58,30 @@ function normalizeSeries(input: Partial<NumberSeries>, fallback: NumberSeries): 
 }
 
 export function getNumberSeries(): NumberSeries[] {
-  if (typeof window === "undefined") return defaultNumberSeries;
+  const stored = getSharedStateValue<Partial<NumberSeries>[]>(
+    storageKey,
+    defaultNumberSeries,
+  );
 
-  const stored = window.localStorage.getItem(storageKey);
-  if (!stored) return defaultNumberSeries;
-
-  try {
-    const parsed = JSON.parse(stored) as Partial<NumberSeries>[];
-    return defaultNumberSeries.map((fallback) => {
-      const found = parsed.find((item) => item.key === fallback.key);
-      return normalizeSeries(found ?? {}, fallback);
-    });
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return defaultNumberSeries;
-  }
+  return defaultNumberSeries.map((fallback) => {
+    const found = stored.find((item) => item.key === fallback.key);
+    return normalizeSeries(found ?? {}, fallback);
+  });
 }
 
 export function saveNumberSeries(series: NumberSeries[]) {
-  if (typeof window === "undefined") return;
-
   const normalized = defaultNumberSeries.map((fallback) => {
     const found = series.find((item) => item.key === fallback.key);
     return normalizeSeries(found ?? {}, fallback);
   });
 
-  window.localStorage.setItem(storageKey, JSON.stringify(normalized));
-  window.dispatchEvent(new CustomEvent(numberSeriesChangedEvent, { detail: normalized }));
+  setSharedStateValue(storageKey, normalized);
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(numberSeriesChangedEvent, { detail: normalized }),
+    );
+  }
 }
 
 export function resetNumberSeries() {
@@ -96,13 +99,37 @@ export function peekNextNumber(key: NumberSeriesKey) {
   return series ? formatNumber(series, series.nextNumber) : "";
 }
 
-export function claimNextNumber(key: NumberSeriesKey) {
-  const all = getNumberSeries();
-  const index = all.findIndex((item) => item.key === key);
-  if (index < 0 || !all[index].active) return "";
+export async function claimNextNumber(key: NumberSeriesKey): Promise<string> {
+  const response = await fetch("/api/number-series/claim", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key }),
+  });
 
-  const claimed = formatNumber(all[index], all[index].nextNumber);
-  all[index] = { ...all[index], nextNumber: all[index].nextNumber + 1 };
-  saveNumberSeries(all);
-  return claimed;
+  const body = (await response.json().catch(() => null)) as
+    | { number?: string; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error || "Het volgende nummer kon niet worden uitgegeven.");
+  }
+
+  if (!body?.number) {
+    throw new Error("De nummerreeks is niet actief of bestaat niet.");
+  }
+
+  await hydrateNumberSeries();
+  return body.number;
+}
+
+export async function hydrateNumberSeries() {
+  const { hydrateSharedState } = await import("@/lib/shared-state-client");
+  await hydrateSharedState(numberSeriesSharedStateKeys);
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(numberSeriesChangedEvent, { detail: getNumberSeries() }),
+    );
+  }
 }
