@@ -4,6 +4,7 @@ import {
   type Product,
   type ProductVariant,
 } from "@/lib/articles";
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
 import {
   getPurchaseOrders,
   getPurchaseOrderTotals,
@@ -101,6 +102,11 @@ const movementStorageKey =
 const settingsStorageKey =
   "fashion-erp-inventory-settings-v1";
 
+export const inventorySharedStateKeys = [
+  movementStorageKey,
+  settingsStorageKey,
+] as const;
+
 const defaultWarehouse = "Amsterdam";
 const defaultLocation = "MAG-A";
 
@@ -111,97 +117,30 @@ function createId(prefix: string) {
 }
 
 function getSettings(): InventorySettings {
-  if (typeof window === "undefined") {
-    return {
-      minimumStockByVariant: {},
-      warehouseByVariant: {},
-      locationByVariant: {},
-    };
-  }
-
-  const stored = window.localStorage.getItem(
+  const parsed = getSharedStateValue<Partial<InventorySettings>>(
     settingsStorageKey,
+    {},
   );
 
-  if (!stored) {
-    return {
-      minimumStockByVariant: {},
-      warehouseByVariant: {},
-      locationByVariant: {},
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(
-      stored,
-    ) as Partial<InventorySettings>;
-
-    return {
-      minimumStockByVariant:
-        parsed.minimumStockByVariant ?? {},
-      warehouseByVariant:
-        parsed.warehouseByVariant ?? {},
-      locationByVariant:
-        parsed.locationByVariant ?? {},
-    };
-  } catch {
-    window.localStorage.removeItem(
-      settingsStorageKey,
-    );
-
-    return {
-      minimumStockByVariant: {},
-      warehouseByVariant: {},
-      locationByVariant: {},
-    };
-  }
+  return {
+    minimumStockByVariant: parsed.minimumStockByVariant ?? {},
+    warehouseByVariant: parsed.warehouseByVariant ?? {},
+    locationByVariant: parsed.locationByVariant ?? {},
+  };
 }
 
 function saveSettings(settings: InventorySettings) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    settingsStorageKey,
-    JSON.stringify(settings),
-  );
+  setSharedStateValue(settingsStorageKey, settings);
 }
 
 export function getInventoryMovements() {
-  if (typeof window === "undefined") {
-    return [] as InventoryMovement[];
-  }
-
-  const stored = window.localStorage.getItem(
-    movementStorageKey,
-  );
-
-  if (!stored) {
-    return [] as InventoryMovement[];
-  }
-
-  try {
-    return JSON.parse(stored) as InventoryMovement[];
-  } catch {
-    window.localStorage.removeItem(
-      movementStorageKey,
-    );
-    return [] as InventoryMovement[];
-  }
+  return getSharedStateValue<InventoryMovement[]>(movementStorageKey, []);
 }
 
 export function saveInventoryMovements(
   movements: InventoryMovement[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    movementStorageKey,
-    JSON.stringify(movements),
-  );
+  setSharedStateValue(movementStorageKey, movements);
 }
 
 function findProductAndVariant(

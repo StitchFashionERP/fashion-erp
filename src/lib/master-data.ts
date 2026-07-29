@@ -78,6 +78,8 @@ export const masterDataLabels: Record<MasterDataEntity, string> = {
 
 const STORAGE_KEY = "stitch-master-data-v1";
 const CHANGE_EVENT = "stitch-master-data-change";
+let masterDataCache: Record<MasterDataEntity, MasterDataItem[]> | null = null;
+let customerCache: Customer[] = [];
 
 const initialNames: Record<MasterDataEntity, string[]> = {
   brands: ["Demo Fashion"],
@@ -164,46 +166,90 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
-export function getMasterDataStore(): Record<MasterDataEntity, MasterDataItem[]> {
+function normalizeMasterDataStore(
+  value: unknown,
+): Record<MasterDataEntity, MasterDataItem[]> {
   const fallback = createInitialStore();
+  const parsed =
+    value && typeof value === "object"
+      ? (value as Partial<Record<MasterDataEntity, MasterDataItem[]>>)
+      : {};
 
-  if (!isBrowser()) {
-    return fallback;
+  return Object.fromEntries(
+    (Object.keys(initialNames) as MasterDataEntity[]).map((entity) => [
+      entity,
+      Array.isArray(parsed[entity]) ? parsed[entity] : fallback[entity],
+    ]),
+  ) as Record<MasterDataEntity, MasterDataItem[]>;
+}
+
+export function getMasterDataStore(): Record<MasterDataEntity, MasterDataItem[]> {
+  if (!masterDataCache) {
+    masterDataCache = createInitialStore();
+  }
+  return masterDataCache;
+}
+
+async function persistMasterDataStore(
+  store: Record<MasterDataEntity, MasterDataItem[]>,
+) {
+  const response = await fetch("/api/shared-state", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: STORAGE_KEY, value: JSON.stringify(store) }),
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string }
+      | null;
+    throw new Error(body?.error ?? "Stamgegevens konden niet worden opgeslagen.");
+  }
+}
+
+export async function hydrateMasterData(): Promise<void> {
+  const response = await fetch("/api/shared-state", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Stamgegevens konden niet uit Supabase worden geladen.");
   }
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const payload = (await response.json()) as {
+    items?: Array<{ key?: string; value?: string }>;
+  };
+  const entry = payload.items?.find((item) => item.key === STORAGE_KEY);
 
-  if (!raw) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
-    return fallback;
+  if (entry?.value) {
+    try {
+      masterDataCache = normalizeMasterDataStore(JSON.parse(entry.value));
+    } catch {
+      masterDataCache = createInitialStore();
+    }
+  } else {
+    masterDataCache = createInitialStore();
+    await persistMasterDataStore(masterDataCache);
   }
 
-  try {
-    const parsed = JSON.parse(raw) as Partial<
-      Record<MasterDataEntity, MasterDataItem[]>
-    >;
-
-    return Object.fromEntries(
-      (Object.keys(initialNames) as MasterDataEntity[]).map((entity) => [
-        entity,
-        Array.isArray(parsed[entity]) ? parsed[entity] : fallback[entity],
-      ]),
-    ) as Record<MasterDataEntity, MasterDataItem[]>;
-  } catch {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
-    return fallback;
+  if (isBrowser()) {
+    window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
   }
 }
 
 function saveMasterDataStore(
   store: Record<MasterDataEntity, MasterDataItem[]>,
 ) {
-  if (!isBrowser()) {
-    return;
+  masterDataCache = store;
+
+  if (isBrowser()) {
+    window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+  void persistMasterDataStore(store).catch((error) => {
+    console.error("Stamgegevens konden niet in Supabase worden opgeslagen.", error);
+  });
 }
 
 export function getMasterDataItems(
@@ -225,22 +271,15 @@ export function addMasterDataItem(
   code?: string,
 ) {
   const cleanName = name.trim();
-
-  if (!cleanName) {
-    throw new Error("Naam is verplicht.");
-  }
+  if (!cleanName) throw new Error("Naam is verplicht.");
 
   const store = getMasterDataStore();
   const existing = store[entity].find(
     (item) => item.name.toLowerCase() === cleanName.toLowerCase(),
   );
-
-  if (existing) {
-    return existing;
-  }
+  if (existing) return existing;
 
   const now = new Date().toISOString();
-
   const item: MasterDataItem = {
     id: `${entity}-${slug(cleanName)}-${Date.now()}`,
     code: code?.trim() || slug(cleanName).toUpperCase().replace(/-/g, "_"),
@@ -252,9 +291,7 @@ export function addMasterDataItem(
     updatedAt: now,
   };
 
-  store[entity] = [...store[entity], item];
-  saveMasterDataStore(store);
-
+  saveMasterDataStore({ ...store, [entity]: [...store[entity], item] });
   return item;
 }
 
@@ -266,18 +303,14 @@ export function updateMasterDataItem(
   >,
 ) {
   const store = getMasterDataStore();
-
-  store[entity] = store[entity].map((item) =>
-    item.id === id
-      ? {
-          ...item,
-          ...changes,
-          updatedAt: new Date().toISOString(),
-        }
-      : item,
-  );
-
-  saveMasterDataStore(store);
+  saveMasterDataStore({
+    ...store,
+    [entity]: store[entity].map((item) =>
+      item.id === id
+        ? { ...item, ...changes, updatedAt: new Date().toISOString() }
+        : item,
+    ),
+  });
 }
 
 export function deleteMasterDataItem(
@@ -285,25 +318,17 @@ export function deleteMasterDataItem(
   id: string,
 ) {
   const store = getMasterDataStore();
-
-  store[entity] = store[entity].filter((item) => item.id !== id);
-  saveMasterDataStore(store);
+  saveMasterDataStore({
+    ...store,
+    [entity]: store[entity].filter((item) => item.id !== id),
+  });
 }
 
 export function subscribeToMasterData(callback: () => void) {
-  if (!isBrowser()) {
-    return () => undefined;
-  }
-
+  if (!isBrowser()) return () => undefined;
   const listener = () => callback();
-
   window.addEventListener(CHANGE_EVENT, listener);
-  window.addEventListener("storage", listener);
-
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, listener);
-    window.removeEventListener("storage", listener);
-  };
+  return () => window.removeEventListener(CHANGE_EVENT, listener);
 }
 
 export type CustomerStatus = "Actief" | "Inactief";
@@ -389,59 +414,48 @@ function normalizeCustomer(
 }
 
 export function getCustomers(): Customer[] {
-  if (!isBrowser()) {
-    return [];
+  return customerCache;
+}
+
+export function setCustomerCache(customers: Customer[]) {
+  customerCache = customers.map((customer, index) =>
+    normalizeCustomer(
+      customer as Partial<Customer> & Record<string, unknown>,
+      index,
+    ),
+  );
+}
+
+export async function hydrateCustomers(): Promise<void> {
+  const response = await fetch("/api/customers", {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Klanten konden niet uit Supabase worden geladen.");
   }
-
-  const possibleKeys = [
-    "stitch-customers",
-    "stitch-customers-v1",
-    "fashion-erp-customers",
-    "customers",
-  ];
-
-  for (const key of possibleKeys) {
-    const raw = window.localStorage.getItem(key);
-
-    if (!raw) {
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      const values = Array.isArray(parsed)
-        ? parsed
-        : parsed &&
-            typeof parsed === "object" &&
-            Array.isArray((parsed as { customers?: unknown[] }).customers)
-          ? (parsed as { customers: unknown[] }).customers
-          : null;
-
-      if (values) {
-        return values.map((value, index) =>
-          normalizeCustomer(
-            value && typeof value === "object"
-              ? (value as Partial<Customer> & Record<string, unknown>)
-              : {},
-            index,
-          ),
-        );
-      }
-    } catch {
-      // Probeer de volgende opslaglocatie.
-    }
-  }
-
-  return [];
+  setCustomerCache((await response.json()) as Customer[]);
 }
 
 export function saveCustomers(customers: Customer[]) {
-  if (!isBrowser()) {
-    return;
-  }
-
-  window.localStorage.setItem("stitch-customers", JSON.stringify(customers));
-  window.dispatchEvent(new CustomEvent("stitch-customers-change"));
+  setCustomerCache(customers);
+  void Promise.all(
+    customerCache.map(async (customer) => {
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(body?.error ?? "Klant kon niet worden opgeslagen.");
+      }
+    }),
+  ).catch((error) => {
+    console.error("Klanten konden niet in Supabase worden opgeslagen.", error);
+  });
 }
 
 

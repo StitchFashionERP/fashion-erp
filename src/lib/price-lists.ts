@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import { resolveScheduledArticlePrice } from "@/lib/scheduled-prices";
 import { resolvePromotion } from "@/lib/pricing-promotions";
 
@@ -37,6 +39,8 @@ export type ResolvedSalesPrice = {
 const priceListsKey = "fashion-erp-price-lists-v1";
 const agreementsKey = "fashion-erp-price-agreements-v1";
 
+export const priceListsSharedStateKeys = [priceListsKey, agreementsKey] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -71,25 +75,12 @@ export const defaultPriceLists: PriceList[] = [
 ];
 
 function read<T>(key: string, fallback: T[]): T[] {
-  if (typeof window === "undefined") return fallback;
-
-  const stored = window.localStorage.getItem(key);
-  if (!stored) {
-    window.localStorage.setItem(key, JSON.stringify(fallback));
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    window.localStorage.setItem(key, JSON.stringify(fallback));
-    return fallback;
-  }
+  const value = getSharedStateValue<T[]>(key, fallback);
+  return Array.isArray(value) ? value : fallback;
 }
 
 function save<T>(key: string, values: T[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(values));
+  setSharedStateValue(key, values);
 }
 
 export function getPriceLists() {

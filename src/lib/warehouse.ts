@@ -4,6 +4,7 @@ import {
   getStoredProducts,
   saveProducts,
 } from "@/lib/articles";
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
 import {
   getPurchaseReceipts,
 } from "@/lib/purchasing";
@@ -163,6 +164,15 @@ const pickListsKey =
 const stockCountsKey =
   "stitch-erp-stock-counts-v1";
 
+export const warehouseSharedStateKeys = [
+  locationsKey,
+  positionsKey,
+  transfersKey,
+  putAwayKey,
+  pickListsKey,
+  stockCountsKey,
+] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -174,33 +184,11 @@ function createId(prefix: string) {
 }
 
 function read<T>(key: string): T[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(key);
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    window.localStorage.removeItem(key);
-    return [];
-  }
+  return getSharedStateValue<T[]>(key, []);
 }
 
 function save<T>(key: string, items: T[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    key,
-    JSON.stringify(items),
-  );
+  setSharedStateValue(key, items);
 }
 
 function defaultLocations(): WarehouseLocation[] {

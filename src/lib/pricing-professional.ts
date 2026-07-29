@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import {
   getStoredProducts,
   saveProducts,
@@ -66,6 +68,8 @@ export type PricingAdvice = {
 const scenarioKey = "fashion-erp-pricing-scenarios-v1";
 const channelPriceKey = "fashion-erp-channel-prices-v1";
 
+export const pricingProfessionalSharedStateKeys = [scenarioKey, channelPriceKey] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -81,20 +85,12 @@ function money(value: number) {
 }
 
 function read<T>(key: string, fallback: T[] = []): T[] {
-  if (typeof window === "undefined") return fallback;
-  const stored = window.localStorage.getItem(key);
-  if (!stored) return fallback;
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    window.localStorage.removeItem(key);
-    return fallback;
-  }
+  const value = getSharedStateValue<T[]>(key, fallback);
+  return Array.isArray(value) ? value : fallback;
 }
 
 function save<T>(key: string, values: T[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(values));
+  setSharedStateValue(key, values);
 }
 
 export function getPricingScenarios() {

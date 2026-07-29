@@ -1,3 +1,10 @@
+"use client";
+
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
+
 export type CommunicationDocumentType =
   | "QUOTATION"
   | "SALES_ORDER_CONFIRMATION"
@@ -38,6 +45,8 @@ export const communicationSettingsChangedEvent =
   "stitch-communication-settings-changed";
 
 const storageKey = "stitch-communication-settings-v1";
+
+export const communicationSettingsSharedStateKeys = [storageKey] as const;
 
 export const documentTypeOptions: Array<{
   value: CommunicationDocumentType;
@@ -89,7 +98,7 @@ function normalizeSettings(
   input: Partial<CommunicationSettings> | null | undefined,
 ): CommunicationSettings {
   const accounts = Array.isArray(input?.accounts)
-    ? input!.accounts.map((account) => ({
+    ? input.accounts.map((account) => ({
         id: account.id || createId("mail"),
         name: account.name || "",
         email: account.email || "",
@@ -100,7 +109,7 @@ function normalizeSettings(
     : [];
 
   const inputDocuments = Array.isArray(input?.documents)
-    ? input!.documents
+    ? input.documents
     : [];
 
   const documents = documentTypeOptions.map((option) => {
@@ -119,27 +128,23 @@ function normalizeSettings(
 }
 
 export function getCommunicationSettings(): CommunicationSettings {
-  if (typeof window === "undefined") {
-    return defaultCommunicationSettings;
-  }
+  const stored = getSharedStateValue<Partial<CommunicationSettings> | null>(
+    storageKey,
+    null,
+  );
 
-  try {
-    const stored = window.localStorage.getItem(storageKey);
-    return stored
-      ? normalizeSettings(JSON.parse(stored) as Partial<CommunicationSettings>)
-      : defaultCommunicationSettings;
-  } catch {
-    return defaultCommunicationSettings;
-  }
+  return stored
+    ? normalizeSettings(stored)
+    : defaultCommunicationSettings;
 }
 
 export function saveCommunicationSettings(
   settings: CommunicationSettings,
 ): CommunicationSettings {
   const normalized = normalizeSettings(settings);
+  setSharedStateValue(storageKey, normalized);
 
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(storageKey, JSON.stringify(normalized));
     window.dispatchEvent(
       new CustomEvent(communicationSettingsChangedEvent, {
         detail: normalized,

@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 export type PricingPromotion = {
   id: string;
   name: string;
@@ -19,6 +21,8 @@ export type PricingPromotion = {
 
 const storageKey = "fashion-erp-pricing-promotions-v1";
 
+export const pricingPromotionsSharedStateKeys = [storageKey] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -30,23 +34,12 @@ function id() {
 }
 
 function read(): PricingPromotion[] {
-  if (typeof window === "undefined") return [];
-  const stored = window.localStorage.getItem(storageKey);
-  if (!stored) return [];
-  try {
-    return JSON.parse(stored) as PricingPromotion[];
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
+  const items = getSharedStateValue<PricingPromotion[]>(storageKey, []);
+  return Array.isArray(items) ? items : [];
 }
 
 function save(items: PricingPromotion[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(items),
-  );
+  setSharedStateValue(storageKey, items);
 }
 
 export function getPricingPromotions() {

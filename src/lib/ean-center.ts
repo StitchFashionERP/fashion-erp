@@ -1,3 +1,5 @@
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import { getStoredProducts } from "@/lib/articles";
 import { isValidEan13 } from "@/lib/barcodes";
 
@@ -25,6 +27,8 @@ export type EanImportResult = {
 };
 
 const storageKey = "fashion-erp-ean-pool-v1";
+
+export const eanCenterSharedStateKeys = [storageKey] as const;
 
 export function normalizeEan(value: unknown) {
   return String(value ?? "").replace(/\D/g, "").trim();
@@ -95,18 +99,8 @@ function syncAssignments(items: EanPoolItem[]) {
 }
 
 function readStoredPool() {
-  if (typeof window === "undefined") return [] as EanPoolItem[];
-
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) return [] as EanPoolItem[];
-
-  try {
-    const parsed = JSON.parse(raw) as EanPoolItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
+  const value = getSharedStateValue<EanPoolItem[]>(storageKey, []);
+  return Array.isArray(value) ? value : [];
 }
 
 export function getEanPool() {
@@ -123,8 +117,7 @@ export function getEanPool() {
 }
 
 export function saveEanPool(items: EanPoolItem[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey, JSON.stringify(items));
+  setSharedStateValue(storageKey, items);
 }
 
 export function getAvailableEans(options?: {

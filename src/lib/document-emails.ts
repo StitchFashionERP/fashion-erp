@@ -19,6 +19,10 @@ import {
 import {
   getCompanySettings,
 } from "@/lib/company-settings";
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
 
 export type BusinessDocumentType =
   | "PURCHASE_ORDER"
@@ -98,6 +102,10 @@ export type SendDocumentEmailResult = {
 
 const emailLogStorageKey =
   "fashion-erp-document-email-logs-v1";
+
+export const documentEmailSharedStateKeys = [
+  emailLogStorageKey,
+] as const;
 
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random()
@@ -1085,42 +1093,16 @@ STITCH ERP Fashion Management`,
 }
 
 export function getDocumentEmailLogs() {
-  if (typeof window === "undefined") {
-    return [] as DocumentEmailLog[];
-  }
-
-  const stored = window.localStorage.getItem(
+  return getSharedStateValue<DocumentEmailLog[]>(
     emailLogStorageKey,
+    [],
   );
-
-  if (!stored) {
-    return [] as DocumentEmailLog[];
-  }
-
-  try {
-    return JSON.parse(
-      stored,
-    ) as DocumentEmailLog[];
-  } catch {
-    window.localStorage.removeItem(
-      emailLogStorageKey,
-    );
-
-    return [];
-  }
 }
 
 export function saveDocumentEmailLogs(
   logs: DocumentEmailLog[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    emailLogStorageKey,
-    JSON.stringify(logs),
-  );
+  setSharedStateValue(emailLogStorageKey, logs);
 }
 
 export function getDocumentEmailLogsForReference(

@@ -33,8 +33,17 @@ export type ReminderLog = {
   error: string;
 };
 
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
+
 const reminderLogKey =
   "stitch-erp-reminder-log-v1";
+
+export const debtorManagementSharedStateKeys = [
+  reminderLogKey,
+] as const;
 
 function now() {
   return new Date().toISOString();
@@ -47,35 +56,14 @@ function createId(prefix: string) {
 }
 
 function readLogs(): ReminderLog[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(
+  return getSharedStateValue<ReminderLog[]>(
     reminderLogKey,
+    [],
   );
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as ReminderLog[];
-  } catch {
-    window.localStorage.removeItem(reminderLogKey);
-    return [];
-  }
 }
 
 function saveLogs(logs: ReminderLog[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    reminderLogKey,
-    JSON.stringify(logs),
-  );
+  setSharedStateValue(reminderLogKey, logs);
 }
 
 export function getReminderLogs() {

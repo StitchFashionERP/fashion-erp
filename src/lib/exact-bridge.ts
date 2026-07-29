@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import {
   getCustomers,
   saveCustomers,
@@ -132,6 +134,10 @@ const invoiceExportsKey =
 const syncLogKey =
   "stitch-erp-exact-sync-log-v1";
 
+export const exactBridgeSharedStateKeys = [
+  settingsKey, customerLinksKey, invoiceExportsKey, syncLogKey,
+] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -146,63 +152,20 @@ function readObject<T>(
   key: string,
   fallback: T,
 ): T {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  const stored = window.localStorage.getItem(key);
-
-  if (!stored) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(stored) as T;
-  } catch {
-    window.localStorage.removeItem(key);
-    return fallback;
-  }
+  return getSharedStateValue<T>(key, fallback);
 }
 
 function readArray<T>(key: string): T[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(key);
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    window.localStorage.removeItem(key);
-    return [];
-  }
+  const value = getSharedStateValue<T[]>(key, []);
+  return Array.isArray(value) ? value : [];
 }
 
 function saveObject<T>(key: string, value: T) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    key,
-    JSON.stringify(value),
-  );
+  setSharedStateValue(key, value);
 }
 
 function saveArray<T>(key: string, values: T[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    key,
-    JSON.stringify(values),
-  );
+  setSharedStateValue(key, values);
 }
 
 const defaultSettings: ExactBridgeSettings = {

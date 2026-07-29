@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 export type HistoryEventType =
   | "SALES_ORDER_CREATED"
   | "SALES_ORDER_UPDATED"
@@ -54,6 +56,8 @@ export type HistoryEvent = {
 const storageKey =
   "stitch-erp-history-events-v1";
 
+export const historyEngineSharedStateKeys = [storageKey] as const;
+
 function createId() {
   return `history-${Date.now()}-${Math.random()
     .toString(36)
@@ -61,24 +65,8 @@ function createId() {
 }
 
 export function getHistoryEvents() {
-  if (typeof window === "undefined") {
-    return [] as HistoryEvent[];
-  }
-
-  const stored = window.localStorage.getItem(
-    storageKey,
-  );
-
-  if (!stored) {
-    return [] as HistoryEvent[];
-  }
-
-  try {
-    return JSON.parse(stored) as HistoryEvent[];
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [] as HistoryEvent[];
-  }
+  const events = getSharedStateValue<HistoryEvent[]>(storageKey, []);
+  return Array.isArray(events) ? events : [];
 }
 
 export function appendHistoryEvent(
@@ -95,10 +83,7 @@ export function appendHistoryEvent(
   };
 
   const events = getHistoryEvents();
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify([event, ...events]),
-  );
+  setSharedStateValue(storageKey, [event, ...events]);
 
   return event;
 }
@@ -118,13 +103,10 @@ export function appendHistoryEvents(
       new Date().toISOString(),
   }));
 
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify([
-      ...events,
-      ...getHistoryEvents(),
-    ]),
-  );
+  setSharedStateValue(storageKey, [
+    ...events,
+    ...getHistoryEvents(),
+  ]);
 
   return events;
 }

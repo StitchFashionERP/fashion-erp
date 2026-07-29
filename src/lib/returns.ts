@@ -14,6 +14,10 @@ import {
   getWarehouseStockPositions,
   type WarehouseStockPosition,
 } from "@/lib/warehouse";
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
 
 export type ReturnStatus =
   | "Aangemeld"
@@ -138,6 +142,12 @@ const creditNotesKey =
 const warehousePositionsKey =
   "stitch-erp-warehouse-positions-v1";
 
+export const returnsSharedStateKeys = [
+  returnsKey,
+  creditNotesKey,
+  warehousePositionsKey,
+] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -153,33 +163,11 @@ function createId(prefix: string) {
 }
 
 function readArray<T>(key: string): T[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(key);
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    window.localStorage.removeItem(key);
-    return [];
-  }
+  return getSharedStateValue<T[]>(key, []);
 }
 
 function saveArray<T>(key: string, items: T[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    key,
-    JSON.stringify(items),
-  );
+  setSharedStateValue(key, items);
 }
 
 function nextNumber(

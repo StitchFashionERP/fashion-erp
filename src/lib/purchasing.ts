@@ -2,6 +2,7 @@ import {
   getStoredProducts,
   saveProducts,
 } from "@/lib/articles";
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
 import {
   appendHistoryEventsOnce,
 } from "@/lib/history-engine";
@@ -99,6 +100,11 @@ export type ReceivePurchaseOrderInput = {
 const orderStorageKey = "fashion-erp-purchase-orders";
 const receiptStorageKey = "fashion-erp-purchase-receipts";
 
+export const purchasingSharedStateKeys = [
+  orderStorageKey,
+  receiptStorageKey,
+] as const;
+
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random()
     .toString(36)
@@ -179,77 +185,25 @@ function getNextReceiptNumber(
 }
 
 export function getPurchaseOrders(): PurchaseOrder[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(
-    orderStorageKey,
+  return getSharedStateValue<PurchaseOrder[]>(orderStorageKey, []).map(
+    normalizePurchaseOrder,
   );
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(
-      stored,
-    ) as PurchaseOrder[];
-
-    return parsed.map(normalizePurchaseOrder);
-  } catch {
-    window.localStorage.removeItem(orderStorageKey);
-    return [];
-  }
 }
 
 export function savePurchaseOrders(
   orders: PurchaseOrder[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    orderStorageKey,
-    JSON.stringify(orders),
-  );
+  setSharedStateValue(orderStorageKey, orders);
 }
 
 export function getPurchaseReceipts(): PurchaseReceipt[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(
-    receiptStorageKey,
-  );
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as PurchaseReceipt[];
-  } catch {
-    window.localStorage.removeItem(
-      receiptStorageKey,
-    );
-    return [];
-  }
+  return getSharedStateValue<PurchaseReceipt[]>(receiptStorageKey, []);
 }
 
 export function savePurchaseReceipts(
   receipts: PurchaseReceipt[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    receiptStorageKey,
-    JSON.stringify(receipts),
-  );
+  setSharedStateValue(receiptStorageKey, receipts);
 }
 
 export function getPurchaseOrderById(id: string) {

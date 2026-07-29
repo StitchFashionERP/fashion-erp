@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import type { Product } from "@/lib/articles";
 
 export type PricingSnapshot = {
@@ -27,6 +29,8 @@ export type PricingHistoryEntry = {
 };
 
 const storageKey = "fashion-erp-pricing-history-v1";
+
+export const pricingHistorySharedStateKeys = [storageKey] as const;
 
 function createId() {
   return `pricing-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -58,30 +62,12 @@ export function getProductPricingSnapshot(
 }
 
 export function getPricingHistory(): PricingHistoryEntry[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(storageKey);
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as PricingHistoryEntry[];
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
+  const entries = getSharedStateValue<PricingHistoryEntry[]>(storageKey, []);
+  return Array.isArray(entries) ? entries : [];
 }
 
 export function savePricingHistory(entries: PricingHistoryEntry[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(storageKey, JSON.stringify(entries));
+  setSharedStateValue(storageKey, entries);
 }
 
 function getChangedFields(

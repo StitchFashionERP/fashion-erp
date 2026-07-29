@@ -1,3 +1,5 @@
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 import {
   getStoredProducts,
   type Product,
@@ -117,6 +119,11 @@ const barcodeSettingsStorageKey =
 
 const barcodeScansStorageKey =
   "fashion-erp-barcode-scans-v1";
+
+export const barcodeSharedStateKeys = [
+  barcodeSettingsStorageKey,
+  barcodeScansStorageKey,
+] as const;
 
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random()
@@ -316,68 +323,30 @@ export function validateBarcode(
 }
 
 export function getVariantBarcodeSettings(): VariantBarcodeSettings[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(
+  const parsed = getSharedStateValue<VariantBarcodeSettings[]>(
     barcodeSettingsStorageKey,
+    [],
   );
 
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(
-      stored,
-    ) as VariantBarcodeSettings[];
-
-    return parsed.map((item) => ({
-      ...item,
-      ean: normalizeBarcode(item.ean),
-      internalBarcode: normalizeBarcode(
-        item.internalBarcode,
+  return (Array.isArray(parsed) ? parsed : []).map((item) => ({
+    ...item,
+    ean: normalizeBarcode(item.ean),
+    internalBarcode: normalizeBarcode(item.internalBarcode),
+    supplierBarcode: normalizeBarcode(item.supplierBarcode),
+    barcodeType:
+      item.barcodeType ??
+      detectBarcodeType(
+        item.ean || item.internalBarcode || item.supplierBarcode,
       ),
-      supplierBarcode: normalizeBarcode(
-        item.supplierBarcode,
-      ),
-      barcodeType:
-        item.barcodeType ??
-        detectBarcodeType(
-          item.ean ||
-            item.internalBarcode ||
-            item.supplierBarcode,
-        ),
-      unitsPerPack: normalizePositiveInteger(
-        item.unitsPerPack,
-        1,
-      ),
-      unitsPerCarton: normalizePositiveInteger(
-        item.unitsPerCarton,
-        1,
-      ),
-    }));
-  } catch {
-    window.localStorage.removeItem(
-      barcodeSettingsStorageKey,
-    );
-
-    return [];
-  }
+    unitsPerPack: normalizePositiveInteger(item.unitsPerPack, 1),
+    unitsPerCarton: normalizePositiveInteger(item.unitsPerCarton, 1),
+  }));
 }
 
 export function saveVariantBarcodeSettings(
   settings: VariantBarcodeSettings[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    barcodeSettingsStorageKey,
-    JSON.stringify(settings),
-  );
+  setSharedStateValue(barcodeSettingsStorageKey, settings);
 }
 
 export function getBarcodeSettingsForVariant(
@@ -805,40 +774,14 @@ export function searchVariantsForBarcodeAssignment(
 }
 
 export function getBarcodeScans() {
-  if (typeof window === "undefined") {
-    return [] as BarcodeScan[];
-  }
-
-  const stored = window.localStorage.getItem(
-    barcodeScansStorageKey,
-  );
-
-  if (!stored) {
-    return [] as BarcodeScan[];
-  }
-
-  try {
-    return JSON.parse(stored) as BarcodeScan[];
-  } catch {
-    window.localStorage.removeItem(
-      barcodeScansStorageKey,
-    );
-
-    return [] as BarcodeScan[];
-  }
+  const scans = getSharedStateValue<BarcodeScan[]>(barcodeScansStorageKey, []);
+  return Array.isArray(scans) ? scans : [];
 }
 
 export function saveBarcodeScans(
   scans: BarcodeScan[],
 ) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    barcodeScansStorageKey,
-    JSON.stringify(scans),
-  );
+  setSharedStateValue(barcodeScansStorageKey, scans);
 }
 
 export function registerBarcodeScan(

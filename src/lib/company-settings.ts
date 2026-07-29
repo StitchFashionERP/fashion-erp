@@ -69,8 +69,6 @@ type CompanySettingsRow = {
   settings: unknown;
 };
 
-const legacyStorageKey = "fashion-erp-company-settings-v1";
-
 export const companySettingsChangedEvent =
   "fashion-erp-company-settings-changed";
 
@@ -281,31 +279,6 @@ async function getActiveOrganizationId(): Promise<string> {
   return organizationId;
 }
 
-function readLegacySettings(): CompanySettings | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const stored = window.localStorage.getItem(legacyStorageKey);
-
-  if (!stored) {
-    return null;
-  }
-
-  try {
-    return parseSettings(JSON.parse(stored));
-  } catch {
-    window.localStorage.removeItem(legacyStorageKey);
-    return null;
-  }
-}
-
-function removeLegacySettings() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(legacyStorageKey);
-  }
-}
-
 export function getCompanySettings(): CompanySettings {
   return cachedSettings;
 }
@@ -332,14 +305,11 @@ export async function loadCompanySettings(): Promise<CompanySettings> {
 
   if (row?.settings) {
     cachedSettings = parseSettings(row.settings);
-    removeLegacySettings();
     dispatchSettingsChanged(cachedSettings);
     return cachedSettings;
   }
 
-  const legacySettings = readLegacySettings();
-  const initialSettings =
-    legacySettings ?? defaultCompanySettings;
+  const initialSettings = defaultCompanySettings;
 
   const { error: insertError } = await supabase
     .from("company_settings")
@@ -359,7 +329,6 @@ export async function loadCompanySettings(): Promise<CompanySettings> {
   }
 
   cachedSettings = mergeSettings(initialSettings);
-  removeLegacySettings();
   dispatchSettingsChanged(cachedSettings);
 
   return cachedSettings;
@@ -390,7 +359,6 @@ export async function saveCompanySettings(
   }
 
   cachedSettings = normalized;
-  removeLegacySettings();
   dispatchSettingsChanged(normalized);
 
   return normalized;

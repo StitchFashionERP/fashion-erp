@@ -1,3 +1,5 @@
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 export type ProductMediaType =
   | "packshot"
   | "detail"
@@ -18,23 +20,15 @@ export type ProductMedia = {
 
 const storageKey = "fashion-erp-product-media-v1";
 
-function readAll(): ProductMedia[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
+export const productMediaSharedStateKeys = [storageKey] as const;
 
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function readAll(): ProductMedia[] {
+  const items = getSharedStateValue<ProductMedia[]>(storageKey, []);
+  return Array.isArray(items) ? items : [];
 }
 
 function writeAll(items: ProductMedia[]) {
-  window.localStorage.setItem(storageKey, JSON.stringify(items));
+  setSharedStateValue(storageKey, items);
 }
 
 export function getProductMedia(productId: string) {

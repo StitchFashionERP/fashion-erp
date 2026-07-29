@@ -1,5 +1,7 @@
 "use client";
 
+import { getSharedStateValue, setSharedStateValue } from "@/lib/shared-state-client";
+
 export type ScheduledArticlePrice = {
   id: string;
   productId: string;
@@ -24,6 +26,8 @@ export type ResolvedScheduledPrice = {
 
 const storageKey = "fashion-erp-scheduled-article-prices-v1";
 
+export const scheduledPricesSharedStateKeys = [storageKey] as const;
+
 function createId() {
   return `scheduled-price-${Date.now()}-${Math.random()
     .toString(36)
@@ -42,47 +46,22 @@ function safeMoney(value: number) {
 }
 
 function read(): ScheduledArticlePrice[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(storageKey);
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return (
-      JSON.parse(stored) as ScheduledArticlePrice[]
-    ).map((item) => ({
-      ...item,
-      variantId: item.variantId || "",
-      salesPrice: safeMoney(item.salesPrice),
-      recommendedRetailPrice: safeMoney(
-        item.recommendedRetailPrice,
-      ),
-      validFrom: item.validFrom || "",
-      validUntil: item.validUntil || "",
-      note: item.note || "",
-      isActive: item.isActive !== false,
-      createdBy: item.createdBy || "Daan",
-    }));
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
+  const items = getSharedStateValue<ScheduledArticlePrice[]>(storageKey, []);
+  return (Array.isArray(items) ? items : []).map((item) => ({
+    ...item,
+    variantId: item.variantId || "",
+    salesPrice: safeMoney(item.salesPrice),
+    recommendedRetailPrice: safeMoney(item.recommendedRetailPrice),
+    validFrom: item.validFrom || "",
+    validUntil: item.validUntil || "",
+    note: item.note || "",
+    isActive: item.isActive !== false,
+    createdBy: item.createdBy || "Daan",
+  }));
 }
 
 function save(items: ScheduledArticlePrice[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(items),
-  );
+  setSharedStateValue(storageKey, items);
 }
 
 export function getScheduledArticlePrices() {

@@ -123,10 +123,8 @@ export type ProductInput = {
   }>;
 };
 
-const storageKey = "fashion-erp-products-v3";
-const previousStorageKey = "fashion-erp-products-v2";
-const legacyStorageKey = "fashion-erp-products";
-const pricingMigrationKey = "fashion-erp-products-pricing-migration-v2";
+let productCache: Product[] = [];
+let pricingMigrationDone = false;
 
 function cleanCodePart(value: string, maxLength = 5) {
   return value
@@ -684,26 +682,15 @@ export type PricingMigrationResult = {
 export function migrateProductsToPricingSettings(
   force = false,
 ): PricingMigrationResult {
-  if (typeof window === "undefined") {
-    return { migratedProducts: 0, totalProducts: 0 };
-  }
-
-  if (
-    !force &&
-    window.localStorage.getItem(pricingMigrationKey) ===
-      "done"
-  ) {
-    const products = getStoredProducts();
+  if (!force && pricingMigrationDone) {
     return {
       migratedProducts: 0,
-      totalProducts: products.length,
+      totalProducts: productCache.length,
     };
   }
 
-  const products = getStoredProducts();
   let migratedProducts = 0;
-
-  const migrated = products.map((product) => {
+  const migrated = productCache.map((product) => {
     const normalized = normalizeLegacyProduct(
       product as unknown as Record<string, unknown>,
     );
@@ -711,53 +698,66 @@ export function migrateProductsToPricingSettings(
     const changed =
       normalized.totalCost !== product.totalCost ||
       normalized.brandMarkup !== product.brandMarkup ||
-      normalized.retailerMarkup !==
-        product.retailerMarkup ||
-      normalized.recommendedRetailPrice !==
-        product.recommendedRetailPrice;
+      normalized.retailerMarkup !== product.retailerMarkup ||
+      normalized.recommendedRetailPrice !== product.recommendedRetailPrice;
 
-    if (changed) {
-      migratedProducts += 1;
-    }
-
+    if (changed) migratedProducts += 1;
     return normalized;
   });
 
-  saveProducts(migrated);
-  window.localStorage.setItem(pricingMigrationKey, "done");
+  setProductCache(migrated);
+  pricingMigrationDone = true;
 
-  return {
-    migratedProducts,
-    totalProducts: migrated.length,
-  };
+  return { migratedProducts, totalProducts: migrated.length };
 }
 
 export function getStoredProducts(): Product[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
+  return productCache;
+}
 
-  const stored = window.localStorage.getItem(storageKey);
-  if (!stored) {
-    return [];
-  }
+export function setProductCache(products: Product[]) {
+  productCache = products.map((product) =>
+    normalizeLegacyProduct(product as unknown as Record<string, unknown>),
+  );
+}
 
-  try {
-    return (JSON.parse(stored) as Record<string, unknown>[]).map(
-      normalizeLegacyProduct,
+async function persistProductChanges(previous: Product[], next: Product[]) {
+  const previousById = new Map(previous.map((product) => [product.id, product]));
+  const nextIds = new Set(next.map((product) => product.id));
+
+  for (const product of next) {
+    const existing = previousById.get(product.id);
+    const changed = !existing || JSON.stringify(existing) !== JSON.stringify(product);
+    if (!changed) continue;
+
+    const response = await fetch(
+      existing ? `/api/articles/${encodeURIComponent(product.id)}` : "/api/articles",
+      {
+        method: existing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      },
     );
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
+    const saved = await parseResponse<Product>(response);
+    const current = productCache.filter((item) => item.id !== product.id);
+    productCache = [...current, saved];
+  }
+
+  for (const product of previous) {
+    if (nextIds.has(product.id)) continue;
+    const response = await fetch(`/api/articles/${encodeURIComponent(product.id)}`, {
+      method: "DELETE",
+    });
+    await parseResponse<{ ok: true }>(response);
   }
 }
 
 export function saveProducts(products: Product[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(storageKey, JSON.stringify(products));
+  const previous = productCache;
+  setProductCache(products);
+  void persistProductChanges(previous, productCache).catch((error) => {
+    console.error("Artikelen konden niet in Supabase worden opgeslagen.", error);
+  });
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -780,7 +780,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 function replaceCachedProduct(product: Product) {
   const products = getStoredProducts();
   const exists = products.some((item) => item.id === product.id);
-  saveProducts(
+  setProductCache(
     exists
       ? products.map((item) => (item.id === product.id ? product : item))
       : [...products, product],
@@ -793,7 +793,7 @@ export async function fetchProducts(): Promise<Product[]> {
     cache: "no-store",
   });
   const products = await parseResponse<Product[]>(response);
-  saveProducts(products);
+  setProductCache(products);
   return products;
 }
 
@@ -933,7 +933,7 @@ export async function deleteProduct(id: string) {
     method: "DELETE",
   });
   await parseResponse<{ ok: true }>(response);
-  saveProducts(getStoredProducts().filter((product) => product.id !== id));
+  setProductCache(getStoredProducts().filter((product) => product.id !== id));
 }
 
 export async function duplicateProduct(id: string) {

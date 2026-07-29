@@ -8,6 +8,10 @@ import {
   getWarehouseLocations,
   receiveWarehouseStock,
 } from "@/lib/warehouse";
+import {
+  getSharedStateValue,
+  setSharedStateValue,
+} from "@/lib/shared-state-client";
 
 export type ProductionOrderStatus =
   | "Concept"
@@ -68,6 +72,10 @@ export type ProductionOrderInput = {
 const storageKey =
   "stitch-erp-production-orders-v1";
 
+export const productionSharedStateKeys = [
+  storageKey,
+] as const;
+
 function now() {
   return new Date().toISOString();
 }
@@ -83,35 +91,14 @@ function createId(prefix: string) {
 }
 
 function read(): ProductionOrder[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const stored = window.localStorage.getItem(
+  return getSharedStateValue<ProductionOrder[]>(
     storageKey,
+    [],
   );
-
-  if (!stored) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(stored) as ProductionOrder[];
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return [];
-  }
 }
 
 function save(items: ProductionOrder[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify(items),
-  );
+  setSharedStateValue(storageKey, items);
 }
 
 function nextProductionNumber(
