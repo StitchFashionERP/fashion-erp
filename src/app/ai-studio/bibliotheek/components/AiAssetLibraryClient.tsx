@@ -761,6 +761,37 @@ export function AiAssetLibraryClient() {
                 <div
                   className={styles.assetActions}
                 >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void deleteMediaAsset(
+                        resolveMediaAssetId(asset),
+                      )
+                    }
+                    disabled={
+                      deletingAssetId ===
+                      resolveMediaAssetId(asset)
+                    }
+                    title="Afbeelding definitief verwijderen"
+                    style={{
+                      border: "1px solid #e2a7a7",
+                      background: "#fff7f7",
+                      color: "#a32424",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      cursor:
+                        deletingAssetId ===
+                        resolveMediaAssetId(asset)
+                          ? "wait"
+                          : "pointer",
+                    }}
+                  >
+                    {deletingAssetId ===
+                    resolveMediaAssetId(asset)
+                      ? "Verwijderen..."
+                      : "Verwijderen"}
+                  </button>
+
                   {!approved ? (
                     <>
                       <button
@@ -813,47 +844,7 @@ export function AiAssetLibraryClient() {
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void deleteMediaAsset(
-                            resolveMediaAssetId(
-                              asset,
-                            ),
-                          )
-                        }
-                        disabled={
-                          deletingAssetId ===
-                          resolveMediaAssetId(
-                            asset,
-                          )
-                        }
-                        title="Afbeelding verwijderen"
-                        style={{
-                          border:
-                            "1px solid #e2a7a7",
-                          background: "#fff7f7",
-                          color: "#a32424",
-                          borderRadius: "8px",
-                          padding: "8px 12px",
-                          cursor:
-                            deletingAssetId ===
-                            resolveMediaAssetId(
-                              asset,
-                            )
-                              ? "wait"
-                              : "pointer",
-                        }}
-                      >
-                        {deletingAssetId ===
-                        resolveMediaAssetId(
-                          asset,
-                        )
-                          ? "Verwijderen..."
-                          : "Verwijderen"}
-                      </button>
-
-                      {!asset.isPrimary && (
+{!asset.isPrimary && (
                         <button
                           type="button"
                           className={
