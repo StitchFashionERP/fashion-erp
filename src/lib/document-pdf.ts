@@ -2175,43 +2175,51 @@ function drawArticleBlock(
     dividerY,
   );
 
-  const sizeAreaStart = MARGIN_X + 55;
-  const sizeAreaWidth = 72;
+  const sizeColumnStart = MARGIN_X + 48;
+  const sizeColumnWidth = 12;
 
-  const totalColumnX = 132;
-  const orderColumnX = 145;
-  const salesPriceColumnX = 165;
+  const totalColumnX = 105;
+  const orderColumnX = 130;
+  const salesPriceColumnX = 155;
   const retailPriceColumnX = 183;
-  const sizeColumnWidth =
-    sizeAreaWidth /
-    Math.max(block.sizes.length, 1);
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(6.3);
+
   pdf.text(
     "Kleur",
     MARGIN_X + 3,
     tableHeaderY,
   );
+
   pdf.text(
     "Kleurnr.",
     MARGIN_X + 25,
     tableHeaderY,
   );
 
-  block.sizes.forEach((size, index) => {
-    pdf.text(
-      size,
-      sizeAreaStart +
-        index * sizeColumnWidth +
-        sizeColumnWidth / 2,
-      tableHeaderY,
-      { align: "center" },
-    );
-  });
+  block.sizes.forEach(
+    (size, index) => {
+      pdf.text(
+        size,
+        sizeColumnStart +
+          index * sizeColumnWidth,
+        tableHeaderY,
+      );
+    },
+  );
 
-  pdf.text("Totaal", totalColumnX, tableHeaderY);
-  pdf.text("Ordernr.", orderColumnX, tableHeaderY);
+  pdf.text(
+    "Totaal",
+    totalColumnX,
+    tableHeaderY,
+  );
+
+  pdf.text(
+    "Ordernr.",
+    orderColumnX,
+    tableHeaderY,
+  );
 
   if (
     definition.documentType ===
@@ -2222,26 +2230,17 @@ function drawArticleBlock(
       salesPriceColumnX,
       tableHeaderY,
     );
+
     pdf.text(
       "Adviesprijs",
       retailPriceColumnX,
       tableHeaderY,
     );
   } else {
-    const priceLabel =
-      definition.documentType ===
-      "PURCHASE_ORDER"
-        ? "Inkoopprijs"
-        : definition.documentType ===
-            "PACKING_SLIP"
-          ? "Adviesprijs"
-          : "Prijs";
-
     pdf.text(
-      priceLabel,
-      190,
+      "Prijs",
+      salesPriceColumnX,
       tableHeaderY,
-      { align: "right" },
     );
   }
 
@@ -2278,11 +2277,9 @@ function drawArticleBlock(
             quantity > 0
               ? String(quantity)
               : "",
-            sizeAreaStart +
-              index * sizeColumnWidth +
-              sizeColumnWidth / 2,
+            sizeColumnStart +
+              index * sizeColumnWidth,
             rowY,
-            { align: "center" },
           );
         },
       );
