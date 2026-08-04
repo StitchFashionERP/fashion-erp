@@ -169,6 +169,38 @@ const groups: NavigationGroup[] = [
       },
     ],
   },
+  {
+    id: "ai-studio",
+    label: "AI Studio",
+    icon: "products",
+    items: [
+      {
+        label: "Overzicht",
+        href: "/ai-studio",
+        icon: "dashboard",
+      },
+      {
+        label: "Workspace",
+        href: "/ai-studio/workspace",
+        icon: "products",
+      },
+      {
+        label: "Model Studio",
+        href: "/ai-studio/model-studio",
+        icon: "customers",
+      },
+      {
+        label: "Referenties",
+        href: "/ai-studio/referenties",
+        icon: "document",
+      },
+      {
+        label: "Bibliotheek",
+        href: "/ai-studio/bibliotheek",
+        icon: "inventory",
+      },
+    ],
+  },
 ];
 
 export function Sidebar() {

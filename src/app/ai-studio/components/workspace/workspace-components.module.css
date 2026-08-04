@@ -1,0 +1,119 @@
+.workspaceShell {
+  display: grid;
+  gap: 16px;
+}
+
+.workflow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.workflowStep {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border-right: 1px solid var(--border-light);
+  padding: 12px;
+}
+
+.workflowStep:last-child {
+  border-right: 0;
+}
+
+.workflowNumber {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.workflowText {
+  min-width: 0;
+}
+
+.workflowText strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowText span {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowStepActive {
+  background: var(--primary-light);
+}
+
+.workflowStepActive .workflowNumber {
+  background: var(--primary);
+  color: #fff;
+}
+
+.workflowStepActive .workflowText strong {
+  color: var(--primary);
+}
+
+.workflowStepCompleted .workflowNumber {
+  background: var(--success);
+  color: #fff;
+}
+
+.workflowStepCompleted .workflowText strong {
+  color: var(--text-primary);
+}
+
+.notice {
+  border: 1px solid #c7dceb;
+  border-radius: 5px;
+  background: var(--info-light);
+  padding: 12px 14px;
+  color: var(--info);
+}
+
+.notice strong {
+  display: block;
+  font-size: 12px;
+}
+
+.notice p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1050px) {
+  .workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .workflowStep {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .workflowStep:last-child {
+    border-bottom: 0;
+  }
+}

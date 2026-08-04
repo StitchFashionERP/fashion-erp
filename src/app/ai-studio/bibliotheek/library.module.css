@@ -1,0 +1,414 @@
+.library {
+  display: grid;
+  gap: 16px;
+}
+
+.libraryToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.libraryToolbar strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.libraryToolbar span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.assetGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.assetCard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.assetImageFrame {
+  position: relative;
+  display: grid;
+  min-height: 330px;
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-light);
+  background:
+    linear-gradient(
+      45deg,
+      #edf1f4 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      -45deg,
+      #edf1f4 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 75%,
+      #edf1f4 75%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 75%,
+      #edf1f4 75%
+    );
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0;
+  background-size: 24px 24px;
+}
+
+.assetImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 460px;
+  object-fit: contain;
+}
+
+.conceptBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  min-height: 27px;
+  align-items: center;
+  border: 1px solid #c7dceb;
+  border-radius: 999px;
+  background: rgba(239, 247, 252, 0.96);
+  padding: 0 10px;
+  color: var(--info);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.assetContent {
+  display: grid;
+  gap: 14px;
+  padding: 15px;
+}
+
+.assetTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.assetTitleRow strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.assetTitleRow span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.typeBadge {
+  display: inline-flex !important;
+  min-height: 25px;
+  flex: none;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 0 9px;
+  color: var(--text-secondary) !important;
+  font-size: 9px !important;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.assetDetails {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.assetDetails > div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  border-bottom: 1px solid var(--border-light);
+  padding: 8px 10px;
+}
+
+.assetDetails > div:last-child {
+  border-bottom: 0;
+}
+
+.assetDetails dt {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.assetDetails dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assetActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.disabledButton {
+  display: inline-flex;
+  min-height: 37px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 0 13px;
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.primaryButton {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.disabledButton {
+  cursor: not-allowed;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.stateCard,
+.errorCard,
+.emptyState {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 32px;
+  text-align: center;
+}
+
+.stateCard strong,
+.errorCard strong,
+.emptyState strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.stateCard p,
+.errorCard p,
+.emptyState p {
+  max-width: 500px;
+  margin: 7px auto 16px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.errorCard {
+  border-color: #e1b3b3;
+  background: var(--danger-light);
+}
+
+.spinner {
+  width: 27px;
+  height: 27px;
+  margin-bottom: 13px;
+  border: 3px solid rgba(8, 117, 193, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: librarySpin 850ms linear infinite;
+}
+
+@keyframes librarySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1180px) {
+  .assetGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .libraryToolbar,
+  .assetTitleRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .assetGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .assetActions {
+    flex-direction: column;
+  }
+
+  .assetActions > * {
+    width: 100%;
+  }
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assetCardApproved {
+  border-color: #a8d2b9;
+}
+
+.assetCardPrimary {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 2px rgba(8, 117, 193, 0.12),
+    var(--shadow-card);
+}
+
+.imageBadges {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.imageBadges .conceptBadge {
+  position: static;
+}
+
+.approvedBadge,
+.primaryBadge,
+.versionBadge {
+  display: inline-flex;
+  min-height: 27px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.approvedBadge {
+  border: 1px solid #a8d2b9;
+  background: rgba(236, 249, 241, 0.96);
+  color: var(--success);
+}
+
+.primaryBadge {
+  border: 1px solid #9ec8e2;
+  background: rgba(232, 245, 253, 0.97);
+  color: var(--primary);
+}
+
+.versionBadge {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text-secondary);
+}
+
+.successMessage,
+.errorMessage {
+  border-radius: 5px;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.successMessage {
+  border: 1px solid #a8d2b9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.errorMessage {
+  border: 1px solid #e1b3b3;
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.dangerButton {
+  display: inline-flex;
+  min-height: 37px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9a7a7;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 13px;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.dangerButton:hover {
+  border-color: var(--danger);
+  background: var(--danger-light);
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 720px) {
+  .toolbarActions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .toolbarActions > * {
+    width: 100%;
+  }
+}

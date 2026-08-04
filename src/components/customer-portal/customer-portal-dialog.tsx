@@ -58,7 +58,7 @@ export function CustomerPortalDialog({
 
     try {
       const attachment =
-        createBusinessDocumentPdfAttachment(
+        await createBusinessDocumentPdfAttachment(
           "SALES_ORDER_CONFIRMATION",
           order.id,
         );

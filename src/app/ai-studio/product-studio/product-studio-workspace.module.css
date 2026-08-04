@@ -1,0 +1,554 @@
+.workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.progressStep {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border-right: 1px solid var(--border-light);
+  padding: 12px;
+}
+
+.progressStep:last-child {
+  border-right: 0;
+}
+
+.progressNumber {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.progressStepActive .progressNumber {
+  background: var(--primary);
+  color: #fff;
+}
+
+.progressStepComplete .progressNumber {
+  background: var(--success);
+  color: #fff;
+}
+
+.progressLabel {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progressStepActive .progressLabel,
+.progressStepComplete .progressLabel {
+  color: var(--text-primary);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns:
+    minmax(240px, 1.2fr)
+    minmax(220px, 0.8fr);
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.label {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.select {
+  min-height: 39px;
+  padding: 0 10px;
+}
+
+.textarea {
+  min-height: 76px;
+  resize: vertical;
+  padding: 10px;
+}
+
+.select:focus,
+.textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(8, 117, 193, 0.11);
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    52px
+    minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.imageCard {
+  display: grid;
+  min-width: 0;
+  grid-template-rows:
+    auto
+    minmax(430px, 1fr)
+    auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.imageCardHeader {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-light);
+  padding: 12px 14px;
+}
+
+.imageCardHeader strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.imageCardHeader span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.badge {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 0 9px;
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.badgeSuccess {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.badgeProcessing {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.canvas {
+  display: grid;
+  min-height: 430px;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      45deg,
+      #edf1f4 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      -45deg,
+      #edf1f4 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 75%,
+      #edf1f4 75%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 75%,
+      #edf1f4 75%
+    );
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0;
+  background-size: 24px 24px;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  max-height: 680px;
+  object-fit: contain;
+}
+
+.emptyCanvas {
+  max-width: 300px;
+  padding: 30px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.emptyCanvas strong {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.emptyCanvas p {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.imageCardFooter {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border-light);
+  padding: 12px 14px;
+}
+
+.fileMeta {
+  min-width: 0;
+}
+
+.fileMeta strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileMeta span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.connector {
+  display: grid;
+  place-items: center;
+}
+
+.connectorCircle {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #bed7e8;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 21px;
+  font-weight: 750;
+}
+
+.uploadZone {
+  display: grid;
+  width: 100%;
+  min-height: 430px;
+  place-items: center;
+  border: 0;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 30px;
+  text-align: center;
+}
+
+.uploadZoneDragging {
+  background: var(--primary-light);
+}
+
+.uploadIcon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 25px;
+  font-weight: 750;
+}
+
+.uploadZone strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.uploadZone p {
+  max-width: 310px;
+  margin: 7px auto 14px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.primaryButton {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.primaryButton:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+.secondaryButton {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.secondaryButton:hover {
+  border-color: #bdc5ce;
+  background: var(--surface-muted);
+}
+
+.dangerButton {
+  border: 1px solid #d9a7a7;
+  background: #fff;
+  color: var(--danger);
+}
+
+.dangerButton:hover {
+  border-color: var(--danger);
+  background: var(--danger-light);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.statusPanel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 15px;
+  box-shadow: var(--shadow-card);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.statusHeader strong {
+  display: block;
+  font-size: 13px;
+}
+
+.statusHeader p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.statusGrid > div {
+  min-width: 0;
+  border-right: 1px solid var(--border-light);
+  background: var(--surface-muted);
+  padding: 10px 12px;
+}
+
+.statusGrid > div:last-child {
+  border-right: 0;
+}
+
+.statusGrid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.statusGrid strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice,
+.error,
+.success {
+  border-radius: 5px;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.notice {
+  border: 1px solid #c7dceb;
+  background: var(--info-light);
+  color: var(--info);
+}
+
+.error {
+  border: 1px solid #e1b3b3;
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.success {
+  border: 1px solid #a8d2b9;
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(166, 105, 0, 0.22);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: workspaceSpin 850ms linear infinite;
+}
+
+@keyframes workspaceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1050px) {
+  .comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .connector {
+    min-height: 34px;
+  }
+
+  .connectorCircle {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .progress,
+  .controls,
+  .statusGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .progressStep,
+  .statusGrid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .progressStep:last-child,
+  .statusGrid > div:last-child {
+    border-bottom: 0;
+  }
+
+  .imageCardFooter,
+  .statusHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

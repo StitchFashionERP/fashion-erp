@@ -1,0 +1,426 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import {
+  createMediaAssetLink,
+  createAndLinkMediaAsset,
+} from "@/lib/media/server";
+
+type ApiContext = {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  organizationId: string;
+  userId: string;
+};
+
+type ApprovalRequest = {
+  approved?: boolean;
+  makePrimary?: boolean;
+};
+
+class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+function asString(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function errorResponse(error: unknown) {
+  if (error instanceof ApiError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.status },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        error instanceof Error
+          ? error.message
+          : "De goedkeuringsstatus kon niet worden aangepast.",
+    },
+    { status: 500 },
+  );
+}
+
+async function getApiContext(): Promise<ApiContext> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new ApiError(
+      "Je sessie is verlopen. Log opnieuw in.",
+      401,
+    );
+  }
+
+  const { data: memberships, error: membershipError } =
+    await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .eq("active", true);
+
+  if (membershipError) {
+    throw new ApiError(membershipError.message, 500);
+  }
+
+  const organizationIds = (memberships ?? [])
+    .map((membership) =>
+      asString(membership.organization_id),
+    )
+    .filter(Boolean);
+
+  if (organizationIds.length === 0) {
+    throw new ApiError(
+      "Er is geen actieve organisatie gekoppeld.",
+      403,
+    );
+  }
+
+  const { data: preference } = await supabase
+    .from("user_preferences")
+    .select("active_organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const preferredOrganizationId = asString(
+    preference?.active_organization_id,
+  );
+
+  return {
+    supabase,
+    userId: user.id,
+    organizationId: organizationIds.includes(
+      preferredOrganizationId,
+    )
+      ? preferredOrganizationId
+      : organizationIds[0],
+  };
+}
+
+async function syncPrimaryAssetToMediaCenter({
+  supabase,
+  organizationId,
+  userId,
+  job,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  organizationId: string;
+  userId: string;
+  job: Record<string, unknown>;
+}) {
+  const jobId = asString(job.id);
+  const articleId = asString(job.article_id);
+  const resultPath = asString(job.result_path);
+
+  if (!jobId || !articleId || !resultPath) {
+    throw new ApiError(
+      "De AI-afbeelding mist gegevens voor de artikelkoppeling.",
+      500,
+    );
+  }
+
+  const { data: existingAsset, error: existingError } =
+    await supabase
+      .from("media_assets")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("ai_job_id", jobId)
+      .maybeSingle();
+
+  if (existingError) {
+    throw new ApiError(existingError.message, 500);
+  }
+
+  let assetId = existingAsset?.id
+    ? asString(existingAsset.id)
+    : "";
+
+  if (!assetId) {
+    const created = await createAndLinkMediaAsset(
+      {
+        supabase,
+        organizationId,
+        userId,
+        input: {
+          name: `${asString(job.article_code)}-packshot-v${Number(
+            job.version_number ?? 1,
+          )}.png`,
+          description: `AI-packshot voor ${asString(
+            job.article_name,
+          )}`,
+          kind: "IMAGE",
+          category: "PACKSHOT",
+          origin: "AI",
+          storageBucket:
+            asString(job.result_bucket) || "ai-studio",
+          storagePath: resultPath,
+          mimeType: "image/png",
+          fileSize: 0,
+          versionNumber: Number(
+            job.version_number ?? 1,
+          ),
+          aiProvider: asString(job.provider) || null,
+          aiModel: asString(job.model) || null,
+          aiPrompt:
+            asString(job.generation_prompt) || null,
+          aiJobId: jobId,
+        },
+      },
+      {
+        entityType: "PRODUCT",
+        entityId: articleId,
+        role: "PACKSHOT",
+        isPrimary: true,
+        sortOrder: 0,
+      },
+    );
+
+    assetId = created.asset.id;
+  } else {
+    await createMediaAssetLink({
+      supabase,
+      organizationId,
+      input: {
+        assetId,
+        entityType: "PRODUCT",
+        entityId: articleId,
+        role: "PACKSHOT",
+        isPrimary: true,
+        sortOrder: 0,
+      },
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  const { error: assetUpdateError } = await supabase
+    .from("media_assets")
+    .update({
+      status: "APPROVED",
+      is_primary: true,
+      approved_by: userId,
+      approved_at: now,
+      updated_at: now,
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", assetId);
+
+  if (assetUpdateError) {
+    throw new ApiError(assetUpdateError.message, 500);
+  }
+
+  return assetId;
+}
+
+export async function PATCH(
+  request: Request,
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
+  },
+) {
+  try {
+    const { id } = await context.params;
+    const jobId = asString(id);
+
+    if (!jobId) {
+      throw new ApiError("Ongeldige AI Studio-asset.");
+    }
+
+    const body = (await request
+      .json()
+      .catch(() => null)) as ApprovalRequest | null;
+
+    if (!body || typeof body.approved !== "boolean") {
+      throw new ApiError(
+        "Geef aan of de asset moet worden goedgekeurd.",
+      );
+    }
+
+    const {
+      supabase,
+      organizationId,
+      userId,
+    } = await getApiContext();
+
+    const { data: job, error: jobError } =
+      await supabase
+        .from("ai_studio_jobs")
+        .select(
+          [
+            "id",
+            "article_id",
+            "article_code",
+            "article_name",
+            "job_type",
+            "status",
+            "result_path",
+            "version_number",
+            "asset_status",
+            "is_primary",
+          ].join(","),
+        )
+        .eq("organization_id", organizationId)
+        .eq("id", jobId)
+        .maybeSingle();
+
+    if (jobError) {
+      throw new ApiError(jobError.message, 500);
+    }
+
+    if (!job) {
+      throw new ApiError(
+        "De AI Studio-asset is niet gevonden.",
+        404,
+      );
+    }
+
+    const asset = job as unknown as {
+      id: string;
+      article_id: string | null;
+      article_code: string | null;
+      article_name: string | null;
+      job_type: string;
+      status: string;
+      result_path: string | null;
+      version_number: number;
+      asset_status: string;
+      is_primary: boolean;
+    };
+
+    if (body.approved) {
+      if (
+        asset.status !== "COMPLETED" ||
+        !asset.result_path
+      ) {
+        throw new ApiError(
+          "Alleen een voltooide AI-afbeelding kan worden goedgekeurd.",
+        );
+      }
+
+      const makePrimary = body.makePrimary === true;
+
+      if (makePrimary && asset.article_id) {
+        const { error: clearPrimaryError } =
+          await supabase
+            .from("ai_studio_jobs")
+            .update({
+              is_primary: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("organization_id", organizationId)
+            .eq("article_id", asset.article_id)
+            .eq("job_type", asset.job_type)
+            .neq("id", jobId);
+
+        if (clearPrimaryError) {
+          throw new ApiError(
+            clearPrimaryError.message,
+            500,
+          );
+        }
+      }
+
+      const approvedAt = new Date().toISOString();
+
+      const { data: updatedJob, error: updateError } =
+        await supabase
+          .from("ai_studio_jobs")
+          .update({
+            asset_status: "APPROVED",
+            approved_at: approvedAt,
+            approved_by: userId,
+            is_primary: makePrimary,
+            updated_at: approvedAt,
+          })
+          .eq("organization_id", organizationId)
+          .eq("id", jobId)
+          .select("*")
+          .single();
+
+      if (updateError || !updatedJob) {
+        throw new ApiError(
+          updateError?.message ??
+            "De asset kon niet worden goedgekeurd.",
+          500,
+        );
+      }
+
+      let mediaAssetId: string | null = null;
+
+      if (makePrimary) {
+        mediaAssetId = await syncPrimaryAssetToMediaCenter({
+          supabase,
+          organizationId,
+          userId,
+          job: updatedJob as unknown as Record<string, unknown>,
+        });
+      }
+
+      return NextResponse.json({
+        mediaAssetId,
+        id: updatedJob.id,
+        articleId: updatedJob.article_id,
+        articleCode: updatedJob.article_code,
+        articleName: updatedJob.article_name,
+        type: updatedJob.job_type,
+        versionNumber: updatedJob.version_number,
+        assetStatus: updatedJob.asset_status,
+        isPrimary: updatedJob.is_primary,
+        approvedAt: updatedJob.approved_at,
+      });
+    }
+
+    const updatedAt = new Date().toISOString();
+
+    const { data: updatedJob, error: updateError } =
+      await supabase
+        .from("ai_studio_jobs")
+        .update({
+          asset_status: "CONCEPT",
+          approved_at: null,
+          approved_by: null,
+          is_primary: false,
+          updated_at: updatedAt,
+        })
+        .eq("organization_id", organizationId)
+        .eq("id", jobId)
+        .select("*")
+        .single();
+
+    if (updateError || !updatedJob) {
+      throw new ApiError(
+        updateError?.message ??
+          "De goedkeuring kon niet worden ingetrokken.",
+        500,
+      );
+    }
+
+    return NextResponse.json({
+      id: updatedJob.id,
+      articleId: updatedJob.article_id,
+      articleCode: updatedJob.article_code,
+      articleName: updatedJob.article_name,
+      type: updatedJob.job_type,
+      versionNumber: updatedJob.version_number,
+      assetStatus: updatedJob.asset_status,
+      isPrimary: updatedJob.is_primary,
+      approvedAt: updatedJob.approved_at,
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}

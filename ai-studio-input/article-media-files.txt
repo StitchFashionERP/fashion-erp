@@ -1,0 +1,10 @@
+src/components/articles/article-form-fixed.tsx
+src/components/articles/article-properties-drawer.tsx
+src/components/articles/articles-bulk-bar.tsx
+src/components/articles/articles-bulk-drawer.tsx
+src/components/articles/articles-grid-toolbar.tsx
+src/components/articles/new-article-wizard.tsx
+src/components/articles/product-media-manager.tsx
+src/lib/article-history.ts
+src/lib/articles.ts
+src/lib/product-media.ts

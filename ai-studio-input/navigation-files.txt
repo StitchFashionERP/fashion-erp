@@ -1,0 +1,3 @@
+src/app/layout.tsx
+src/components/layout/app-shell.tsx
+src/components/layout/sidebar.tsx

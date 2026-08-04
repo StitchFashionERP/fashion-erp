@@ -37,9 +37,9 @@ export function DocumentActionButtons({
 
   const [error, setError] = useState("");
 
-  function handleOpenPdf() {
+  async function handleOpenPdf() {
     try {
-      openBusinessDocumentPdf(
+      await openBusinessDocumentPdf(
         documentType,
         referenceId,
       );
@@ -54,9 +54,9 @@ export function DocumentActionButtons({
     }
   }
 
-  function handleDownloadPdf() {
+  async function handleDownloadPdf() {
     try {
-      downloadBusinessDocumentPdf(
+      await downloadBusinessDocumentPdf(
         documentType,
         referenceId,
       );

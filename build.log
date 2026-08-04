@@ -1,0 +1,135 @@
+
+> fashion-erp@0.1.0 build
+> next build
+
+▲ Next.js 16.2.10 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.9s
+  Running TypeScript ...
+  Finished TypeScript in 4.5s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/83) ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+  Generating static pages using 9 workers (20/83) 
+  Generating static pages using 9 workers (41/83) 
+  Generating static pages using 9 workers (62/83) 
+✓ Generating static pages using 9 workers (83/83) in 183ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /ai-studio
+├ ○ /ai-studio/bibliotheek
+├ ○ /ai-studio/instellingen
+├ ○ /ai-studio/model-studio
+├ ○ /ai-studio/product-studio
+├ ○ /ai-studio/referenties
+├ ƒ /api/ai-studio/jobs
+├ ƒ /api/articles
+├ ƒ /api/articles/[id]
+├ ƒ /api/cloud-storage
+├ ƒ /api/customer-portal
+├ ƒ /api/customer-portal/[token]/approve
+├ ƒ /api/customer-portal/[token]/pdf
+├ ƒ /api/customer-portal/[token]/status
+├ ƒ /api/customer-portal/[token]/verify
+├ ƒ /api/customer-portal/customers
+├ ƒ /api/customer-portal/customers/[id]
+├ ƒ /api/customers
+├ ƒ /api/email/send
+├ ƒ /api/kvk
+├ ƒ /api/me
+├ ƒ /api/number-series/claim
+├ ƒ /api/sales-orders
+├ ƒ /api/sales-orders/[id]
+├ ƒ /api/shared-state
+├ ƒ /api/stitch-assistant
+├ ƒ /api/suppliers
+├ ƒ /api/suppliers/[id]
+├ ○ /apple-icon.png
+├ ○ /artikelen
+├ ƒ /artikelen/[id]
+├ ƒ /artikelen/[id]/bewerken
+├ ○ /artikelen/import
+├ ○ /artikelen/nieuw
+├ ƒ /auth/callback
+├ ○ /collecties
+├ ○ /creditfacturen
+├ ƒ /creditfacturen/[id]
+├ ○ /debiteuren
+├ ○ /facturen
+├ ƒ /facturen/[id]
+├ ƒ /facturen/[id]/print
+├ ○ /facturen/nieuw
+├ ○ /help
+├ ○ /icon.png
+├ ○ /inkoop
+├ ƒ /inkoop/[id]
+├ ○ /inkoop/nieuw
+├ ○ /inkoop/ontvangsten
+├ ○ /instellingen
+├ ○ /instellingen/backup
+├ ○ /instellingen/bedrijf
+├ ○ /instellingen/bedrijfsinstellingen
+├ ○ /instellingen/btw
+├ ○ /instellingen/communicatie
+├ ○ /instellingen/ean-center
+├ ○ /instellingen/exact-online
+├ ○ /instellingen/exact-online/facturen
+├ ○ /instellingen/exact-online/klanten
+├ ○ /instellingen/exact-online/logboek
+├ ○ /instellingen/gebruikers
+├ ○ /instellingen/huisstijl
+├ ○ /instellingen/import-center
+├ ○ /instellingen/import-center/artikelen
+├ ○ /instellingen/kanaalprijzen
+├ ○ /instellingen/modules
+├ ○ /instellingen/nummerreeksen
+├ ○ /instellingen/pricing-suite
+├ ○ /instellingen/prijsanalyse
+├ ○ /instellingen/prijshistorie
+├ ○ /instellingen/prijslijsten
+├ ○ /instellingen/prijzen-toekomst
+├ ○ /instellingen/promoties
+├ ○ /instellingen/stamgegevens
+├ ○ /instellingen/voorraadlocaties
+├ ○ /klanten
+├ ○ /leveranciers
+├ ƒ /login
+├ ○ /ontvangsten
+├ ○ /ontvangsten/nieuw
+├ ƒ /portal/order/[token]
+├ ○ /productie
+├ ƒ /productie/[id]
+├ ○ /productie/nieuw
+├ ○ /rapportages
+├ ○ /retouren
+├ ƒ /retouren/[id]
+├ ○ /retouren/nieuw
+├ ○ /supply-intelligence
+├ ○ /systeemcontrole
+├ ○ /verkoop
+├ ƒ /verkoop/[id]
+├ ƒ /verkoop/[id]/pakbon
+├ ○ /verkoop/nieuw
+├ ○ /voorraad
+├ ○ /warehouse
+├ ○ /warehouse/locaties
+├ ○ /warehouse/picklijsten
+├ ƒ /warehouse/picklijsten/[id]
+├ ○ /warehouse/put-away
+├ ○ /warehouse/scanner
+└ ○ /warehouse/tellingen
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -10,7 +10,6 @@ import {
   getColors,
   type Customer,
 } from "@/lib/master-data";
-import { getProductMedia } from "@/lib/product-media";
 import { resolveSalesPrice } from "@/lib/price-lists";
 import {
   createSalesOrder,
@@ -125,10 +124,33 @@ export default function NewSalesOrderPage() {
           ]),
         );
 
+        const productIds = productResult.map((product) => product.id);
+
+        const mediaResponse = await fetch(
+          "/api/media/products/primary",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              productIds,
+            }),
+          },
+        );
+
+        const mediaByProduct = mediaResponse.ok
+          ? ((await mediaResponse.json()) as Record<
+              string,
+              {
+                imageUrl?: string;
+              }
+            >)
+          : {};
+
         const loadedVariants = productResult.flatMap((product) => {
-          const media = getProductMedia(product.id);
-          const primaryMedia =
-            media.find((item) => item.isPrimary) ?? media[0];
+          const primaryImageUrl =
+            mediaByProduct[product.id]?.imageUrl ?? "";
 
           return product.variants.map((variant) => {
             const colorCode =
@@ -145,7 +167,7 @@ export default function NewSalesOrderPage() {
                 product.code,
                 colorCode,
               ),
-              imageUrl: primaryMedia?.dataUrl ?? "",
+              imageUrl: primaryImageUrl,
               variantId: variant.id,
               sku: variant.sku,
               size: variant.size,

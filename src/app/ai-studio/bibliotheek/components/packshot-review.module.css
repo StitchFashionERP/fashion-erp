@@ -1,0 +1,121 @@
+.openButton,
+.generateButton,
+.closeButton,
+.chip,
+.chipSelected {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.openButton {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #bed7e8;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  padding: 13px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header strong {
+  display: block;
+  font-size: 12px;
+}
+
+.header span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.closeButton {
+  align-self: start;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+}
+
+.group > strong,
+.comment > span {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip,
+.chipSelected {
+  min-height: 31px;
+  border: 1px solid var(--border);
+  padding: 0 9px;
+}
+
+.chip {
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.chipSelected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.comment {
+  display: grid;
+  gap: 6px;
+}
+
+.comment textarea {
+  min-height: 82px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 9px;
+  font: inherit;
+}
+
+.generateButton {
+  min-height: 39px;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.generateButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.error {
+  border: 1px solid #e1b3b3;
+  border-radius: 4px;
+  background: var(--danger-light);
+  padding: 9px;
+  color: var(--danger);
+  font-size: 10px;
+}

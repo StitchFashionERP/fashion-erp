@@ -48,6 +48,7 @@ export default function EditArticlePage() {
       input,
     );
 
+    window.alert("Artikel succesvol opgeslagen.");
     router.push(`/artikelen/${updated.id}`);
   }
 

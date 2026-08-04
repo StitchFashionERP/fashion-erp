@@ -21,10 +21,16 @@ import {
   type CompanySettings,
 } from "@/lib/company-settings";
 import { getPaymentConditionText } from "@/lib/pricing-engine";
+import { getStoredProducts } from "@/lib/articles";
+import { getCustomers } from "@/lib/master-data";
 import type {
   BusinessDocumentType,
   DocumentEmailAttachment,
 } from "@/lib/document-emails";
+import {
+  SALES_TERMS_TEXT,
+  SALES_TERMS_TITLE,
+} from "@/lib/legal/sales-terms";
 
 type MatrixRow = {
   label: string;
@@ -32,6 +38,8 @@ type MatrixRow = {
 };
 
 type FashionArticleBlock = {
+  productId?: string;
+  imageDataUrl?: string;
   productCode: string;
   productName: string;
   brand: string;
@@ -60,6 +68,7 @@ type DocumentDefinition = {
   title: string;
   number: string;
   date: string;
+  customerId?: string;
   customerName: string;
   customerLines: string[];
   meta: DocumentMetaRow[];
@@ -88,6 +97,296 @@ const STANDARD_SIZES = [
   "XL",
   "XXL",
 ];
+
+type PrimaryProductMedia = {
+  assetId: string;
+  imageUrl: string;
+  name: string;
+  versionNumber: number;
+};
+
+type PrimaryProductMediaMap = Record<
+  string,
+  PrimaryProductMedia
+>;
+
+async function getPrimaryProductMedia(
+  productIds: string[],
+): Promise<PrimaryProductMediaMap> {
+  const normalizedIds = [
+    ...new Set(
+      productIds
+        .map((productId) => productId.trim())
+        .filter(Boolean),
+    ),
+  ];
+
+  if (normalizedIds.length === 0) {
+    return {};
+  }
+
+  const response = await fetch(
+    "/api/media/products/primary",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        productIds: normalizedIds,
+      }),
+    },
+  );
+
+  const result = (await response
+    .json()
+    .catch(() => null)) as
+    | PrimaryProductMediaMap
+    | { error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      result &&
+        "error" in result &&
+        typeof result.error === "string"
+        ? result.error
+        : "Productafbeeldingen konden niet worden geladen.",
+    );
+  }
+
+  return (result ?? {}) as PrimaryProductMediaMap;
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(
+        new Error(
+          "Productafbeelding kon niet worden gelezen.",
+        ),
+      );
+    };
+
+    reader.onerror = () => {
+      reject(
+        new Error(
+          "Productafbeelding kon niet worden gelezen.",
+        ),
+      );
+    };
+
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function imageUrlToDataUrl(imageUrl: string) {
+  const response = await fetch(imageUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      "Productafbeelding kon niet worden gedownload.",
+    );
+  }
+
+  return blobToDataUrl(await response.blob());
+}
+
+async function attachPrimaryProductImages(
+  definition: DocumentDefinition,
+) {
+  if (
+    definition.documentType !==
+    "SALES_ORDER_CONFIRMATION"
+  ) {
+    return;
+  }
+
+  const productIds = definition.articleBlocks
+    .map((block) => block.productId ?? "")
+    .filter(Boolean);
+
+  if (productIds.length === 0) {
+    return;
+  }
+
+  const mediaByProductId =
+    await getPrimaryProductMedia(productIds);
+
+  await Promise.all(
+    definition.articleBlocks.map(async (block) => {
+      const productId = block.productId ?? "";
+      const media = mediaByProductId[productId];
+
+      if (!media?.imageUrl) {
+        return;
+      }
+
+      try {
+        block.imageDataUrl =
+          await imageUrlToDataUrl(media.imageUrl);
+      } catch {
+        // Een ontbrekende of onleesbare afbeelding mag het
+        // volledige bedrijfsdocument niet blokkeren.
+        block.imageDataUrl = undefined;
+      }
+    }),
+  );
+}
+
+
+type DocumentCustomerRecord = {
+  id?: unknown;
+  companyName?: unknown;
+  contactPerson?: unknown;
+  email?: unknown;
+  address?: unknown;
+  postalCode?: unknown;
+  city?: unknown;
+  vatNumber?: unknown;
+};
+
+function asDocumentText(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+async function fetchDocumentCustomer(
+  customerId: string,
+): Promise<DocumentCustomerRecord | null> {
+  const normalizedId = customerId.trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  const response = await fetch(
+    "/api/customers",
+    {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    },
+  );
+
+  const body = (await response
+    .json()
+    .catch(() => null)) as
+    | DocumentCustomerRecord[]
+    | {
+        customers?: DocumentCustomerRecord[];
+        data?: DocumentCustomerRecord[];
+        error?: string;
+      }
+    | null;
+
+  if (!response.ok) {
+    const message =
+      body &&
+      !Array.isArray(body) &&
+      typeof body.error === "string"
+        ? body.error
+        : "Klantgegevens konden niet worden geladen.";
+
+    throw new Error(message);
+  }
+
+  const customers = Array.isArray(body)
+    ? body
+    : Array.isArray(body?.customers)
+      ? body.customers
+      : Array.isArray(body?.data)
+        ? body.data
+        : [];
+
+  return (
+    customers.find(
+      (customer) =>
+        asDocumentText(customer.id) ===
+        normalizedId,
+    ) ?? null
+  );
+}
+
+async function attachCurrentCustomerData(
+  definition: DocumentDefinition,
+) {
+  if (
+    definition.documentType ===
+      "PURCHASE_ORDER" ||
+    !definition.customerId
+  ) {
+    return;
+  }
+
+  const customer =
+    await fetchDocumentCustomer(
+      definition.customerId,
+    );
+
+  if (!customer) {
+    return;
+  }
+
+  const companyName =
+    asDocumentText(customer.companyName) ||
+    definition.customerName;
+
+  const contactPerson = asDocumentText(
+    customer.contactPerson,
+  );
+  const address = asDocumentText(
+    customer.address,
+  );
+  const postalCode = asDocumentText(
+    customer.postalCode,
+  );
+  const city = asDocumentText(
+    customer.city,
+  );
+  const vatNumber = asDocumentText(
+    customer.vatNumber,
+  );
+  const email = asDocumentText(
+    customer.email,
+  );
+
+  definition.customerName = companyName;
+
+  definition.customerLines = [
+    contactPerson,
+    address,
+    [postalCode, city]
+      .filter(Boolean)
+      .join(" ")
+      .trim(),
+    vatNumber
+      ? `BTW-nummer: ${vatNumber}`
+      : "",
+    email,
+  ].filter(Boolean);
+}
+
+function getPdfImageFormat(dataUrl: string) {
+  if (
+    dataUrl.startsWith("data:image/jpeg") ||
+    dataUrl.startsWith("data:image/jpg")
+  ) {
+    return "JPEG";
+  }
+
+  if (dataUrl.startsWith("data:image/webp")) {
+    return "WEBP";
+  }
+
+  return "PNG";
+}
 
 function formatCurrency(
   value: number,
@@ -159,6 +458,238 @@ function getSortedSizes(sizes: string[]) {
   });
 }
 
+type StoredProduct =
+  ReturnType<typeof getStoredProducts>[number];
+
+type ProductReferenceInput = {
+  productId?: string;
+  productCode?: string;
+  sku?: string;
+};
+
+function normalizeProductReference(
+  value: unknown,
+) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function createProductResolver() {
+  const storedProducts = getStoredProducts();
+
+  const productsById = new Map(
+    storedProducts.map((product) => [
+      product.id,
+      product,
+    ]),
+  );
+
+  const productsByReference =
+    new Map<string, StoredProduct>();
+
+  storedProducts.forEach((product) => {
+    const record =
+      product as unknown as Record<
+        string,
+        unknown
+      >;
+
+    const references = [
+      record.productCode,
+      record.code,
+      record.articleNumber,
+      record.articleCode,
+      record.sku,
+    ]
+      .map(normalizeProductReference)
+      .filter(Boolean);
+
+    references.forEach((reference) => {
+      if (
+        !productsByReference.has(reference)
+      ) {
+        productsByReference.set(
+          reference,
+          product,
+        );
+      }
+    });
+  });
+
+  return ({
+    productId,
+    productCode,
+    sku,
+  }: ProductReferenceInput) => {
+    if (productId) {
+      const product =
+        productsById.get(productId);
+
+      if (product) {
+        return product;
+      }
+    }
+
+    const references = [
+      productCode,
+      sku,
+    ]
+      .map(normalizeProductReference)
+      .filter(Boolean);
+
+    for (const reference of references) {
+      const product =
+        productsByReference.get(reference);
+
+      if (product) {
+        return product;
+      }
+    }
+
+    return undefined;
+  };
+}
+
+
+
+type DocumentCustomerInput = {
+  customerId?: string;
+  companyName?: string;
+  contactPerson?: string;
+  city?: string;
+  email?: string;
+  vatNumber?: string;
+};
+
+function firstText(
+  record: Record<string, unknown>,
+  keys: string[],
+) {
+  for (const key of keys) {
+    const value = String(
+      record[key] ?? "",
+    ).trim();
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function resolveDocumentCustomer({
+  customerId,
+  companyName,
+  contactPerson,
+  city,
+  email,
+  vatNumber,
+}: DocumentCustomerInput) {
+  const customer = customerId
+    ? getCustomers().find(
+        (item) => item.id === customerId,
+      )
+    : undefined;
+
+  const record =
+    (customer ?? {}) as unknown as Record<
+      string,
+      unknown
+    >;
+
+  const resolvedCompanyName =
+    firstText(record, [
+      "companyName",
+      "name",
+      "tradeName",
+      "customerName",
+    ]) || companyName?.trim() || "—";
+
+  const resolvedContactPerson =
+    firstText(record, [
+      "contactPerson",
+      "contactName",
+      "primaryContact",
+    ]) || contactPerson?.trim() || "";
+
+  const street = firstText(record, [
+    "street",
+    "streetName",
+    "addressStreet",
+  ]);
+
+  const houseNumber = firstText(record, [
+    "houseNumber",
+    "houseNumberAddition",
+    "streetNumber",
+    "number",
+  ]);
+
+  const directAddress = firstText(record, [
+    "address",
+    "invoiceAddress",
+    "billingAddress",
+    "visitAddress",
+  ]);
+
+  const streetLine =
+    [street, houseNumber]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || directAddress;
+
+  const postalCode = firstText(record, [
+    "postalCode",
+    "zipCode",
+    "postcode",
+  ]);
+
+  const resolvedCity =
+    firstText(record, [
+      "city",
+      "town",
+      "place",
+    ]) || city?.trim() || "";
+
+  const cityLine = [
+    postalCode,
+    resolvedCity,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  const resolvedVatNumber =
+    firstText(record, [
+      "vatNumber",
+      "vatId",
+      "btwNumber",
+      "taxNumber",
+    ]) || vatNumber?.trim() || "";
+
+  const resolvedEmail =
+    firstText(record, [
+      "email",
+      "emailAddress",
+      "primaryEmail",
+    ]) || email?.trim() || "";
+
+  return {
+    name: resolvedCompanyName,
+    lines: [
+      resolvedContactPerson,
+      streetLine,
+      cityLine,
+      resolvedVatNumber
+        ? `BTW-nummer: ${resolvedVatNumber}`
+        : "",
+      resolvedEmail,
+    ].filter(Boolean),
+  };
+}
+
 function groupSalesLines(
   order: SalesOrder,
   documentType:
@@ -183,9 +714,17 @@ function groupSalesLines(
     groups.set(key, current);
   });
 
+  const resolveProduct =
+    createProductResolver();
+
   return Array.from(groups.values()).map(
     (lines) => {
       const first = lines[0];
+      const product = resolveProduct({
+        productId: first.productId,
+        productCode: first.productCode,
+        sku: first.sku,
+      });
       const sizes = getSortedSizes(
         lines.map((line) => line.size),
       );
@@ -228,14 +767,6 @@ function groupSalesLines(
                 label: "Besteld",
                 quantities: ordered,
               },
-              {
-                label: "Gereserveerd",
-                quantities: reserved,
-              },
-              {
-                label: "Voororder",
-                quantities: open,
-              },
             ]
           : [
               {
@@ -249,10 +780,12 @@ function groupSalesLines(
             ];
 
       return {
+        productId:
+          product?.id ?? first.productId,
         productCode: first.productCode,
         productName: first.productName,
-        brand: "",
-        season: "",
+        brand: product?.brand ?? "",
+        season: product?.seasonType ?? "",
         color: first.color,
         colorCode: "",
         sku: first.sku,
@@ -296,6 +829,14 @@ function getSalesDefinition(
   }
 
   const totals = getSalesOrderTotals(order);
+  const documentCustomer =
+    resolveDocumentCustomer({
+      customerId: order.customerId,
+      companyName: order.customerName,
+      contactPerson: order.contactPerson,
+      city: order.city,
+      email: order.email,
+    });
   const title =
     documentType ===
     "SALES_ORDER_CONFIRMATION"
@@ -307,12 +848,9 @@ function getSalesDefinition(
     title,
     number: order.orderNumber,
     date: order.orderDate,
-    customerName: order.customerName,
-    customerLines: [
-      order.contactPerson,
-      order.city,
-      order.email,
-    ].filter(Boolean),
+    customerId: order.customerId,
+    customerName: documentCustomer.name,
+    customerLines: documentCustomer.lines,
     meta: [
       {
         label:
@@ -411,10 +949,17 @@ function getPurchaseDefinition(
     groups.set(key, current);
   });
 
+  const resolveProduct =
+    createProductResolver();
+
   const articleBlocks =
     Array.from(groups.values()).map(
       (lines) => {
         const first = lines[0];
+        const product = resolveProduct({
+          productCode: first.productCode,
+          sku: first.sku,
+        });
         const sizes = getSortedSizes(
           lines.map((line) => line.size),
         );
@@ -533,6 +1078,16 @@ function getInvoiceDefinition(
     throw new Error("Factuur niet gevonden.");
   }
 
+  const documentCustomer =
+    resolveDocumentCustomer({
+      customerId: invoice.customerId,
+      companyName: invoice.customerName,
+      contactPerson: invoice.contactPerson,
+      city: invoice.city,
+      email: invoice.email,
+      vatNumber: invoice.customerVatNumber,
+    });
+
   const groups = new Map<
     string,
     typeof invoice.lines
@@ -550,10 +1105,17 @@ function getInvoiceDefinition(
     groups.set(key, current);
   });
 
+  const resolveProduct =
+    createProductResolver();
+
   const articleBlocks =
     Array.from(groups.values()).map(
       (lines) => {
         const first = lines[0];
+        const product = resolveProduct({
+          productCode: first.productCode,
+          sku: first.sku,
+        });
         const sizes = getSortedSizes(
           lines.map((line) => line.size),
         );
@@ -571,10 +1133,11 @@ function getInvoiceDefinition(
         });
 
         return {
+          productId: product?.id,
           productCode: first.productCode,
           productName: first.productName,
-          brand: "",
-          season: "",
+          brand: product?.brand ?? "",
+          season: product?.seasonType ?? "",
           color: first.color,
           colorCode: "",
           sku: first.sku,
@@ -607,12 +1170,9 @@ function getInvoiceDefinition(
     title: "FACTUUR",
     number: invoice.invoiceNumber,
     date: invoice.invoiceDate,
-    customerName: invoice.customerName,
-    customerLines: [
-      invoice.contactPerson,
-      invoice.city,
-      invoice.email,
-    ].filter(Boolean),
+    customerId: invoice.customerId,
+    customerName: documentCustomer.name,
+    customerLines: documentCustomer.lines,
     meta: [
       {
         label: "Factuurnummer",
@@ -681,6 +1241,18 @@ function getCreditNoteDefinition(
     credit.originalInvoiceId,
   );
 
+  const documentCustomer =
+    resolveDocumentCustomer({
+      customerId: originalInvoice?.customerId,
+      companyName: credit.customerName,
+      contactPerson:
+        originalInvoice?.contactPerson,
+      city: originalInvoice?.city,
+      email: originalInvoice?.email,
+      vatNumber:
+        originalInvoice?.customerVatNumber,
+    });
+
   const groups = new Map<
     string,
     typeof credit.lines
@@ -698,10 +1270,17 @@ function getCreditNoteDefinition(
     groups.set(key, current);
   });
 
+  const resolveProduct =
+    createProductResolver();
+
   const articleBlocks =
     Array.from(groups.values()).map(
       (lines) => {
         const first = lines[0];
+        const product = resolveProduct({
+          productCode: first.productCode,
+          sku: first.sku,
+        });
 
         const sizes = getSortedSizes(
           lines.map((line) => line.size),
@@ -723,10 +1302,11 @@ function getCreditNoteDefinition(
         });
 
         return {
+          productId: product?.id,
           productCode: first.productCode,
           productName: first.productName,
-          brand: "",
-          season: "",
+          brand: product?.brand ?? "",
+          season: product?.seasonType ?? "",
           color: first.color,
           colorCode: "",
           sku: first.sku,
@@ -764,12 +1344,9 @@ function getCreditNoteDefinition(
     title: "CREDITFACTUUR",
     number: credit.creditNumber,
     date: credit.creditDate,
-    customerName: credit.customerName,
-    customerLines: [
-      originalInvoice?.contactPerson || "",
-      originalInvoice?.city || "",
-      originalInvoice?.email || "",
-    ].filter(Boolean),
+    customerId: originalInvoice?.customerId,
+    customerName: documentCustomer.name,
+    customerLines: documentCustomer.lines,
     meta: [
       {
         label: "Creditnummer",
@@ -1458,10 +2035,33 @@ function drawDocumentBarcode(
   });
 }
 
+function hasArticleImage(
+  block: FashionArticleBlock,
+  definition: DocumentDefinition,
+) {
+  return Boolean(
+    block.imageDataUrl &&
+      definition.documentType ===
+        "SALES_ORDER_CONFIRMATION",
+  );
+}
+
 function getBlockHeight(
   block: FashionArticleBlock,
+  definition: DocumentDefinition,
 ) {
-  return 23 + block.matrixRows.length * 5;
+  const headerHeight = hasArticleImage(
+    block,
+    definition,
+  )
+    ? 35
+    : 18;
+
+  return (
+    headerHeight +
+    5 +
+    block.matrixRows.length * 5
+  );
 }
 
 function drawArticleBlock(
@@ -1470,7 +2070,19 @@ function drawArticleBlock(
   y: number,
   definition: DocumentDefinition,
 ) {
-  const blockHeight = getBlockHeight(block);
+  const showImage = hasArticleImage(
+    block,
+    definition,
+  );
+  const blockHeight = getBlockHeight(
+    block,
+    definition,
+  );
+  const tableHeaderY = showImage
+    ? y + 34
+    : y + 17;
+  const firstRowY = tableHeaderY + 5;
+  const dividerY = tableHeaderY - 4;
 
   pdf.setDrawColor(90, 90, 90);
   pdf.setLineWidth(0.2);
@@ -1481,19 +2093,76 @@ function drawArticleBlock(
     blockHeight,
   );
 
+  let productTextX = MARGIN_X + 3;
+
+  if (showImage && block.imageDataUrl) {
+    const imageX = MARGIN_X + 3;
+    const imageY = y + 3;
+    const imageMaxWidth = 25;
+    const imageMaxHeight = 25;
+
+    try {
+      const size = getContainedImageSize(
+        pdf,
+        block.imageDataUrl,
+        imageMaxWidth,
+        imageMaxHeight,
+      );
+
+      const centeredX =
+        imageX +
+        (imageMaxWidth - size.width) / 2;
+      const centeredY =
+        imageY +
+        (imageMaxHeight - size.height) / 2;
+
+      pdf.setDrawColor(210, 210, 210);
+      pdf.rect(
+        imageX,
+        imageY,
+        imageMaxWidth,
+        imageMaxHeight,
+      );
+
+      pdf.addImage(
+        block.imageDataUrl,
+        getPdfImageFormat(
+          block.imageDataUrl,
+        ),
+        centeredX,
+        centeredY,
+        size.width,
+        size.height,
+        undefined,
+        "FAST",
+      );
+
+      productTextX = MARGIN_X + 32;
+    } catch {
+      productTextX = MARGIN_X + 3;
+    }
+  }
+
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.6);
   pdf.setTextColor(15, 15, 15);
   pdf.text(
     `${block.productCode}:`,
-    MARGIN_X + 3,
+    productTextX,
     y + 6,
   );
 
   pdf.setFont("helvetica", "normal");
+
+  const productNameLines =
+    pdf.splitTextToSize(
+      block.productName,
+      showImage ? 94 : 145,
+    );
+
   pdf.text(
-    block.productName,
-    MARGIN_X + 30,
+    productNameLines,
+    productTextX + 27,
     y + 6,
   );
 
@@ -1501,22 +2170,22 @@ function drawArticleBlock(
   pdf.setFont("helvetica", "normal");
   pdf.text(
     `Merk: ${block.brand || "—"}`,
-    MARGIN_X + 3,
-    y + 11,
+    productTextX,
+    y + 13,
   );
 
   pdf.text(
     `Seizoen: ${block.season || "—"}`,
-    95,
-    y + 11,
+    showImage ? productTextX : 95,
+    y + (showImage ? 18 : 11),
   );
 
   pdf.setDrawColor(80, 80, 80);
   pdf.line(
     MARGIN_X + 3,
-    y + 13,
+    dividerY,
     PAGE_WIDTH - MARGIN_X - 3,
-    y + 13,
+    dividerY,
   );
 
   const sizeAreaStart = MARGIN_X + 50;
@@ -1527,11 +2196,15 @@ function drawArticleBlock(
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(6.3);
-  pdf.text("Kleur", MARGIN_X + 3, y + 17);
+  pdf.text(
+    "Kleur",
+    MARGIN_X + 3,
+    tableHeaderY,
+  );
   pdf.text(
     "Kleurnr.",
     MARGIN_X + 25,
-    y + 17,
+    tableHeaderY,
   );
 
   block.sizes.forEach((size, index) => {
@@ -1540,15 +2213,15 @@ function drawArticleBlock(
       sizeAreaStart +
         index * sizeColumnWidth +
         sizeColumnWidth / 2,
-      y + 17,
+      tableHeaderY,
       { align: "center" },
     );
   });
 
-  pdf.text("Totaal", 146, y + 17, {
+  pdf.text("Totaal", 146, tableHeaderY, {
     align: "center",
   });
-  pdf.text("Ordernr.", 163, y + 17, {
+  pdf.text("Ordernr.", 163, tableHeaderY, {
     align: "center",
   });
 
@@ -1556,12 +2229,18 @@ function drawArticleBlock(
     definition.documentType ===
     "SALES_ORDER_CONFIRMATION"
   ) {
-    pdf.text("Verkoopprijs", 181, y + 17, {
-      align: "right",
-    });
-    pdf.text("Adviesprijs", 193, y + 17, {
-      align: "right",
-    });
+    pdf.text(
+      "Verkoopprijs",
+      181,
+      tableHeaderY,
+      { align: "right" },
+    );
+    pdf.text(
+      "Adviesprijs",
+      193,
+      tableHeaderY,
+      { align: "right" },
+    );
   } else {
     const priceLabel =
       definition.documentType ===
@@ -1572,14 +2251,18 @@ function drawArticleBlock(
           ? "Adviesprijs"
           : "Prijs";
 
-    pdf.text(priceLabel, 190, y + 17, {
-      align: "right",
-    });
+    pdf.text(
+      priceLabel,
+      190,
+      tableHeaderY,
+      { align: "right" },
+    );
   }
 
   block.matrixRows.forEach(
     (row, rowIndex) => {
-      const rowY = y + 22 + rowIndex * 5;
+      const rowY =
+        firstRowY + rowIndex * 5;
 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(6.5);
@@ -1841,7 +2524,7 @@ function drawOrderApprovalBlock(
   pdf.setFontSize(6.8);
 
   const statement = pdf.splitTextToSize(
-    "Met ondertekening van deze orderbevestiging bevestigt u akkoord te gaan met de hierboven vermelde artikelen, aantallen, prijzen, levervoorwaarden en overige afspraken.",
+    "Met ondertekening van deze orderbevestiging bevestigt u akkoord te gaan met de vermelde artikelen, aantallen, prijzen, levervoorwaarden en overige afspraken. De toepasselijke algemene verkoopvoorwaarden zijn opgenomen op de volgende pagina's van dit document.",
     CONTENT_WIDTH,
   );
 
@@ -1909,6 +2592,105 @@ function drawOrderApprovalBlock(
   );
 
   return y + blockHeight;
+}
+
+
+function drawSalesTermsPages(pdf: jsPDF) {
+  const paragraphs = SALES_TERMS_TEXT
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  const topY = 17;
+  const bottomY = FOOTER_Y - 12;
+  const textWidth = CONTENT_WIDTH;
+  let y = topY;
+
+  const addTermsPage = (
+    continuation = false,
+  ) => {
+    pdf.addPage();
+
+    y = topY;
+
+    pdf.setTextColor(20, 20, 20);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+
+    pdf.text(
+      continuation
+        ? `${SALES_TERMS_TITLE} – VERVOLG`
+        : SALES_TERMS_TITLE,
+      MARGIN_X,
+      y,
+    );
+
+    y += 8;
+
+    pdf.setDrawColor(120, 120, 120);
+    pdf.setLineWidth(0.2);
+    pdf.line(
+      MARGIN_X,
+      y,
+      PAGE_WIDTH - MARGIN_X,
+      y,
+    );
+
+    y += 7;
+  };
+
+  addTermsPage();
+
+  paragraphs.forEach((paragraph) => {
+    const isArticleHeading =
+      /^Artikel\s+\d+/i.test(paragraph);
+
+    pdf.setFont(
+      "helvetica",
+      isArticleHeading ? "bold" : "normal",
+    );
+    pdf.setFontSize(
+      isArticleHeading ? 8.2 : 6.6,
+    );
+
+    const lines = pdf.splitTextToSize(
+      paragraph,
+      textWidth,
+    );
+
+    const lineHeight = isArticleHeading
+      ? 4
+      : 3.25;
+
+    const requiredHeight =
+      lines.length * lineHeight +
+      (isArticleHeading ? 2.5 : 2);
+
+    if (y + requiredHeight > bottomY) {
+      addTermsPage(true);
+
+      pdf.setFont(
+        "helvetica",
+        isArticleHeading
+          ? "bold"
+          : "normal",
+      );
+      pdf.setFontSize(
+        isArticleHeading ? 8.2 : 6.6,
+      );
+    }
+
+    pdf.text(
+      lines,
+      MARGIN_X,
+      y,
+      {
+        lineHeightFactor: 1.15,
+      },
+    );
+
+    y += requiredHeight;
+  });
 }
 
 function drawFooter(
@@ -1995,7 +2777,7 @@ function drawFooter(
   );
 }
 
-export function createBusinessDocumentPdf(
+export async function createBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
 ) {
@@ -2004,6 +2786,14 @@ export function createBusinessDocumentPdf(
     referenceId,
   );
   const settings = getCompanySettings();
+
+  await attachCurrentCustomerData(
+    definition,
+  );
+
+  await attachPrimaryProductImages(
+    definition,
+  );
 
   const pdf = new jsPDF({
     orientation: "portrait",
@@ -2021,7 +2811,10 @@ export function createBusinessDocumentPdf(
   definition.articleBlocks.forEach(
     (block, index) => {
       const blockHeight =
-        getBlockHeight(block);
+        getBlockHeight(
+          block,
+          definition,
+        );
 
       if (y + blockHeight > 270) {
         pdf.addPage();
@@ -2102,6 +2895,13 @@ export function createBusinessDocumentPdf(
     }
   }
 
+  if (
+    definition.documentType ===
+    "SALES_ORDER_CONFIRMATION"
+  ) {
+    drawSalesTermsPages(pdf);
+  }
+
   const pageCount = pdf.getNumberOfPages();
 
   for (
@@ -2126,46 +2926,109 @@ export function createBusinessDocumentPdf(
   };
 }
 
-export function openBusinessDocumentPdf(
+export async function openBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
 ) {
-  const { pdf, filename } =
-    createBusinessDocumentPdf(
-      documentType,
-      referenceId,
-    );
-
-  const blob = pdf.output("blob");
-  const url = URL.createObjectURL(blob);
-
   const pdfWindow = window.open(
-    url,
+    "about:blank",
     "_blank",
-    "noopener,noreferrer",
   );
 
   if (!pdfWindow) {
-    URL.revokeObjectURL(url);
-
     throw new Error(
       "De browser blokkeert het PDF-venster. Sta pop-ups toe voor deze website.",
     );
   }
 
-  window.setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 60_000);
+  pdfWindow.document.open();
+  pdfWindow.document.write(`
+    <!doctype html>
+    <html lang="nl">
+      <head>
+        <meta charset="utf-8" />
+        <title>PDF voorbereiden</title>
+        <style>
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f7fb;
+            color: #14233a;
+          }
 
-  return filename;
+          main {
+            text-align: center;
+          }
+
+          strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 18px;
+          }
+
+          span {
+            color: #68788f;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <main>
+          <strong>PDF wordt voorbereid…</strong>
+          <span>Een moment geduld.</span>
+        </main>
+      </body>
+    </html>
+  `);
+  pdfWindow.document.close();
+
+  try {
+    const { pdf, filename } =
+      await createBusinessDocumentPdf(
+        documentType,
+        referenceId,
+      );
+
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+
+    pdfWindow.location.replace(url);
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 5 * 60_000);
+
+    return filename;
+  } catch (error) {
+    pdfWindow.document.open();
+    pdfWindow.document.write(`
+      <!doctype html>
+      <html lang="nl">
+        <head>
+          <meta charset="utf-8" />
+          <title>PDF kon niet worden geopend</title>
+        </head>
+        <body style="font-family: sans-serif; padding: 32px;">
+          <h1>PDF kon niet worden geopend</h1>
+          <p>Sluit dit venster en probeer het opnieuw.</p>
+        </body>
+      </html>
+    `);
+    pdfWindow.document.close();
+
+    throw error;
+  }
 }
 
-export function downloadBusinessDocumentPdf(
+export async function downloadBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
 ) {
   const { pdf, filename } =
-    createBusinessDocumentPdf(
+    await createBusinessDocumentPdf(
       documentType,
       referenceId,
     );
@@ -2175,12 +3038,12 @@ export function downloadBusinessDocumentPdf(
   return filename;
 }
 
-export function createBusinessDocumentPdfAttachment(
+export async function createBusinessDocumentPdfAttachment(
   documentType: BusinessDocumentType,
   referenceId: string,
-): DocumentEmailAttachment {
+): Promise<DocumentEmailAttachment> {
   const { pdf, filename } =
-    createBusinessDocumentPdf(
+    await createBusinessDocumentPdf(
       documentType,
       referenceId,
     );

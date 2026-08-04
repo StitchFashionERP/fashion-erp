@@ -94,7 +94,7 @@ export function SendDocumentDialog({
           );
 
         const pdfAttachment =
-          createBusinessDocumentPdfAttachment(
+          await createBusinessDocumentPdfAttachment(
             documentType,
             referenceId,
           );
@@ -153,9 +153,9 @@ export function SendDocumentDialog({
     );
   }
 
-  function handlePreview() {
+  async function handlePreview() {
     try {
-      openBusinessDocumentPdf(
+      await openBusinessDocumentPdf(
         documentType,
         referenceId,
       );
@@ -195,7 +195,7 @@ export function SendDocumentDialog({
           ? {
               ...draft,
               attachment:
-                createBusinessDocumentPdfAttachment(
+                await createBusinessDocumentPdfAttachment(
                   documentType,
                   referenceId,
                 ),

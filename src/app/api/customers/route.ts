@@ -29,6 +29,25 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function rowToCustomer(row: Record<string, unknown>) {
   const profile = asRecord(row.profile);
+  const crm = asRecord(profile.crm);
+
+  const street = String(crm.street ?? "").trim();
+  const houseNumber = String(
+    crm.houseNumber ?? "",
+  ).trim();
+  const houseNumberAddition = String(
+    crm.houseNumberAddition ?? "",
+  ).trim();
+
+  const crmAddress = [
+    street,
+    [houseNumber, houseNumberAddition]
+      .filter(Boolean)
+      .join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
 
   return {
     ...profile,
@@ -38,6 +57,18 @@ function rowToCustomer(row: Record<string, unknown>) {
     contactPerson: String(row.contact_person ?? ""),
     email: String(row.email ?? ""),
     phone: String(row.phone ?? ""),
+    address: String(
+      row.address ??
+        profile.address ??
+        crmAddress ??
+        "",
+    ),
+    postalCode: String(
+      row.postal_code ??
+        profile.postalCode ??
+        crm.postalCode ??
+        "",
+    ),
     city: String(row.city ?? ""),
     country: String(profile.country ?? row.country_code ?? "Nederland"),
     chamberOfCommerceNumber: String(
@@ -76,6 +107,33 @@ function customerToRow(
   payload: CustomerPayload,
 ) {
   const customer = payload.customer;
+  const crm = asRecord(
+    payload.crm ?? customer.crm,
+  );
+
+  const street = String(crm.street ?? "").trim();
+  const houseNumber = String(
+    crm.houseNumber ?? "",
+  ).trim();
+  const houseNumberAddition = String(
+    crm.houseNumberAddition ?? "",
+  ).trim();
+
+  const crmAddress = [
+    street,
+    [houseNumber, houseNumberAddition]
+      .filter(Boolean)
+      .join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  const crmPostalCode = String(
+    crm.postalCode ?? "",
+  )
+    .trim()
+    .toUpperCase();
 
   return {
     organization_id: organizationId,
@@ -86,6 +144,16 @@ function customerToRow(
       String(customer.contactPerson ?? "") || null,
     email: String(customer.email ?? "") || null,
     phone: String(customer.phone ?? "") || null,
+    address:
+      String(customer.address ?? "").trim() ||
+      crmAddress ||
+      null,
+    postal_code:
+      String(customer.postalCode ?? "")
+        .trim()
+        .toUpperCase() ||
+      crmPostalCode ||
+      null,
     city: String(customer.city ?? "") || null,
     country_code: String(customer.countryCode ?? "NL"),
     chamber_of_commerce_number:
@@ -96,7 +164,16 @@ function customerToRow(
     active: customer.status !== "Inactief",
     profile: {
       ...customer,
-      crm: payload.crm ?? customer.crm ?? null,
+      address:
+        String(customer.address ?? "").trim() ||
+        crmAddress,
+      postalCode:
+        String(customer.postalCode ?? "")
+          .trim()
+          .toUpperCase() ||
+        crmPostalCode,
+      crm:
+        payload.crm ?? customer.crm ?? null,
     },
     updated_at: new Date().toISOString(),
   };
