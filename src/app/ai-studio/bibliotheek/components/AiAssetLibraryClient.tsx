@@ -184,7 +184,26 @@ function normalizeAsset(
   };
 }
 
+
+function resolveMediaAssetId(asset: unknown) {
+  if (!asset || typeof asset !== "object") {
+    return "";
+  }
+
+  const record = asset as {
+    assetId?: unknown;
+    id?: unknown;
+  };
+
+  return String(
+    record.assetId ?? record.id ?? "",
+  ).trim();
+}
+
 export function AiAssetLibraryClient() {
+  const [deletingAssetId, setDeletingAssetId] =
+    useState<string | null>(null);
+
   const [jobs, setJobs] = useState<AiAssetJob[]>(
     [],
   );
@@ -482,6 +501,69 @@ export function AiAssetLibraryClient() {
     );
   }
 
+
+  async function deleteMediaAsset(
+    assetId: string,
+  ) {
+    if (!assetId) {
+      window.alert(
+        "De afbeelding kon niet worden herkend.",
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Weet je zeker dat je deze afbeelding definitief wilt verwijderen? Dit verwijdert ook het bestand uit Supabase Storage.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAssetId(assetId);
+
+    try {
+      const response = await fetch(
+        `/api/media/assets/${encodeURIComponent(
+          assetId,
+        )}?mode=delete`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+        },
+      );
+
+      const body = (await response
+        .json()
+        .catch(() => null)) as
+        | {
+            error?: string;
+            deleted?: boolean;
+          }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(
+          body?.error ||
+            "De afbeelding kon niet worden verwijderd.",
+        );
+      }
+
+      window.alert("Afbeelding verwijderd.");
+
+      window.location.reload();
+    } catch (caughtError) {
+      window.alert(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "De afbeelding kon niet worden verwijderd.",
+      );
+    } finally {
+      setDeletingAssetId(null);
+    }
+  }
+
+
   return (
     <div className={styles.library}>
       <div className={styles.libraryToolbar}>
@@ -731,6 +813,46 @@ export function AiAssetLibraryClient() {
                     </>
                   ) : (
                     <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void deleteMediaAsset(
+                            resolveMediaAssetId(
+                              asset,
+                            ),
+                          )
+                        }
+                        disabled={
+                          deletingAssetId ===
+                          resolveMediaAssetId(
+                            asset,
+                          )
+                        }
+                        title="Afbeelding verwijderen"
+                        style={{
+                          border:
+                            "1px solid #e2a7a7",
+                          background: "#fff7f7",
+                          color: "#a32424",
+                          borderRadius: "8px",
+                          padding: "8px 12px",
+                          cursor:
+                            deletingAssetId ===
+                            resolveMediaAssetId(
+                              asset,
+                            )
+                              ? "wait"
+                              : "pointer",
+                        }}
+                      >
+                        {deletingAssetId ===
+                        resolveMediaAssetId(
+                          asset,
+                        )
+                          ? "Verwijderen..."
+                          : "Verwijderen"}
+                      </button>
+
                       {!asset.isPrimary && (
                         <button
                           type="button"
