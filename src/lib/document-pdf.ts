@@ -2175,8 +2175,8 @@ function drawArticleBlock(
     dividerY,
   );
 
-  const sizeAreaStart = MARGIN_X + 50;
-  const sizeAreaWidth = 82;
+  const sizeAreaStart = MARGIN_X + 55;
+  const sizeAreaWidth = 70;
   const sizeColumnWidth =
     sizeAreaWidth /
     Math.max(block.sizes.length, 1);
@@ -2205,12 +2205,8 @@ function drawArticleBlock(
     );
   });
 
-  pdf.text("Totaal", 142, tableHeaderY, {
-    align: "center",
-  });
-  pdf.text("Ordernr.", 163, tableHeaderY, {
-    align: "center",
-  });
+  pdf.text("Totaal", 137, tableHeaderY);
+  pdf.text("Ordernr.", 158, tableHeaderY);
 
   if (
     definition.documentType ===
@@ -2218,15 +2214,13 @@ function drawArticleBlock(
   ) {
     pdf.text(
       "Verkoopprijs",
-      185,
+      183,
       tableHeaderY,
-      { align: "right" },
     );
     pdf.text(
       "Adviesprijs",
-      208,
+      210,
       tableHeaderY,
-      { align: "right" },
     );
   } else {
     const priceLabel =
@@ -2298,16 +2292,14 @@ function drawArticleBlock(
 
       pdf.text(
         String(rowTotal),
-        142,
+        137,
         rowY,
-        { align: "center" },
       );
 
       pdf.text(
         block.orderNumber,
-        163,
+        158,
         rowY,
-        { align: "center" },
       );
 
       if (
