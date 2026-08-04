@@ -1,3 +1,5 @@
+FILE: src/app/api/ai-studio/jobs/[id]/generate/route.ts
+==================================================
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -113,10 +115,7 @@ function createPrompt(
     "Preserve the real cut, proportions, sleeve length, body length and silhouette.",
     "Do not redesign, restyle, simplify, embellish or invent product details.",
     "Remove the original background, mannequin, body form, hands, hangers, clips, supports, furniture and unrelated objects.",
-    "Present one garment only, centered, upright and neatly arranged.",
-    "Preserve the exact viewpoint and product side shown in the supplied source photo.",
-    "If the source shows the back, generate the back. If it shows the front, generate the front. If it shows a side or detail view, preserve that same view.",
-    "Never turn a back view into a front view and never invent product details that are not visible in the source.",
+    "Present one garment only, centered, front-facing, upright and neatly arranged.",
     "Correct only minor perspective distortion, uneven lighting and accidental wrinkles.",
     "Retain natural fabric depth and construction.",
     "Use balanced professional studio lighting with accurate color reproduction.",
@@ -295,8 +294,8 @@ async function prepareSourceImage(
 
     const convertedArrayBuffer = await heicConvert({
       buffer: sourceBytes,
-      format: "JPEG",
-      quality: 0.92,
+      format: "PNG",
+      quality: 1,
     });
 
     const convertedBytes = Buffer.from(
@@ -305,7 +304,7 @@ async function prepareSourceImage(
 
     if (convertedBytes.length === 0) {
       throw new Error(
-        "De geconverteerde afbeelding is leeg.",
+        "De geconverteerde PNG is leeg.",
       );
     }
 
@@ -313,14 +312,14 @@ async function prepareSourceImage(
       organizationId,
       "processed-sources",
       jobId,
-      "source.jpg",
+      "source.png",
     ].join("/");
 
     const { error: uploadError } =
       await supabase.storage
         .from(AI_STUDIO_BUCKET)
         .upload(processedPath, convertedBytes, {
-          contentType: "image/jpeg",
+          contentType: "image/png",
           upsert: true,
         });
 
@@ -333,7 +332,7 @@ async function prepareSourceImage(
       .update({
         processed_source_bucket: AI_STUDIO_BUCKET,
         processed_source_path: processedPath,
-        processed_source_mime_type: "image/jpeg",
+        processed_source_mime_type: "image/png",
         processed_source_file_size:
           convertedBytes.length,
         source_conversion_status: "COMPLETED",
@@ -345,8 +344,8 @@ async function prepareSourceImage(
 
     return {
       bytes: convertedBytes,
-      fileName: "source.jpg",
-      mimeType: "image/jpeg",
+      fileName: "source.png",
+      mimeType: "image/png",
       processedPath,
       converted: true,
     };
@@ -367,7 +366,7 @@ async function prepareSourceImage(
       .eq("id", jobId);
 
     throw new ApiError(
-      `De iPhone-foto kon niet worden verwerkt: ${message}`,
+      `De iPhone-foto kon niet naar PNG worden geconverteerd: ${message}`,
       500,
     );
   }

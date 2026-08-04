@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import styles from "../../ai-studio.module.css";
+import { PhotoEditor } from "../../workspace/components/PhotoEditor";
+import type { PhotoEditorTransform } from "@/lib/media/photo-editor";
 import { PackshotGenerator } from "./PackshotGenerator";
 
 type ArticleOption = {
@@ -55,7 +57,8 @@ function readErrorMessage(
     "error" in body
   ) {
     return String(
-      (body as { error?: unknown }).error ?? fallback,
+      (body as { error?: unknown }).error ??
+        fallback,
     );
   }
 
@@ -100,11 +103,12 @@ function normalizeArticle(
 }
 
 export function ProductStudioClient() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef =
+    useRef<HTMLInputElement>(null);
 
-  const [articles, setArticles] = useState<ArticleOption[]>(
-    [],
-  );
+  const [articles, setArticles] = useState<
+    ArticleOption[]
+  >([]);
   const [articlesLoading, setArticlesLoading] =
     useState(true);
   const [articlesError, setArticlesError] =
@@ -114,12 +118,16 @@ export function ProductStudioClient() {
   const [presetName, setPresetName] = useState(
     "Transparante achtergrond",
   );
-  const [instructions, setInstructions] = useState("");
+  const [instructions, setInstructions] =
+    useState("");
 
   const [sourceFile, setSourceFile] =
     useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] =
+    useState(false);
+  const [editVersion, setEditVersion] =
+    useState(0);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -135,9 +143,12 @@ export function ProductStudioClient() {
       setArticlesError("");
 
       try {
-        const response = await fetch("/api/articles", {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          "/api/articles",
+          {
+            cache: "no-store",
+          },
+        );
 
         const body = (await response
           .json()
@@ -163,7 +174,8 @@ export function ProductStudioClient() {
           .filter(
             (
               article,
-            ): article is ArticleOption => article !== null,
+            ): article is ArticleOption =>
+              article !== null,
           )
           .sort((left, right) =>
             left.code.localeCompare(
@@ -206,18 +218,24 @@ export function ProductStudioClient() {
       return;
     }
 
-    const nextPreviewUrl = URL.createObjectURL(sourceFile);
+    const nextPreviewUrl =
+      URL.createObjectURL(sourceFile);
+
     setPreviewUrl(nextPreviewUrl);
 
     return () => {
       URL.revokeObjectURL(nextPreviewUrl);
     };
-  }, [sourceFile]);
+  }, [sourceFile, editVersion]);
 
-  function validateAndSetFile(file: File) {
+  function resetJobState() {
+    setSavedJob(null);
     setError("");
     setMessage("");
-    setSavedJob(null);
+  }
+
+  function validateAndSetFile(file: File) {
+    resetJobState();
 
     if (!acceptedMimeTypes.has(file.type)) {
       setSourceFile(null);
@@ -242,6 +260,7 @@ export function ProductStudioClient() {
     }
 
     setSourceFile(file);
+    setEditVersion((current) => current + 1);
   }
 
   function handleFileInput(
@@ -256,7 +275,9 @@ export function ProductStudioClient() {
     event.target.value = "";
   }
 
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+  ) {
     event.preventDefault();
     setIsDragging(false);
 
@@ -272,6 +293,25 @@ export function ProductStudioClient() {
     setSavedJob(null);
     setError("");
     setMessage("");
+  }
+
+  async function handleEditedFile(
+    file: File,
+    _transform: PhotoEditorTransform,
+  ) {
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(
+        "De bewerkte afbeelding is groter dan 15 MB.",
+      );
+    }
+
+    setSourceFile(file);
+    setSavedJob(null);
+    setError("");
+    setMessage(
+      "Bewerking opgeslagen. Deze uitsnede wordt gebruikt voor de AI-packshot.",
+    );
+    setEditVersion((current) => current + 1);
   }
 
   async function handleSubmit(
@@ -299,7 +339,10 @@ export function ProductStudioClient() {
       const formData = new FormData();
       formData.set("articleId", articleId);
       formData.set("presetName", presetName);
-      formData.set("instructions", instructions);
+      formData.set(
+        "instructions",
+        instructions,
+      );
       formData.set("sourceImage", sourceFile);
 
       const response = await fetch(
@@ -354,11 +397,9 @@ export function ProductStudioClient() {
   }
 
   const selectedArticle =
-    articles.find((article) => article.id === articleId) ??
-    null;
-
-  const shownPreviewUrl =
-    savedJob?.sourceUrl || previewUrl;
+    articles.find(
+      (article) => article.id === articleId,
+    ) ?? null;
 
   return (
     <form
@@ -371,14 +412,23 @@ export function ProductStudioClient() {
             <h2 className={styles.cardTitle}>
               Nieuwe productshot
             </h2>
-            <p className={styles.cardDescription}>
-              Selecteer een echt artikel en sla de bronfoto
-              centraal op als AI Studio-opdracht.
+            <p
+              className={
+                styles.cardDescription
+              }
+            >
+              Selecteer een artikel, kies een
+              bronfoto en positioneer het product
+              voordat je de AI-packshot maakt.
             </p>
           </div>
 
           {savedJob && (
-            <span className={styles.statusCompleted}>
+            <span
+              className={
+                styles.statusCompleted
+              }
+            >
               Concept opgeslagen
             </span>
           )}
@@ -388,7 +438,9 @@ export function ProductStudioClient() {
           <div className={styles.formSection}>
             <div className={styles.formGrid}>
               <label className={styles.field}>
-                <span className={styles.fieldLabel}>
+                <span
+                  className={styles.fieldLabel}
+                >
                   Artikel
                 </span>
 
@@ -396,12 +448,14 @@ export function ProductStudioClient() {
                   className={styles.select}
                   value={articleId}
                   onChange={(event) => {
-                    setArticleId(event.target.value);
-                    setSavedJob(null);
-                    setMessage("");
-                    setError("");
+                    setArticleId(
+                      event.target.value,
+                    );
+                    resetJobState();
                   }}
-                  disabled={articlesLoading || isSaving}
+                  disabled={
+                    articlesLoading || isSaving
+                  }
                 >
                   <option value="">
                     {articlesLoading
@@ -414,7 +468,8 @@ export function ProductStudioClient() {
                       key={article.id}
                       value={article.id}
                     >
-                      {article.code} · {article.name}
+                      {article.code} ·{" "}
+                      {article.name}
                       {article.status
                         ? ` · ${article.status}`
                         : ""}
@@ -423,19 +478,29 @@ export function ProductStudioClient() {
                 </select>
 
                 {articlesError ? (
-                  <span className={styles.fieldError}>
+                  <span
+                    className={
+                      styles.fieldError
+                    }
+                  >
                     {articlesError}
                   </span>
                 ) : (
-                  <span className={styles.fieldHint}>
-                    De artikelen worden rechtstreeks uit STiTch
-                    geladen.
+                  <span
+                    className={
+                      styles.fieldHint
+                    }
+                  >
+                    De artikelen worden rechtstreeks
+                    uit STiTch geladen.
                   </span>
                 )}
               </label>
 
               <label className={styles.field}>
-                <span className={styles.fieldLabel}>
+                <span
+                  className={styles.fieldLabel}
+                >
                   Packshotstijl
                 </span>
 
@@ -443,7 +508,9 @@ export function ProductStudioClient() {
                   className={styles.select}
                   value={presetName}
                   onChange={(event) => {
-                    setPresetName(event.target.value);
+                    setPresetName(
+                      event.target.value,
+                    );
                     setSavedJob(null);
                   }}
                   disabled={isSaving}
@@ -463,7 +530,9 @@ export function ProductStudioClient() {
               <label
                 className={`${styles.field} ${styles.fieldFull}`}
               >
-                <span className={styles.fieldLabel}>
+                <span
+                  className={styles.fieldLabel}
+                >
                   Aanvullende instructie
                 </span>
 
@@ -471,23 +540,22 @@ export function ProductStudioClient() {
                   className={styles.textarea}
                   value={instructions}
                   onChange={(event) => {
-                    setInstructions(event.target.value);
+                    setInstructions(
+                      event.target.value,
+                    );
                     setSavedJob(null);
                   }}
                   placeholder="Bijvoorbeeld: behoud de exacte kleur, stofstructuur en pasvorm."
                   disabled={isSaving}
                 />
-
-                <span className={styles.fieldHint}>
-                  Deze instructie wordt in een volgende run aan
-                  de AI-provider meegegeven.
-                </span>
               </label>
             </div>
 
             <input
               ref={fileInputRef}
-              className={styles.hiddenFileInput}
+              className={
+                styles.hiddenFileInput
+              }
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
               onChange={handleFileInput}
@@ -514,21 +582,38 @@ export function ProductStudioClient() {
               onDrop={handleDrop}
             >
               {sourceFile ? (
-                <div className={styles.selectedFile}>
-                  <div className={styles.uploadIcon}>✓</div>
+                <div
+                  className={styles.selectedFile}
+                >
+                  <div
+                    className={styles.uploadIcon}
+                  >
+                    ✓
+                  </div>
 
-                  <strong>{sourceFile.name}</strong>
+                  <strong>
+                    {sourceFile.name}
+                  </strong>
 
                   <p>
-                    {formatFileSize(sourceFile.size)}
+                    {formatFileSize(
+                      sourceFile.size,
+                    )}
                     {" · "}
-                    {sourceFile.type || "Afbeelding"}
+                    {sourceFile.type ||
+                      "Afbeelding"}
                   </p>
 
-                  <div className={styles.inlineActions}>
+                  <div
+                    className={
+                      styles.inlineActions
+                    }
+                  >
                     <button
                       type="button"
-                      className={styles.secondaryButton}
+                      className={
+                        styles.secondaryButton
+                      }
                       onClick={() =>
                         fileInputRef.current?.click()
                       }
@@ -539,7 +624,9 @@ export function ProductStudioClient() {
 
                     <button
                       type="button"
-                      className={styles.dangerButton}
+                      className={
+                        styles.dangerButton
+                      }
                       onClick={clearFile}
                       disabled={isSaving}
                     >
@@ -549,21 +636,27 @@ export function ProductStudioClient() {
                 </div>
               ) : (
                 <div>
-                  <div className={styles.uploadIcon}>+</div>
+                  <div
+                    className={styles.uploadIcon}
+                  >
+                    +
+                  </div>
 
                   <strong>
-                    Sleep een productfoto naar dit vlak
+                    Sleep een productfoto naar dit
+                    vlak
                   </strong>
 
                   <p>
-                    JPG, PNG, WebP, HEIC of HEIF. Maximaal 15 MB.
-                    Gebruik bij voorkeur een scherpe foto bij
-                    gelijkmatig licht.
+                    JPG, PNG, WebP, HEIC of HEIF.
+                    Maximaal 15 MB.
                   </p>
 
                   <button
                     type="button"
-                    className={styles.secondaryButton}
+                    className={
+                      styles.secondaryButton
+                    }
                     onClick={() =>
                       fileInputRef.current?.click()
                     }
@@ -576,7 +669,11 @@ export function ProductStudioClient() {
             </div>
 
             {selectedArticle && sourceFile && (
-              <div className={styles.selectionSummary}>
+              <div
+                className={
+                  styles.selectionSummary
+                }
+              >
                 <div>
                   <span>Artikel</span>
                   <strong>
@@ -608,7 +705,11 @@ export function ProductStudioClient() {
             )}
 
             {message && (
-              <div className={styles.successNotice}>
+              <div
+                className={
+                  styles.successNotice
+                }
+              >
                 {message}
               </div>
             )}
@@ -616,19 +717,24 @@ export function ProductStudioClient() {
             {savedJob && (
               <PackshotGenerator
                 jobId={savedJob.id}
-                articleName={savedJob.articleName}
+                articleName={
+                  savedJob.articleName
+                }
               />
             )}
 
             <div className={styles.formFooter}>
               <div className={styles.fieldHint}>
-                Run 2 slaat alleen de bronfoto en de opdracht op.
-                De daadwerkelijke AI-bewerking volgt in Run 3.
+                Bewerk eerst de foto rechts. Sla
+                daarna de bron op en start vervolgens
+                de AI-generatie.
               </div>
 
               <button
                 type="submit"
-                className={styles.primaryButton}
+                className={
+                  styles.primaryButton
+                }
                 disabled={
                   isSaving ||
                   !articleId ||
@@ -639,7 +745,7 @@ export function ProductStudioClient() {
                 {isSaving
                   ? "Bronfoto opslaan..."
                   : savedJob
-                    ? "Opnieuw opslaan als nieuwe job"
+                    ? "Opslaan als nieuwe job"
                     : "Bronfoto centraal opslaan"}
               </button>
             </div>
@@ -653,35 +759,41 @@ export function ProductStudioClient() {
         <div className={styles.cardHeader}>
           <div>
             <h2 className={styles.cardTitle}>
-              Bronfoto
+              Bronfoto bewerken
             </h2>
-            <p className={styles.cardDescription}>
-              Controleer de foto voordat je de opdracht opslaat.
+            <p
+              className={
+                styles.cardDescription
+              }
+            >
+              Draai, zoom en sleep het product naar
+              de gewenste positie.
             </p>
           </div>
         </div>
 
         <div className={styles.cardBody}>
-          {shownPreviewUrl ? (
-            <div className={styles.imagePreviewFrame}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                className={styles.imagePreview}
-                src={shownPreviewUrl}
-                alt={
-                  selectedArticle
-                    ? `Bronfoto voor ${selectedArticle.name}`
-                    : "Geselecteerde bronfoto"
-                }
-              />
-            </div>
+          {previewUrl && sourceFile ? (
+            <PhotoEditor
+              key={`${sourceFile.name}-${editVersion}`}
+              sourceUrl={previewUrl}
+              sourceFileName={sourceFile.name}
+              disabled={isSaving}
+              onSave={handleEditedFile}
+            />
           ) : (
-            <div className={styles.previewPlaceholder}>
+            <div
+              className={
+                styles.previewPlaceholder
+              }
+            >
               <div>
-                <strong>Nog geen bronfoto</strong>
+                <strong>
+                  Nog geen bronfoto
+                </strong>
                 <div>
-                  Kies een afbeelding of sleep deze naar het
-                  uploadvlak.
+                  Kies een afbeelding of sleep deze
+                  naar het uploadvlak.
                 </div>
               </div>
             </div>
@@ -689,11 +801,6 @@ export function ProductStudioClient() {
 
           {savedJob && (
             <dl className={styles.jobDetails}>
-              <div>
-                <dt>Job-ID</dt>
-                <dd>{savedJob.id}</dd>
-              </div>
-
               <div>
                 <dt>Artikel</dt>
                 <dd>
@@ -709,7 +816,9 @@ export function ProductStudioClient() {
 
               <div>
                 <dt>Bestand</dt>
-                <dd>{savedJob.sourceFileName}</dd>
+                <dd>
+                  {savedJob.sourceFileName}
+                </dd>
               </div>
             </dl>
           )}

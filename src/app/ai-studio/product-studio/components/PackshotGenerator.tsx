@@ -59,9 +59,7 @@ export function PackshotGenerator({
 
     try {
       const response = await fetch(
-        `/api/ai-studio/jobs/${encodeURIComponent(
-          jobId,
-        )}/generate`,
+        `/api/ai-studio/jobs/${encodeURIComponent(jobId)}/generate`,
         {
           method: "POST",
         },
@@ -121,6 +119,7 @@ export function PackshotGenerator({
           <h3 className={styles.generationTitle}>
             AI-packshot genereren
           </h3>
+
           <p className={styles.generationDescription}>
             De bronfoto is centraal opgeslagen. Start nu de
             eerste echte AI-bewerking voor {articleName}.
@@ -199,6 +198,8 @@ export function PackshotGenerator({
             jobId={result.id}
             articleId={result.articleId}
             articleCode={result.articleCode}
+            sourceUrl={result.sourceUrl}
+            resultUrl={result.resultUrl}
           />
         </div>
       )}

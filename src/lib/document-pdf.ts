@@ -2146,23 +2146,10 @@ function drawArticleBlock(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.6);
   pdf.setTextColor(15, 15, 15);
+
   pdf.text(
-    `${block.productCode}:`,
+    `${block.productCode} — ${block.productName}`,
     productTextX,
-    y + 6,
-  );
-
-  pdf.setFont("helvetica", "normal");
-
-  const productNameLines =
-    pdf.splitTextToSize(
-      block.productName,
-      showImage ? 94 : 145,
-    );
-
-  pdf.text(
-    productNameLines,
-    productTextX + 27,
     y + 6,
   );
 
@@ -2218,7 +2205,7 @@ function drawArticleBlock(
     );
   });
 
-  pdf.text("Totaal", 146, tableHeaderY, {
+  pdf.text("Totaal", 142, tableHeaderY, {
     align: "center",
   });
   pdf.text("Ordernr.", 163, tableHeaderY, {
@@ -2231,13 +2218,13 @@ function drawArticleBlock(
   ) {
     pdf.text(
       "Verkoopprijs",
-      181,
+      185,
       tableHeaderY,
       { align: "right" },
     );
     pdf.text(
       "Adviesprijs",
-      193,
+      208,
       tableHeaderY,
       { align: "right" },
     );
@@ -2311,7 +2298,7 @@ function drawArticleBlock(
 
       pdf.text(
         String(rowTotal),
-        146,
+        142,
         rowY,
         { align: "center" },
       );
@@ -2751,13 +2738,13 @@ function drawFooter(
   pdf.line(MARGIN_X, FOOTER_Y - 8, PAGE_WIDTH - MARGIN_X, FOOTER_Y - 8);
 
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(6.2);
+  pdf.setFontSize(6.0);
   pdf.setTextColor(65, 65, 65);
 
   if (footerLine) {
     const wrapped = pdf.splitTextToSize(
       footerLine,
-      CONTENT_WIDTH - 32,
+      CONTENT_WIDTH - 10,
     );
 
     pdf.text(wrapped, MARGIN_X, FOOTER_Y - 3);

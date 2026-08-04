@@ -7,11 +7,15 @@ import {
   useMemo,
   useState,
 } from "react";
-import styles from "../library.module.css";
+import {
+  groupAiAssetsByArticle,
+} from "@/lib/media/group-ai-assets";
 import { PackshotReview } from "./PackshotReview";
+import styles from "./article-media-library.module.css";
 
 type AiAssetJob = {
   id: string;
+  assetId: string;
   articleId: string;
   articleCode: string;
   articleName: string;
@@ -74,6 +78,10 @@ function readErrorMessage(
   return fallback;
 }
 
+function text(value: unknown) {
+  return String(value ?? "").trim();
+}
+
 function formatDate(value: string) {
   if (!value) {
     return "Onbekende datum";
@@ -110,14 +118,6 @@ function jobTypeLabel(type: string) {
   return "AI-afbeelding";
 }
 
-function getAssetStatusLabel(
-  assetStatus: string,
-) {
-  return assetStatus === "APPROVED"
-    ? "Goedgekeurd"
-    : "Concept";
-}
-
 function normalizeAsset(
   value: unknown,
 ): AiAssetJob | null {
@@ -127,13 +127,9 @@ function normalizeAsset(
 
   const row = value as Record<string, unknown>;
 
-  const id = String(row.id ?? "");
-  const articleCode = String(
-    row.articleCode ?? "",
-  );
-  const articleName = String(
-    row.articleName ?? "",
-  );
+  const id = text(row.id);
+  const articleCode = text(row.articleCode);
+  const articleName = text(row.articleName);
 
   if (!id || !articleCode || !articleName) {
     return null;
@@ -141,15 +137,20 @@ function normalizeAsset(
 
   return {
     id,
-    articleId: String(row.articleId ?? ""),
+    assetId: text(
+      row.assetId ??
+        row.mediaAssetId ??
+        row.media_asset_id,
+    ),
+    articleId: text(
+      row.articleId ?? row.productId,
+    ),
     articleCode,
     articleName,
-    type: String(row.type ?? "PRODUCT_SHOT"),
-    status: String(row.status ?? ""),
-    presetName: String(row.presetName ?? ""),
-    sourceFileName: String(
-      row.sourceFileName ?? "",
-    ),
+    type: text(row.type) || "PRODUCT_SHOT",
+    status: text(row.status),
+    presetName: text(row.presetName),
+    sourceFileName: text(row.sourceFileName),
     sourceUrl:
       typeof row.sourceUrl === "string"
         ? row.sourceUrl
@@ -158,15 +159,11 @@ function normalizeAsset(
       typeof row.resultUrl === "string"
         ? row.resultUrl
         : null,
-    resultPath: String(row.resultPath ?? ""),
-    provider: String(row.provider ?? ""),
-    model: String(row.model ?? ""),
-    errorMessage: String(
-      row.errorMessage ?? "",
-    ),
-    completedAt: String(
-      row.completedAt ?? "",
-    ),
+    resultPath: text(row.resultPath),
+    provider: text(row.provider),
+    model: text(row.model),
+    errorMessage: text(row.errorMessage),
+    completedAt: text(row.completedAt),
     versionNumber: Math.max(
       1,
       Number(row.versionNumber ?? 1),
@@ -176,34 +173,19 @@ function normalizeAsset(
         ? "APPROVED"
         : "CONCEPT",
     isPrimary: Boolean(row.isPrimary),
-    approvedAt: String(
-      row.approvedAt ?? "",
-    ),
-    createdAt: String(row.createdAt ?? ""),
-    updatedAt: String(row.updatedAt ?? ""),
+    approvedAt: text(row.approvedAt),
+    createdAt: text(row.createdAt),
+    updatedAt: text(row.updatedAt),
   };
 }
 
+type AiAssetLibraryClientProps = {
+  articleId?: string;
+};
 
-function resolveMediaAssetId(asset: unknown) {
-  if (!asset || typeof asset !== "object") {
-    return "";
-  }
-
-  const record = asset as {
-    assetId?: unknown;
-    id?: unknown;
-  };
-
-  return String(
-    record.assetId ?? record.id ?? "",
-  ).trim();
-}
-
-export function AiAssetLibraryClient() {
-  const [deletingAssetId, setDeletingAssetId] =
-    useState<string | null>(null);
-
+export function AiAssetLibraryClient({
+  articleId,
+}: AiAssetLibraryClientProps) {
   const [jobs, setJobs] = useState<AiAssetJob[]>(
     [],
   );
@@ -212,6 +194,11 @@ export function AiAssetLibraryClient() {
   const [message, setMessage] = useState("");
   const [pendingAction, setPendingAction] =
     useState<PendingAction>(null);
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<
+    Set<string>
+  >(new Set());
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -244,20 +231,20 @@ export function AiAssetLibraryClient() {
         );
       }
 
-      const normalized = body
-        .map(normalizeAsset)
-        .filter(
-          (
-            asset,
-          ): asset is AiAssetJob =>
-            asset !== null,
-        );
-
-      setJobs(normalized);
-    } catch (loadError) {
+      setJobs(
+        body
+          .map(normalizeAsset)
+          .filter(
+            (
+              asset,
+            ): asset is AiAssetJob =>
+              asset !== null,
+          ),
+      );
+    } catch (caughtError) {
       setError(
-        loadError instanceof Error
-          ? loadError.message
+        caughtError instanceof Error
+          ? caughtError.message
           : "De AI-bibliotheek kon niet worden geladen.",
       );
     } finally {
@@ -271,43 +258,53 @@ export function AiAssetLibraryClient() {
 
   const assets = useMemo(
     () =>
-      jobs
-        .filter(
-          (job) =>
-            job.status === "COMPLETED" &&
-            Boolean(job.resultUrl),
-        )
-        .sort((left, right) => {
-          if (left.isPrimary !== right.isPrimary) {
-            return left.isPrimary ? -1 : 1;
-          }
-
-          if (
-            left.assetStatus !==
-            right.assetStatus
-          ) {
-            return left.assetStatus === "APPROVED"
-              ? -1
-              : 1;
-          }
-
-          return (
-            new Date(right.updatedAt).getTime() -
-            new Date(left.updatedAt).getTime()
-          );
-        }),
+      jobs.filter(
+        (job) =>
+          job.status === "COMPLETED" &&
+          Boolean(job.resultUrl),
+      ),
     [jobs],
   );
+
+  const groups = useMemo(() => {
+    const grouped =
+      groupAiAssetsByArticle(assets);
+
+    if (!articleId) {
+      return grouped;
+    }
+
+    return grouped.filter(
+      (group) =>
+        group.productId === articleId,
+    );
+  }, [articleId, assets]);
+
+  function isPending(
+    jobId: string,
+    action?: PendingActionType,
+  ) {
+    if (!pendingAction) {
+      return false;
+    }
+
+    if (pendingAction.jobId !== jobId) {
+      return false;
+    }
+
+    return action
+      ? pendingAction.action === action
+      : true;
+  }
 
   function updateLocalAsset(
     response: ApprovalResponse,
   ) {
-    setJobs((currentJobs) =>
-      currentJobs.map((job) => {
+    setJobs((current) =>
+      current.map((job) => {
         if (
           response.isPrimary &&
           job.articleId === response.articleId &&
-          job.type === response.type &&
           job.id !== response.id
         ) {
           return {
@@ -384,7 +381,7 @@ export function AiAssetLibraryClient() {
         throw new Error(
           readErrorMessage(
             body,
-            "De goedkeuringsstatus kon niet worden aangepast.",
+            "De afbeelding kon niet worden bijgewerkt.",
           ),
         );
       }
@@ -395,64 +392,125 @@ export function AiAssetLibraryClient() {
         !("id" in body)
       ) {
         throw new Error(
-          "De goedkeurings-API heeft een ongeldig resultaat teruggestuurd.",
+          "De afbeelding kon niet worden bijgewerkt.",
         );
       }
 
-      const approval =
-        body as ApprovalResponse;
+      updateLocalAsset(
+        body as ApprovalResponse,
+      );
 
-      updateLocalAsset(approval);
-
-      if (!approved) {
+      if (makePrimary) {
         setMessage(
-          `Goedkeuring van ${asset.articleCode} v${asset.versionNumber} is ingetrokken.`,
+          `${asset.articleCode} v${asset.versionNumber} is ingesteld als hoofdafbeelding.`,
         );
-      } else if (makePrimary) {
+      } else if (approved) {
         setMessage(
-          `${asset.articleCode} v${asset.versionNumber} is goedgekeurd en ingesteld als hoofdafbeelding.`,
+          `${asset.articleCode} v${asset.versionNumber} is toegevoegd aan de galerij.`,
         );
       } else {
         setMessage(
-          `${asset.articleCode} v${asset.versionNumber} is goedgekeurd.`,
+          `Goedkeuring van ${asset.articleCode} v${asset.versionNumber} is ingetrokken.`,
         );
       }
-    } catch (approvalError) {
+    } catch (caughtError) {
       setError(
-        approvalError instanceof Error
-          ? approvalError.message
-          : "De goedkeuringsstatus kon niet worden aangepast.",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "De afbeelding kon niet worden bijgewerkt.",
       );
     } finally {
       setPendingAction(null);
     }
   }
 
-  function isPending(
-    jobId: string,
-    action?: PendingActionType,
+  async function deleteAsset(
+    asset: AiAssetJob,
   ) {
-    if (!pendingAction) {
-      return false;
+    const identifier =
+      asset.assetId || asset.id;
+
+    const confirmed = window.confirm(
+      "Weet je zeker dat je deze afbeelding definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    );
+
+    if (!confirmed) {
+      return;
     }
 
-    if (pendingAction.jobId !== jobId) {
-      return false;
-    }
+    setDeletingId(identifier);
+    setError("");
+    setMessage("");
 
-    return action
-      ? pendingAction.action === action
-      : true;
+    try {
+      const endpoint = asset.assetId
+        ? `/api/media/assets/${encodeURIComponent(
+            asset.assetId,
+          )}?mode=delete`
+        : `/api/ai-studio/jobs/${encodeURIComponent(
+            asset.id,
+          )}/delete`;
+
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+
+      const body = (await response
+        .json()
+        .catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(
+          body?.error ||
+            "De afbeelding kon niet worden verwijderd.",
+        );
+      }
+
+      setJobs((current) =>
+        current.filter(
+          (job) => job.id !== asset.id,
+        ),
+      );
+
+      setMessage("Afbeelding verwijderd.");
+
+      await loadJobs();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "De afbeelding kon niet worden verwijderd.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  function toggleGroup(key: string) {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
   }
 
   if (loading) {
     return (
       <div className={styles.stateCard}>
         <div className={styles.spinner} />
-        <strong>AI-afbeeldingen laden</strong>
+        <strong>Bibliotheek laden</strong>
         <p>
-          De gegenereerde resultaten worden uit
-          Supabase opgehaald.
+          De afbeeldingen worden per artikel
+          gegroepeerd.
         </p>
       </div>
     );
@@ -460,13 +518,11 @@ export function AiAssetLibraryClient() {
 
   if (error && jobs.length === 0) {
     return (
-      <div className={styles.errorCard}>
+      <div className={styles.stateCard}>
         <strong>
           Bibliotheek laden is mislukt
         </strong>
-
         <p>{error}</p>
-
         <button
           type="button"
           className={styles.secondaryButton}
@@ -480,17 +536,15 @@ export function AiAssetLibraryClient() {
 
   if (assets.length === 0) {
     return (
-      <div className={styles.emptyState}>
+      <div className={styles.stateCard}>
         <strong>
-          Nog geen gegenereerde afbeeldingen
+          Nog geen afbeeldingen
         </strong>
-
         <p>
           Maak eerst een packshot in de Workspace.
-          Zodra de generatie is voltooid, verschijnt
-          het resultaat hier automatisch.
+          Het artikel verschijnt daarna automatisch
+          in deze bibliotheek.
         </p>
-
         <Link
           href="/ai-studio/workspace"
           className={styles.primaryButton}
@@ -501,83 +555,19 @@ export function AiAssetLibraryClient() {
     );
   }
 
-
-  async function deleteMediaAsset(
-    assetId: string,
-  ) {
-    if (!assetId) {
-      window.alert(
-        "De afbeelding kon niet worden herkend.",
-      );
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Weet je zeker dat je deze afbeelding definitief wilt verwijderen? Dit verwijdert ook het bestand uit Supabase Storage.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setDeletingAssetId(assetId);
-
-    try {
-      const response = await fetch(
-        `/api/media/assets/${encodeURIComponent(
-          assetId,
-        )}?mode=delete`,
-        {
-          method: "DELETE",
-          credentials: "same-origin",
-        },
-      );
-
-      const body = (await response
-        .json()
-        .catch(() => null)) as
-        | {
-            error?: string;
-            deleted?: boolean;
-          }
-        | null;
-
-      if (!response.ok) {
-        throw new Error(
-          body?.error ||
-            "De afbeelding kon niet worden verwijderd.",
-        );
-      }
-
-      window.alert("Afbeelding verwijderd.");
-
-      window.location.reload();
-    } catch (caughtError) {
-      window.alert(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "De afbeelding kon niet worden verwijderd.",
-      );
-    } finally {
-      setDeletingAssetId(null);
-    }
-  }
-
-
   return (
     <div className={styles.library}>
-      <div className={styles.libraryToolbar}>
-        <div>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarCopy}>
           <strong>
-            {assets.length}{" "}
-            {assets.length === 1
-              ? "AI-afbeelding"
-              : "AI-afbeeldingen"}
+            {groups.length}{" "}
+            {groups.length === 1
+              ? "artikel"
+              : "artikelen"}
           </strong>
-
           <span>
-            Beheer concepten, goedgekeurde versies
-            en hoofdafbeeldingen.
+            Hoofdafbeeldingen, galerijbeelden en
+            AI-versies zijn per artikel gebundeld.
           </span>
         </div>
 
@@ -588,12 +578,10 @@ export function AiAssetLibraryClient() {
           >
             Nieuwe generatie
           </Link>
-
           <button
             type="button"
             className={styles.secondaryButton}
             onClick={() => void loadJobs()}
-            disabled={loading}
           >
             Vernieuwen
           </button>
@@ -601,302 +589,601 @@ export function AiAssetLibraryClient() {
       </div>
 
       {message && (
-        <div className={styles.successMessage}>
+        <div className={styles.message}>
           {message}
         </div>
       )}
 
       {error && (
-        <div className={styles.errorMessage}>
+        <div className={styles.error}>
           {error}
         </div>
       )}
 
-      <section className={styles.assetGrid}>
-        {assets.map((asset) => {
-          const approved =
-            asset.assetStatus === "APPROVED";
+      <section className={styles.articleList}>
+        {groups.map((group) => {
+          const primary =
+            group.primaryAsset;
+          const gallery =
+            group.galleryAssets.filter(
+              (asset) =>
+                asset.assetStatus === "APPROVED",
+            );
+          const historyOpen =
+            openGroups.has(group.key);
 
           return (
             <article
-              key={asset.id}
-              className={`${styles.assetCard} ${
-                asset.isPrimary
-                  ? styles.assetCardPrimary
-                  : approved
-                    ? styles.assetCardApproved
-                    : ""
-              }`}
+              key={group.key}
+              className={styles.articleGroup}
             >
-              <div
-                className={styles.assetImageFrame}
+              <header
+                className={styles.articleHeader}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={asset.resultUrl ?? ""}
-                  alt={`${jobTypeLabel(
-                    asset.type,
-                  )} van ${asset.articleName}`}
-                  className={styles.assetImage}
-                />
+                <div
+                  className={styles.articleIdentity}
+                >
+                  <strong>
+                    {group.articleName}
+                  </strong>
+                  <span>
+                    {group.articleCode}
+                  </span>
+                </div>
 
                 <div
-                  className={styles.imageBadges}
+                  className={styles.articleStats}
                 >
                   <span
-                    className={
-                      approved
-                        ? styles.approvedBadge
-                        : styles.conceptBadge
-                    }
+                    className={styles.statBadge}
                   >
-                    {getAssetStatusLabel(
-                      asset.assetStatus,
+                    {gallery.length +
+                      (primary ? 1 : 0)}{" "}
+                    media
+                  </span>
+                  <span
+                    className={styles.statBadge}
+                  >
+                    {group.versionHistory.length}{" "}
+                    AI-versies
+                  </span>
+                  <span
+                    className={styles.statBadge}
+                  >
+                    Laatst gewijzigd{" "}
+                    {formatDate(
+                      group.latestUpdatedAt,
                     )}
                   </span>
-
-                  {asset.isPrimary && (
-                    <span
-                      className={styles.primaryBadge}
-                    >
-                      Hoofdafbeelding
-                    </span>
-                  )}
-
-                  <span
-                    className={styles.versionBadge}
-                  >
-                    v{asset.versionNumber}
-                  </span>
                 </div>
-              </div>
+              </header>
 
-              <div className={styles.assetContent}>
-                <div
-                  className={styles.assetTitleRow}
+              <div className={styles.articleBody}>
+                <section
+                  className={styles.primaryColumn}
                 >
-                  <div>
+                  <div
+                    className={styles.sectionTitle}
+                  >
                     <strong>
-                      {asset.articleName}
+                      Hoofdafbeelding
                     </strong>
-                    <span>
-                      {asset.articleCode}
-                    </span>
                   </div>
 
-                  <span
-                    className={styles.typeBadge}
-                  >
-                    {jobTypeLabel(asset.type)}
-                  </span>
-                </div>
+                  {primary &&
+                  primary.resultUrl ? (
+                    <div
+                      className={styles.primaryCard}
+                    >
+                      <div
+                        className={
+                          styles.primaryImageFrame
+                        }
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={primary.resultUrl}
+                          alt={`Hoofdafbeelding van ${group.articleName}`}
+                          className={
+                            styles.primaryImage
+                          }
+                        />
+                        <span
+                          className={
+                            styles.primaryBadge
+                          }
+                        >
+                          Hoofdafbeelding
+                        </span>
+                        <span
+                          className={
+                            styles.versionBadge
+                          }
+                        >
+                          v
+                          {
+                            primary.versionNumber
+                          }
+                        </span>
+                      </div>
 
-                <dl
-                  className={styles.assetDetails}
-                >
-                  <div>
-                    <dt>Versie</dt>
-                    <dd>
-                      v{asset.versionNumber}
-                    </dd>
-                  </div>
+                      <div
+                        className={
+                          styles.primaryMeta
+                        }
+                      >
+                        <div
+                          className={
+                            styles.primaryMetaText
+                          }
+                        >
+                          <strong>
+                            {jobTypeLabel(
+                              primary.type,
+                            )}
+                          </strong>
+                          <span>
+                            {formatDate(
+                              primary.completedAt ||
+                                primary.updatedAt,
+                            )}
+                          </span>
+                        </div>
 
-                  <div>
-                    <dt>Status</dt>
-                    <dd>
-                      {getAssetStatusLabel(
-                        asset.assetStatus,
-                      )}
-                    </dd>
-                  </div>
+                        <div
+                          className={
+                            styles.actions
+                          }
+                        >
+                          {primary.resultUrl && (
+                            <a
+                              href={primary.resultUrl}
+                              download
+                              className={
+                                styles.secondaryButton
+                              }
+                            >
+                              Download PNG
+                            </a>
+                          )}
 
-                  <div>
-                    <dt>Preset</dt>
-                    <dd>
-                      {asset.presetName ||
-                        "Standaard"}
-                    </dd>
-                  </div>
+                          {primary.sourceUrl && (
+                            <a
+                              href={primary.sourceUrl}
+                              download
+                              className={
+                                styles.secondaryButton
+                              }
+                            >
+                              Download bronfoto
+                            </a>
+                          )}
 
-                  <div>
-                    <dt>AI-model</dt>
-                    <dd>
-                      {asset.provider ||
-                        "Onbekend"}
-                      {" · "}
-                      {asset.model ||
-                        "Onbekend"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Gegenereerd</dt>
-                    <dd>
-                      {formatDate(
-                        asset.completedAt ||
-                          asset.updatedAt ||
-                          asset.createdAt,
-                      )}
-                    </dd>
-                  </div>
-
-                  {approved && (
-                    <div>
-                      <dt>Goedgekeurd</dt>
-                      <dd>
-                        {formatDate(
-                          asset.approvedAt,
-                        )}
-                      </dd>
+                          <button
+                            type="button"
+                            className={
+                              styles.dangerButton
+                            }
+                            onClick={() =>
+                              void deleteAsset(
+                                primary,
+                              )
+                            }
+                            disabled={
+                              deletingId ===
+                              (primary.assetId ||
+                                primary.id)
+                            }
+                          >
+                            {deletingId ===
+                            (primary.assetId ||
+                              primary.id)
+                              ? "Verwijderen..."
+                              : "Verwijderen"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={
+                        styles.emptyPrimary
+                      }
+                    >
+                      Nog geen hoofdafbeelding
+                      ingesteld.
                     </div>
                   )}
-                </dl>
+                </section>
 
-                <PackshotReview
-                  jobId={asset.id}
-                  versionNumber={asset.versionNumber}
-                  onCompleted={() => void loadJobs()}
-                />
-
-                <div
-                  className={styles.assetActions}
+                <section
+                  className={styles.galleryColumn}
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void deleteMediaAsset(
-                        resolveMediaAssetId(asset),
-                      )
-                    }
-                    disabled={
-                      deletingAssetId ===
-                      resolveMediaAssetId(asset)
-                    }
-                    title="Afbeelding definitief verwijderen"
-                    style={{
-                      border: "1px solid #e2a7a7",
-                      background: "#fff7f7",
-                      color: "#a32424",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
-                      cursor:
-                        deletingAssetId ===
-                        resolveMediaAssetId(asset)
-                          ? "wait"
-                          : "pointer",
-                    }}
+                  <div
+                    className={styles.sectionTitle}
                   >
-                    {deletingAssetId ===
-                    resolveMediaAssetId(asset)
-                      ? "Verwijderen..."
-                      : "Verwijderen"}
-                  </button>
+                    <strong>
+                      Overige afbeeldingen
+                    </strong>
+                    <span>
+                      {gallery.length}
+                    </span>
+                  </div>
 
-                  {!approved ? (
-                    <>
-                      <button
-                        type="button"
-                        className={
-                          styles.secondaryButton
-                        }
-                        onClick={() =>
-                          void updateApproval(
-                            asset,
-                            true,
-                            false,
-                          )
-                        }
-                        disabled={isPending(
-                          asset.id,
-                        )}
-                      >
-                        {isPending(
-                          asset.id,
-                          "approve",
-                        )
-                          ? "Goedkeuren..."
-                          : "Goedkeuren"}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={
-                          styles.primaryButton
-                        }
-                        onClick={() =>
-                          void updateApproval(
-                            asset,
-                            true,
-                            true,
-                          )
-                        }
-                        disabled={isPending(
-                          asset.id,
-                        )}
-                      >
-                        {isPending(
-                          asset.id,
-                          "approve-primary",
-                        )
-                          ? "Instellen..."
-                          : "Goedkeuren als hoofdafbeelding"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-{!asset.isPrimary && (
-                        <button
-                          type="button"
+                  {gallery.length > 0 ? (
+                    <div
+                      className={
+                        styles.galleryGrid
+                      }
+                    >
+                      {gallery.map((asset) => (
+                        <div
+                          key={asset.id}
                           className={
-                            styles.primaryButton
+                            styles.galleryCard
                           }
-                          onClick={() =>
-                            void updateApproval(
-                              asset,
-                              true,
-                              true,
-                            )
-                          }
-                          disabled={isPending(
-                            asset.id,
-                          )}
                         >
-                          {isPending(
-                            asset.id,
-                            "approve-primary",
-                          )
-                            ? "Instellen..."
-                            : "Maak hoofdafbeelding"}
-                        </button>
-                      )}
+                          <div
+                            className={
+                              styles.galleryImageFrame
+                            }
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={
+                                asset.resultUrl ??
+                                ""
+                              }
+                              alt={`${jobTypeLabel(
+                                asset.type,
+                              )} van ${group.articleName}`}
+                              className={
+                                styles.galleryImage
+                              }
+                            />
+                            <span
+                              className={
+                                styles.versionBadge
+                              }
+                            >
+                              v
+                              {
+                                asset.versionNumber
+                              }
+                            </span>
+                          </div>
 
-                      <button
-                        type="button"
-                        className={
-                          styles.dangerButton
-                        }
-                        onClick={() =>
-                          void updateApproval(
-                            asset,
-                            false,
-                            false,
-                          )
-                        }
-                        disabled={isPending(
-                          asset.id,
-                        )}
-                      >
-                        {isPending(
-                          asset.id,
-                          "revoke",
-                        )
-                          ? "Intrekken..."
-                          : "Goedkeuring intrekken"}
-                      </button>
-                    </>
+                          <div
+                            className={
+                              styles.galleryMeta
+                            }
+                          >
+                            <strong>
+                              {jobTypeLabel(
+                                asset.type,
+                              )}
+                            </strong>
+                            <span>
+                              {formatDate(
+                                asset.completedAt ||
+                                  asset.updatedAt,
+                              )}
+                            </span>
+
+                            <div
+                              className={
+                                styles.actions
+                              }
+                            >
+                              {asset.resultUrl && (
+                                <a
+                                  href={asset.resultUrl}
+                                  download
+                                  className={
+                                    styles.secondaryButton
+                                  }
+                                >
+                                  Download PNG
+                                </a>
+                              )}
+
+                              {asset.sourceUrl && (
+                                <a
+                                  href={asset.sourceUrl}
+                                  download
+                                  className={
+                                    styles.secondaryButton
+                                  }
+                                >
+                                  Download bronfoto
+                                </a>
+                              )}
+
+                              <button
+                                type="button"
+                                className={
+                                  styles.secondaryButton
+                                }
+                                onClick={() =>
+                                  void updateApproval(
+                                    asset,
+                                    true,
+                                    true,
+                                  )
+                                }
+                                disabled={isPending(
+                                  asset.id,
+                                )}
+                              >
+                                Maak hoofd
+                              </button>
+
+                              <button
+                                type="button"
+                                className={
+                                  styles.iconButton
+                                }
+                                title="Afbeelding verwijderen"
+                                aria-label="Afbeelding verwijderen"
+                                onClick={() =>
+                                  void deleteAsset(
+                                    asset,
+                                  )
+                                }
+                                disabled={
+                                  deletingId ===
+                                  (asset.assetId ||
+                                    asset.id)
+                                }
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className={
+                        styles.emptyGallery
+                      }
+                    >
+                      Er zijn nog geen
+                      galerijafbeeldingen.
+                    </div>
                   )}
-                </div>
+                </section>
               </div>
+
+              <section
+                className={styles.versionSection}
+              >
+                <button
+                  type="button"
+                  className={styles.versionToggle}
+                  onClick={() =>
+                    toggleGroup(group.key)
+                  }
+                >
+                  <span>
+                    {historyOpen ? "▼" : "▶"}{" "}
+                    AI-versiegeschiedenis
+                  </span>
+                  <span>
+                    {
+                      group.versionHistory
+                        .length
+                    }{" "}
+                    versies
+                  </span>
+                </button>
+
+                {historyOpen && (
+                  <div
+                    className={styles.versionList}
+                  >
+                    {group.versionHistory.map(
+                      (asset) => {
+                        const approved =
+                          asset.assetStatus ===
+                          "APPROVED";
+
+                        return (
+                          <div
+                            key={asset.id}
+                            className={
+                              styles.versionItem
+                            }
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={
+                                asset.resultUrl ??
+                                ""
+                              }
+                              alt={`Versie ${asset.versionNumber}`}
+                              className={
+                                styles.versionThumb
+                              }
+                            />
+
+                            <div
+                              className={
+                                styles.versionContent
+                              }
+                            >
+                              <div
+                                className={
+                                  styles.versionHeading
+                                }
+                              >
+                                <div>
+                                  <strong>
+                                    Versie{" "}
+                                    {
+                                      asset.versionNumber
+                                    }
+                                    {asset.isPrimary
+                                      ? " · Hoofdafbeelding"
+                                      : ""}
+                                  </strong>
+                                  <span>
+                                    {jobTypeLabel(
+                                      asset.type,
+                                    )}
+                                    {" · "}
+                                    {approved
+                                      ? "Goedgekeurd"
+                                      : "Concept"}
+                                    {" · "}
+                                    {formatDate(
+                                      asset.completedAt ||
+                                        asset.updatedAt,
+                                    )}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className={
+                                    styles.iconButton
+                                  }
+                                  title="Versie verwijderen"
+                                  aria-label="Versie verwijderen"
+                                  onClick={() =>
+                                    void deleteAsset(
+                                      asset,
+                                    )
+                                  }
+                                  disabled={
+                                    deletingId ===
+                                    (asset.assetId ||
+                                      asset.id)
+                                  }
+                                >
+                                  ×
+                                </button>
+                              </div>
+
+                              <div
+                                className={
+                                  styles.actions
+                                }
+                              >
+                                {asset.resultUrl && (
+                                  <a
+                                    href={asset.resultUrl}
+                                    download
+                                    className={
+                                      styles.secondaryButton
+                                    }
+                                  >
+                                    Download PNG
+                                  </a>
+                                )}
+
+                                {asset.sourceUrl && (
+                                  <a
+                                    href={asset.sourceUrl}
+                                    download
+                                    className={
+                                      styles.secondaryButton
+                                    }
+                                  >
+                                    Download bronfoto
+                                  </a>
+                                )}
+
+                                {!approved && (
+                                  <button
+                                    type="button"
+                                    className={
+                                      styles.secondaryButton
+                                    }
+                                    onClick={() =>
+                                      void updateApproval(
+                                        asset,
+                                        true,
+                                        false,
+                                      )
+                                    }
+                                    disabled={isPending(
+                                      asset.id,
+                                    )}
+                                  >
+                                    Toevoegen aan
+                                    galerij
+                                  </button>
+                                )}
+
+                                {!asset.isPrimary && (
+                                  <button
+                                    type="button"
+                                    className={
+                                      styles.primaryButton
+                                    }
+                                    onClick={() =>
+                                      void updateApproval(
+                                        asset,
+                                        true,
+                                        true,
+                                      )
+                                    }
+                                    disabled={isPending(
+                                      asset.id,
+                                    )}
+                                  >
+                                    Maak
+                                    hoofdafbeelding
+                                  </button>
+                                )}
+
+                                {approved && (
+                                  <button
+                                    type="button"
+                                    className={
+                                      styles.dangerButton
+                                    }
+                                    onClick={() =>
+                                      void updateApproval(
+                                        asset,
+                                        false,
+                                        false,
+                                      )
+                                    }
+                                    disabled={isPending(
+                                      asset.id,
+                                    )}
+                                  >
+                                    Uit galerij halen
+                                  </button>
+                                )}
+                              </div>
+
+                              <div
+                                className={
+                                  styles.reviewWrap
+                                }
+                              >
+                                <PackshotReview
+                                  jobId={asset.id}
+                                  versionNumber={
+                                    asset.versionNumber
+                                  }
+                                  onCompleted={() =>
+                                    void loadJobs()
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </section>
             </article>
           );
         })}

@@ -1,0 +1,71 @@
+supabase/migrations/202608040004_ai_packshot_reviews.sql:1:alter table public.ai_studio_jobs
+supabase/migrations/202608040004_ai_packshot_reviews.sql:3:    references public.ai_studio_jobs(id)
+supabase/migrations/202608040004_ai_packshot_reviews.sql:6:create table if not exists public.ai_studio_reviews (
+supabase/migrations/202608040004_ai_packshot_reviews.sql:14:    references public.ai_studio_jobs(id)
+supabase/migrations/202608040004_ai_packshot_reviews.sql:18:    references public.ai_studio_jobs(id)
+supabase/migrations/202608040004_ai_packshot_reviews.sql:52:  ai_studio_jobs_parent_job_idx
+supabase/migrations/202608040004_ai_packshot_reviews.sql:53:on public.ai_studio_jobs (
+supabase/migrations/202608040002_media_center_foundation.sql:1:create table if not exists public.media_assets (
+supabase/migrations/202608040002_media_center_foundation.sql:67:    references public.media_assets(id)
+supabase/migrations/202608040002_media_center_foundation.sql:76:    references public.ai_studio_jobs(id)
+supabase/migrations/202608040002_media_center_foundation.sql:99:create table if not exists public.media_asset_links (
+supabase/migrations/202608040002_media_center_foundation.sql:107:    references public.media_assets(id)
+supabase/migrations/202608040002_media_center_foundation.sql:154:create index if not exists media_assets_org_created_idx
+supabase/migrations/202608040002_media_center_foundation.sql:155:  on public.media_assets (
+supabase/migrations/202608040002_media_center_foundation.sql:160:create index if not exists media_assets_org_category_idx
+supabase/migrations/202608040002_media_center_foundation.sql:161:  on public.media_assets (
+supabase/migrations/202608040002_media_center_foundation.sql:167:create index if not exists media_asset_links_entity_idx
+supabase/migrations/202608040002_media_center_foundation.sql:168:  on public.media_asset_links (
+supabase/migrations/202608040002_media_center_foundation.sql:175:create unique index if not exists media_asset_links_primary_idx
+supabase/migrations/202608040002_media_center_foundation.sql:176:  on public.media_asset_links (
+supabase/migrations/202608040002_media_center_foundation.sql:184:alter table public.media_assets
+supabase/migrations/202608040002_media_center_foundation.sql:187:alter table public.media_asset_links
+supabase/migrations/202608040002_media_center_foundation.sql:191:on public.media_assets
+supabase/migrations/202608040002_media_center_foundation.sql:199:on public.media_assets
+supabase/migrations/202608040002_media_center_foundation.sql:207:on public.media_assets
+supabase/migrations/202608040002_media_center_foundation.sql:218:on public.media_assets
+supabase/migrations/202608040002_media_center_foundation.sql:226:on public.media_asset_links
+supabase/migrations/202608040002_media_center_foundation.sql:234:on public.media_asset_links
+supabase/migrations/202608040002_media_center_foundation.sql:242:on public.media_asset_links
+supabase/migrations/202608040002_media_center_foundation.sql:253:on public.media_asset_links
+supabase/migrations/202608030001_ai_studio_foundation.sql:1:create table if not exists public.ai_studio_jobs (
+supabase/migrations/202608030001_ai_studio_foundation.sql:57:create index if not exists ai_studio_jobs_organization_created_idx
+supabase/migrations/202608030001_ai_studio_foundation.sql:58:  on public.ai_studio_jobs (
+supabase/migrations/202608030001_ai_studio_foundation.sql:63:create index if not exists ai_studio_jobs_article_idx
+supabase/migrations/202608030001_ai_studio_foundation.sql:64:  on public.ai_studio_jobs (
+supabase/migrations/202608030001_ai_studio_foundation.sql:69:alter table public.ai_studio_jobs
+supabase/migrations/202608030001_ai_studio_foundation.sql:74:  on public.ai_studio_jobs;
+supabase/migrations/202608030001_ai_studio_foundation.sql:78:on public.ai_studio_jobs
+supabase/migrations/202608030001_ai_studio_foundation.sql:87:  on public.ai_studio_jobs;
+supabase/migrations/202608030001_ai_studio_foundation.sql:91:on public.ai_studio_jobs
+supabase/migrations/202608030001_ai_studio_foundation.sql:100:  on public.ai_studio_jobs;
+supabase/migrations/202608030001_ai_studio_foundation.sql:104:on public.ai_studio_jobs
+supabase/migrations/202608030001_ai_studio_foundation.sql:116:  on public.ai_studio_jobs;
+supabase/migrations/202608030001_ai_studio_foundation.sql:120:on public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:1:alter table public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:12:alter table public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:14:    ai_studio_jobs_asset_status_check;
+supabase/migrations/202608040001_ai_asset_approval.sql:16:alter table public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:18:    ai_studio_jobs_asset_status_check
+supabase/migrations/202608040001_ai_asset_approval.sql:38:  from public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:40:update public.ai_studio_jobs as jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:46:alter table public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:77:  from public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:89:  on public.ai_studio_jobs;
+supabase/migrations/202608040001_ai_asset_approval.sql:94:on public.ai_studio_jobs
+supabase/migrations/202608040001_ai_asset_approval.sql:100:  ai_studio_jobs_one_primary_asset_idx
+supabase/migrations/202608040001_ai_asset_approval.sql:101:on public.ai_studio_jobs (
+supabase/migrations/202608040001_ai_asset_approval.sql:110:  ai_studio_jobs_asset_library_idx
+supabase/migrations/202608040001_ai_asset_approval.sql:111:on public.ai_studio_jobs (
+supabase/migrations/202608040001_ai_asset_approval.sql:118:  ai_studio_jobs_article_version_idx
+supabase/migrations/202608040001_ai_asset_approval.sql:119:on public.ai_studio_jobs (
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:1:alter table public.ai_studio_jobs
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:10:alter table public.ai_studio_jobs
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:12:    ai_studio_jobs_source_conversion_status_check;
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:14:alter table public.ai_studio_jobs
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:16:    ai_studio_jobs_source_conversion_status_check
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:28:  ai_studio_jobs_source_conversion_idx
+supabase/migrations/202608030003_ai_studio_source_conversion.sql:29:on public.ai_studio_jobs (
+supabase/migrations/202608030002_ai_studio_generation.sql:1:alter table public.ai_studio_jobs
+supabase/migrations/202608030002_ai_studio_generation.sql:8:create index if not exists ai_studio_jobs_status_idx
+supabase/migrations/202608030002_ai_studio_generation.sql:9:  on public.ai_studio_jobs (

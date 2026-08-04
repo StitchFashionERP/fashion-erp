@@ -1,0 +1,30 @@
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:4:  createMediaAssetLink,
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:5:  createAndLinkMediaAsset,
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:136:      .from("media_assets")
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:151:    const created = await createAndLinkMediaAsset(
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:192:    await createMediaAssetLink({
+src/app/api/ai-studio/jobs/[id]/approval/route.ts:209:    .from("media_assets")
+src/app/ai-studio/product-studio/components/GeneratedAssetActions.tsx:48:        )}/approval`,
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:363:        )}/approval`,
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:402:      const approval =
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:405:      updateLocalAsset(approval);
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:420:    } catch (approvalError) {
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:422:        approvalError instanceof Error
+src/app/ai-studio/bibliotheek/components/AiAssetLibraryClient.tsx:423:          ? approvalError.message
+src/lib/media/server/media-service.ts:60:    parentAssetId: asNullableString(row.parent_asset_id),
+src/lib/media/server/media-service.ts:81:    assetId: asString(row.asset_id),
+src/lib/media/server/media-service.ts:92:export async function createMediaAsset({
+src/lib/media/server/media-service.ts:99:    .from("media_assets")
+src/lib/media/server/media-service.ts:115:      parent_asset_id: input.parentAssetId ?? null,
+src/lib/media/server/media-service.ts:138:export async function createMediaAssetLink({
+src/lib/media/server/media-service.ts:145:      .from("media_asset_links")
+src/lib/media/server/media-service.ts:161:    .from("media_asset_links")
+src/lib/media/server/media-service.ts:165:        asset_id: input.assetId,
+src/lib/media/server/media-service.ts:175:          "asset_id,entity_type,entity_id,role",
+src/lib/media/server/media-service.ts:193:export async function createAndLinkMediaAsset(
+src/lib/media/server/media-service.ts:197:  const asset = await createMediaAsset(assetOptions);
+src/lib/media/server/media-service.ts:200:    const link = await createMediaAssetLink({
+src/lib/media/server/media-service.ts:215:      .from("media_assets")
+src/lib/media/server/product-media-service.ts:57:    .from("media_asset_links")
+src/lib/media/server/product-media-service.ts:63:      media_assets (
+src/lib/media/server/product-media-service.ts:99:    const relatedAssets = link.media_assets;

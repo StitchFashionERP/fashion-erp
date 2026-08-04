@@ -8,6 +8,8 @@ type Props = {
   jobId: string;
   articleId: string;
   articleCode: string;
+  sourceUrl: string | null;
+  resultUrl: string | null;
 };
 
 function readErrorMessage(
@@ -31,10 +33,13 @@ export function GeneratedAssetActions({
   jobId,
   articleId,
   articleCode,
+  sourceUrl,
+  resultUrl,
 }: Props) {
   const [isApproving, setIsApproving] =
     useState(false);
-  const [approved, setApproved] = useState(false);
+  const [approved, setApproved] =
+    useState(false);
   const [error, setError] = useState("");
 
   async function approveAsPrimary() {
@@ -43,9 +48,7 @@ export function GeneratedAssetActions({
 
     try {
       const response = await fetch(
-        `/api/ai-studio/jobs/${encodeURIComponent(
-          jobId,
-        )}/approval`,
+        `/api/ai-studio/jobs/${encodeURIComponent(jobId)}/approval`,
         {
           method: "PATCH",
           headers: {
@@ -58,9 +61,9 @@ export function GeneratedAssetActions({
         },
       );
 
-      const body = (await response
+      const body = await response
         .json()
-        .catch(() => null)) as unknown;
+        .catch(() => null);
 
       if (!response.ok) {
         throw new Error(
@@ -90,6 +93,28 @@ export function GeneratedAssetActions({
 
   return (
     <div className={styles.workspaceResultActions}>
+      <div>
+        {resultUrl && (
+          <a
+            href={resultUrl}
+            download
+            className={styles.secondaryButton}
+          >
+            Download PNG
+          </a>
+        )}
+
+        {sourceUrl && (
+          <a
+            href={sourceUrl}
+            download
+            className={styles.secondaryButton}
+          >
+            Download bronfoto
+          </a>
+        )}
+      </div>
+
       {!approved ? (
         <button
           type="button"
@@ -104,8 +129,7 @@ export function GeneratedAssetActions({
       ) : (
         <>
           <div className={styles.successNotice}>
-            Packshot goedgekeurd en gekoppeld aan{" "}
-            {articleCode}.
+            Packshot goedgekeurd en gekoppeld aan {articleCode}.
           </div>
 
           <Link

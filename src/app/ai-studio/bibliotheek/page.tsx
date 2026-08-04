@@ -1,4 +1,4 @@
-import { AiAssetLibraryClient } from "./components/AiAssetLibraryClient";
+import { AiAssetLibraryOverviewClient } from "./components/AiAssetLibraryOverviewClient";
 import styles from "../ai-studio.module.css";
 
 export default function AiStudioLibraryPage() {
@@ -15,15 +15,15 @@ export default function AiStudioLibraryPage() {
           </h1>
 
           <p className={styles.description}>
-            Alle voltooide AI-generaties worden hier
-            automatisch zichtbaar. Goedkeuren, versiebeheer
-            en koppelen aan artikelen volgen in de volgende
-            fase.
+            Bekijk per artikel de hoofdafbeelding,
+            productnaam en het artikelnummer. Open
+            een artikel voor de galerij en volledige
+            AI-versiegeschiedenis.
           </p>
         </div>
       </header>
 
-      <AiAssetLibraryClient />
+      <AiAssetLibraryOverviewClient />
     </>
   );
 }
