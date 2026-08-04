@@ -2176,7 +2176,12 @@ function drawArticleBlock(
   );
 
   const sizeAreaStart = MARGIN_X + 55;
-  const sizeAreaWidth = 70;
+  const sizeAreaWidth = 72;
+
+  const totalColumnX = 132;
+  const orderColumnX = 145;
+  const salesPriceColumnX = 165;
+  const retailPriceColumnX = 183;
   const sizeColumnWidth =
     sizeAreaWidth /
     Math.max(block.sizes.length, 1);
@@ -2205,8 +2210,8 @@ function drawArticleBlock(
     );
   });
 
-  pdf.text("Totaal", 137, tableHeaderY);
-  pdf.text("Ordernr.", 158, tableHeaderY);
+  pdf.text("Totaal", totalColumnX, tableHeaderY);
+  pdf.text("Ordernr.", orderColumnX, tableHeaderY);
 
   if (
     definition.documentType ===
@@ -2214,12 +2219,12 @@ function drawArticleBlock(
   ) {
     pdf.text(
       "Verkoopprijs",
-      183,
+      salesPriceColumnX,
       tableHeaderY,
     );
     pdf.text(
       "Adviesprijs",
-      210,
+      retailPriceColumnX,
       tableHeaderY,
     );
   } else {
@@ -2292,13 +2297,13 @@ function drawArticleBlock(
 
       pdf.text(
         String(rowTotal),
-        137,
+        totalColumnX,
         rowY,
       );
 
       pdf.text(
         block.orderNumber,
-        158,
+        orderColumnX,
         rowY,
       );
 
@@ -2313,9 +2318,8 @@ function drawArticleBlock(
                 definition.currency,
               )
             : "—",
-          181,
+          salesPriceColumnX,
           rowY,
-          { align: "right" },
         );
 
         pdf.text(
@@ -2326,9 +2330,8 @@ function drawArticleBlock(
                 definition.currency,
               )
             : "—",
-          193,
+          retailPriceColumnX,
           rowY,
-          { align: "right" },
         );
       } else {
         const price =
@@ -2347,9 +2350,8 @@ function drawArticleBlock(
                 definition.currency,
               )
             : "—",
-          190,
+          salesPriceColumnX,
           rowY,
-          { align: "right" },
         );
       }
     },
