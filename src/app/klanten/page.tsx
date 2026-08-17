@@ -524,6 +524,14 @@ export default function CustomersPage() {
         companyName: form.companyName.trim(),
         contactPerson: form.contactPerson.trim(),
         email: form.email.trim(),
+
+        invoiceEmail: form.invoiceEmail.trim(),
+        invoiceCc: form.invoiceCc.trim(),
+        orderEmail: form.orderEmail.trim(),
+        orderCc: form.orderCc.trim(),
+        deliveryEmail: form.deliveryEmail.trim(),
+        deliveryCc: form.deliveryCc.trim(),
+
         phone: form.phone.trim(),
         city: form.city.trim(),
         country: form.country,
