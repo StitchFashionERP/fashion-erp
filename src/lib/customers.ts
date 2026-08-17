@@ -7,6 +7,14 @@ export type Customer = {
   companyName: string;
   contactPerson: string;
   email: string;
+
+  invoiceEmail: string;
+  invoiceCc: string;
+  orderEmail: string;
+  orderCc: string;
+  deliveryEmail: string;
+  deliveryCc: string;
+
   phone: string;
   city: string;
   country: string;
