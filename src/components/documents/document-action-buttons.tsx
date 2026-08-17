@@ -95,9 +95,13 @@ export function DocumentActionButtons({
         <button
           type="button"
           className={emailButtonClassName}
-          onClick={() =>
-            setShowSendDialog(true)
-          }
+          onClick={() => {
+            console.log("OPEN EMAIL BUTTON CLICKED", {
+              documentType,
+              referenceId,
+            });
+            setShowSendDialog(true);
+          }}
         >
           {emailLabel}
         </button>

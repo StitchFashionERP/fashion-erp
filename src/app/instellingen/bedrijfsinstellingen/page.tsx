@@ -502,6 +502,61 @@ export default function CompanySettingsPage() {
                 </label>
 
                 <label>
+                  <span>Afzendernaam e-mail</span>
+                  <input
+                    value={settings.company.emailFromName}
+                    onChange={(event) =>
+                      updateGroup("company", {
+                        emailFromName: event.target.value,
+                      })
+                    }
+                    placeholder="Bijvoorbeeld Dooruiter"
+                  />
+                </label>
+
+                <label>
+                  <span>Afzender e-mailadres</span>
+                  <input
+                    type="email"
+                    value={settings.company.emailFromAddress}
+                    onChange={(event) =>
+                      updateGroup("company", {
+                        emailFromAddress: event.target.value,
+                      })
+                    }
+                    placeholder="kim@dooruiter.nl"
+                  />
+                </label>
+
+                <label>
+                  <span>Antwoord e-mailadres</span>
+                  <input
+                    type="email"
+                    value={settings.company.emailReplyTo}
+                    onChange={(event) =>
+                      updateGroup("company", {
+                        emailReplyTo: event.target.value,
+                      })
+                    }
+                    placeholder="kim@dooruiter.nl"
+                  />
+                </label>
+
+                <label>
+                  <span>BCC kopie versturen naar</span>
+                  <input
+                    type="email"
+                    value={settings.company.emailBcc}
+                    onChange={(event) =>
+                      updateGroup("company", {
+                        emailBcc: event.target.value,
+                      })
+                    }
+                    placeholder="intern@bedrijf.nl"
+                  />
+                </label>
+
+                <label>
                   <span>Telefoonnummer</span>
                   <input
                     value={settings.company.phone}

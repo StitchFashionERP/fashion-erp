@@ -69,6 +69,13 @@ export async function POST(request: Request) {
     const discount = lines.reduce((t, l) => t + num(l.quantity) * num(l.unitPrice) * num(l.discountPercentage) / 100, 0);
     const subtotal = subtotalBeforeDiscount - discount; const vat = subtotal * .21;
     const now = new Date().toISOString();
+    console.log("CREATE SALES ORDER EMAIL DATA", {
+      email: input.email,
+      orderEmail: input.orderEmail,
+      invoiceEmail: input.invoiceEmail,
+      deliveryEmail: input.deliveryEmail,
+    });
+
     const profile = { ...input, orderNumber, orderDate: now.slice(0,10), createdAt: now, updatedAt: now };
     const { data: order, error } = await supabase.from("sales_orders").insert({ organization_id: organizationId, order_number: orderNumber, customer_id: customerId, order_date: now.slice(0,10), requested_delivery_date: String(input.requestedDeliveryDate ?? "") || null, status: String(input.status ?? "Concept") === "Concept" ? "Concept" : "Bevestigd", notes: String(input.notes ?? "") || null, subtotal, vat, total: subtotal + vat, created_by: user.id, profile }).select("*").single();
     if (error) throw new ApiError(error.message);

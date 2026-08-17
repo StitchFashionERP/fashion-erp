@@ -34,6 +34,8 @@ export type DocumentEmailSetting = {
   cc: string;
   bcc: string;
   includePdf: boolean;
+  footer: string;
+  logoUrl: string;
 };
 
 export type CommunicationSettings = {
@@ -84,6 +86,9 @@ function defaultDocumentSetting(
     cc: "",
     bcc: "",
     includePdf: true,
+    footer:
+      "Met vriendelijke groet,\n{{sender_name}}",
+    logoUrl: "",
   };
 }
 

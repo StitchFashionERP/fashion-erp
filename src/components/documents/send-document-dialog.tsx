@@ -87,8 +87,13 @@ export function SendDocumentDialog({
       setDraft(null);
 
       try {
+        console.log("PREPARE DOCUMENT DRAFT", {
+          documentType,
+          referenceId,
+        });
+
         const emailDraft =
-          createDocumentEmailDraft(
+          await createDocumentEmailDraft(
             documentType,
             referenceId,
           );

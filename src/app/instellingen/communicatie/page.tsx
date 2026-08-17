@@ -350,6 +350,24 @@ export default function CommunicationSettingsPage() {
                           onChange={(event) => updateDocument({ message: event.target.value })}
                         />
                       </label>
+
+                      <label className={styles.fullWidth}>
+                        <span>Logo URL</span>
+                        <input
+                          value={documentSetting.logoUrl}
+                          onChange={(event) => updateDocument({ logoUrl: event.target.value })}
+                          placeholder="https://..."
+                        />
+                      </label>
+
+                      <label className={styles.fullWidth}>
+                        <span>E-mailfooter</span>
+                        <textarea
+                          rows={5}
+                          value={documentSetting.footer}
+                          onChange={(event) => updateDocument({ footer: event.target.value })}
+                        />
+                      </label>
                     </div>
 
                     <div className={styles.variables}>

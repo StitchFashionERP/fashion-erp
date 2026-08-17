@@ -11,6 +11,9 @@ type SendEmailRequest = {
   cc?: string[];
   bcc?: string[];
 
+  from?: string;
+  replyTo?: string;
+
   subject: string;
   message: string;
 
@@ -114,12 +117,16 @@ function renderEmailHtml(message: string) {
 export async function POST(
   request: Request,
 ) {
+
   try {
+
     const apiKey =
       process.env.RESEND_API_KEY;
 
+
     const fromAddress =
       process.env.EMAIL_FROM;
+
 
     if (!apiKey) {
       return NextResponse.json(
@@ -149,6 +156,7 @@ export async function POST(
 
     const body =
       (await request.json()) as SendEmailRequest;
+
 
     const recipients = Array.isArray(
       body.to,
@@ -208,7 +216,10 @@ export async function POST(
             "application/json",
         },
         body: JSON.stringify({
-          from: fromAddress,
+          from:
+            body.from || fromAddress,
+          reply_to:
+            body.replyTo || undefined,
           to: recipients,
 
           cc:

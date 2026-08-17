@@ -56,6 +56,36 @@ function rowToCustomer(row: Record<string, unknown>) {
     companyName: String(row.company_name ?? ""),
     contactPerson: String(row.contact_person ?? ""),
     email: String(row.email ?? ""),
+    orderEmail: String(
+      profile.orderEmail ??
+      crm.orderEmail ??
+      "",
+    ),
+    orderCc: String(
+      profile.orderCc ??
+      crm.orderCc ??
+      "",
+    ),
+    invoiceEmail: String(
+      profile.invoiceEmail ??
+      crm.invoiceEmail ??
+      "",
+    ),
+    invoiceCc: String(
+      profile.invoiceCc ??
+      crm.invoiceCc ??
+      "",
+    ),
+    deliveryEmail: String(
+      profile.deliveryEmail ??
+      crm.deliveryEmail ??
+      "",
+    ),
+    deliveryCc: String(
+      profile.deliveryCc ??
+      crm.deliveryCc ??
+      "",
+    ),
     phone: String(row.phone ?? ""),
     address: String(
       row.address ??

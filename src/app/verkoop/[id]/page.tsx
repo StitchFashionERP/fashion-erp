@@ -258,6 +258,15 @@ export default function SalesOrderDetailPage() {
         }`}
         action={
           <div className="button-group">
+            {order.status === "Concept" && (
+              <Link
+                href={`/verkoop/${order.id}/bewerken`}
+                className="button button-secondary"
+              >
+                Order bewerken
+              </Link>
+            )}
+
             <DocumentActionButtons
               referenceId={order.id}
               documentType="SALES_ORDER_CONFIRMATION"
@@ -527,7 +536,7 @@ export default function SalesOrderDetailPage() {
             <div>
               <dt>Klantkorting</dt>
               <dd>
-                {order.discountPercentage.toLocaleString(
+                {(order.discountPercentage ?? 0).toLocaleString(
                   "nl-NL",
                 )}
                 %

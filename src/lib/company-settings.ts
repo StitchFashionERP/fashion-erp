@@ -24,6 +24,10 @@ export type CompanySettings = {
     email: string;
     phone: string;
     website: string;
+    emailFromName: string;
+    emailFromAddress: string;
+    emailReplyTo: string;
+    emailBcc: string;
     chamberOfCommerceNumber: string;
     vatNumber: string;
     iban: string;
@@ -83,6 +87,10 @@ export const defaultCompanySettings: CompanySettings = {
     email: "",
     phone: "",
     website: "",
+    emailFromName: "",
+    emailFromAddress: "",
+    emailReplyTo: "",
+    emailBcc: "",
     chamberOfCommerceNumber: "",
     vatNumber: "",
     iban: "",

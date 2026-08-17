@@ -1,9 +1,13 @@
 import { getPaymentConditionText } from "@/lib/pricing-engine";
 import {
   getSalesOrderById,
+  loadSalesOrderById,
   getSalesOrderTotals,
   type SalesOrder,
 } from "@/lib/sales";
+import {
+  getCustomers,
+} from "@/lib/customers";
 import {
   getPurchaseOrderById,
   getPurchaseOrderTotals,
@@ -20,9 +24,25 @@ import {
   getCompanySettings,
 } from "@/lib/company-settings";
 import {
+  getCommunicationSettings,
+  type CommunicationDocumentType,
+} from "@/lib/communication-settings";
+import {
   getSharedStateValue,
   setSharedStateValue,
 } from "@/lib/shared-state-client";
+
+function getEmailTemplate(
+  documentType: BusinessDocumentType,
+) {
+  const settings = getCommunicationSettings();
+
+  return settings.documents.find(
+    (item) =>
+      item.documentType ===
+      (documentType as CommunicationDocumentType),
+  );
+}
 
 export type BusinessDocumentType =
   | "PURCHASE_ORDER"
@@ -854,10 +874,10 @@ function getSenderCompanyName() {
   );
 }
 
-export function createDocumentEmailDraft(
+export async function createDocumentEmailDraft(
   documentType: BusinessDocumentType,
   referenceId: string,
-): DocumentEmailDraft {
+): Promise<DocumentEmailDraft> {
   if (documentType === "PURCHASE_ORDER") {
     const order =
       getPurchaseOrderById(referenceId);
@@ -905,7 +925,7 @@ STITCH ERP Fashion Management`,
     "SALES_ORDER_CONFIRMATION"
   ) {
     const order =
-      getSalesOrderById(referenceId);
+      await loadSalesOrderById(referenceId);
 
     if (!order) {
       throw new Error(
@@ -918,32 +938,59 @@ STITCH ERP Fashion Management`,
         order,
       );
 
+    const customers =
+      await getCustomers();
+
+    const customer =
+      customers.find(
+        (item) =>
+          item.id === order.customerId,
+      );
+
+    const recipientEmail =
+      order.orderEmail ||
+      customer?.orderEmail ||
+      customer?.email ||
+      order.email ||
+      "";
+
+    const recipientCc =
+      order.orderCc ||
+      customer?.orderCc ||
+      "";
+
     return {
       documentType,
       referenceId: order.id,
       referenceNumber: order.orderNumber,
-      to: order.email,
-      cc: "",
+      to: recipientEmail,
+      cc: recipientCc,
       bcc: "",
-      subject: `Orderbevestiging ${order.orderNumber}`,
-      message: `Beste ${
-        order.contactPerson ||
-        "heer/mevrouw"
-      },
+      subject:
+        getEmailTemplate("SALES_ORDER_CONFIRMATION")
+          ?.subject
+          .replaceAll("{{order_number}}", order.orderNumber)
+          .replaceAll("{{document_number}}", order.orderNumber)
+          .replaceAll("{{customer_name}}", order.customerName)
+          .replaceAll("{{company_name}}", getSenderCompanyName())
+          || `Orderbevestiging ${order.orderNumber}`,
+
+      message:
+        getEmailTemplate("SALES_ORDER_CONFIRMATION")
+          ?.message
+          .replaceAll("{{recipient_name}}", order.contactPerson || "heer/mevrouw")
+          .replaceAll("{{customer_name}}", order.customerName)
+          .replaceAll("{{order_number}}", order.orderNumber)
+          .replaceAll("{{document_number}}", order.orderNumber)
+          .replaceAll("{{company_name}}", getSenderCompanyName())
+          .replaceAll("{{sender_name}}", getSenderCompanyName())
+          || `Beste ${
+            order.contactPerson || "heer/mevrouw"
+          },
 
 Hartelijk dank voor uw bestelling.
 
 In de bijlage vindt u de orderbevestiging voor order ${order.orderNumber}.
-
-Wilt u deze controleren en, indien akkoord, ondertekenen en per e-mail aan ons retourneren?
-
-Na ontvangst van de ondertekende orderbevestiging nemen wij uw bestelling definitief in behandeling.
-
-Heeft u nog vragen of ziet u iets dat aangepast moet worden? Neem dan gerust contact met ons op voordat u ondertekent.
-
-De gewenste leverdatum is ${formatDate(
-        order.requestedDeliveryDate,
-      )}.
 
 Met vriendelijke groet,
 
@@ -973,12 +1020,29 @@ ${getSenderCompanyName()}`,
     const documentHtml =
       renderPackingSlipDocument(order);
 
+    const customers =
+      await getCustomers();
+
+    const customer =
+      customers.find(
+        (item) =>
+          item.id === order.customerId,
+      );
+
     return {
       documentType,
       referenceId: order.id,
       referenceNumber: order.orderNumber,
-      to: order.email,
-      cc: "",
+      to:
+        order.deliveryEmail ||
+        customer?.deliveryEmail ||
+        customer?.email ||
+        order.email ||
+        "",
+      cc:
+        order.deliveryCc ||
+        customer?.deliveryCc ||
+        "",
       bcc: "",
       subject: `Kopie pakbon ${order.orderNumber}`,
       message: `Beste ${
@@ -1057,13 +1121,30 @@ STITCH ERP Fashion Management`,
   const documentHtml =
     renderInvoiceDocument(invoice);
 
+  const customers =
+    await getCustomers();
+
+  const customer =
+    customers.find(
+      (item) =>
+        item.id === invoice.customerId,
+    );
+
   return {
     documentType,
     referenceId: invoice.id,
     referenceNumber:
       invoice.invoiceNumber,
-    to: invoice.email,
-    cc: "",
+    to:
+      invoice.invoiceEmail ||
+      customer?.invoiceEmail ||
+      customer?.email ||
+      invoice.email ||
+      "",
+    cc:
+      invoice.invoiceCc ||
+      customer?.invoiceCc ||
+      "",
     bcc: "",
     subject: `Factuur ${invoice.invoiceNumber}`,
     message: `Beste ${
@@ -1126,6 +1207,20 @@ export async function sendDocumentEmail({
 }: SendDocumentEmailInput): Promise<SendDocumentEmailResult> {
   const now = new Date().toISOString();
 
+  const companySettings = getCompanySettings();
+
+  const emailFrom =
+    companySettings.company.emailFromAddress ||
+    companySettings.company.email;
+
+  const emailReplyTo =
+    companySettings.company.emailReplyTo ||
+    companySettings.company.email;
+
+  const emailBcc =
+    companySettings.company.emailBcc ||
+    "";
+
   const pendingLog: DocumentEmailLog = {
     id: createId("document-email"),
     documentType: draft.documentType,
@@ -1187,6 +1282,20 @@ export async function sendDocumentEmail({
             .split(",")
             .map((value) => value.trim())
             .filter(Boolean),
+
+          from: emailFrom,
+          replyTo: emailReplyTo,
+
+          bcc: [
+            ...draft.bcc
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+            ...emailBcc
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+          ],
 
           subject: draft.subject,
           message: draft.message,

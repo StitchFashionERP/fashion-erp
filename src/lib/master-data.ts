@@ -339,6 +339,14 @@ export type Customer = {
   companyName: string;
   contactPerson: string;
   email: string;
+
+  invoiceEmail: string;
+  invoiceCc: string;
+  orderEmail: string;
+  orderCc: string;
+  deliveryEmail: string;
+  deliveryCc: string;
+
   phone: string;
   address: string;
   postalCode: string;
@@ -380,6 +388,32 @@ function normalizeCustomer(
     contactPerson:
       typeof value.contactPerson === "string" ? value.contactPerson : "",
     email: typeof value.email === "string" ? value.email : "",
+
+    invoiceEmail:
+      typeof value.invoiceEmail === "string"
+        ? value.invoiceEmail
+        : "",
+    invoiceCc:
+      typeof value.invoiceCc === "string"
+        ? value.invoiceCc
+        : "",
+    orderEmail:
+      typeof value.orderEmail === "string"
+        ? value.orderEmail
+        : "",
+    orderCc:
+      typeof value.orderCc === "string"
+        ? value.orderCc
+        : "",
+    deliveryEmail:
+      typeof value.deliveryEmail === "string"
+        ? value.deliveryEmail
+        : "",
+    deliveryCc:
+      typeof value.deliveryCc === "string"
+        ? value.deliveryCc
+        : "",
+
     phone: typeof value.phone === "string" ? value.phone : "",
     address: typeof value.address === "string" ? value.address : "",
     postalCode: typeof value.postalCode === "string" ? value.postalCode : "",
