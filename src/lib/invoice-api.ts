@@ -1,6 +1,6 @@
 import type { Invoice } from "@/lib/invoices";
 
-export type { Invoice } from "@/lib/invoices";
+export type { Invoice, InvoiceStatus } from "@/lib/invoices";
 
 async function request<T>(
   url: string,
@@ -124,5 +124,26 @@ export function getInvoiceOutstandingAmount(
   return Math.max(
     0,
     invoice.total - getInvoicePaidAmount(invoice),
+  );
+}
+
+
+export async function getInvoiceableSalesOrders() {
+  return request<any[]>(
+    "/api/invoices/available-sales-orders",
+  );
+}
+
+export async function createInvoiceFromSalesOrder(
+  salesOrderId: string,
+) {
+  return request<Invoice>(
+    "/api/invoices/from-sales-order",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        salesOrderId,
+      }),
+    },
   );
 }

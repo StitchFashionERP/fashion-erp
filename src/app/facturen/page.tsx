@@ -11,10 +11,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getInvoiceOutstandingAmount,
   getInvoices,
-  refreshInvoiceStatuses,
   type Invoice,
   type InvoiceStatus,
-} from "@/lib/invoices";
+} from "@/lib/invoice-api";
 
 type StatusTone =
   | "success"
@@ -71,7 +70,12 @@ export default function InvoicesPage() {
   );
 
   useEffect(() => {
-    setInvoices(refreshInvoiceStatuses());
+    async function loadInvoices() {
+      const data = await getInvoices();
+      setInvoices(data);
+    }
+
+    loadInvoices();
   }, []);
 
   const filteredInvoices = useMemo(() => {

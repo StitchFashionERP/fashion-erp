@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   createInvoiceFromSalesOrder,
   getInvoiceableSalesOrders,
-} from "@/lib/invoices";
+} from "@/lib/invoice-api";
 import {
   getSalesOrderTotals,
   type SalesOrder,
@@ -43,7 +43,12 @@ export default function NewInvoicePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setOrders(getInvoiceableSalesOrders());
+    async function loadOrders() {
+      const data = await getInvoiceableSalesOrders();
+      setOrders(data);
+    }
+
+    loadOrders();
   }, []);
 
   async function createInvoice(orderId: string) {
