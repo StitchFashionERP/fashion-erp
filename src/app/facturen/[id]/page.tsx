@@ -21,7 +21,7 @@ import {
   markInvoiceSent,
   registerInvoicePayment,
   type Invoice,
-} from "@/lib/invoices";
+} from "@/lib/invoice-api";
 import styles from "./invoice-detail.module.css";
 
 function formatCurrency(value: number) {
@@ -64,23 +64,26 @@ export default function InvoiceDetailPage() {
     useState("");
 
   useEffect(() => {
-    const selectedInvoice = getInvoiceById(
-      params.id,
-    );
+    async function loadInvoice() {
+      const selectedInvoice =
+        await getInvoiceById(params.id);
 
-    setInvoice(selectedInvoice);
+      setInvoice(selectedInvoice);
 
-    if (selectedInvoice) {
-      setPaymentAmount(
-        getInvoiceOutstandingAmount(
-          selectedInvoice,
-        )
-          .toFixed(2)
-          .replace(".", ","),
-      );
+      if (selectedInvoice) {
+        setPaymentAmount(
+          getInvoiceOutstandingAmount(
+            selectedInvoice,
+          )
+            .toFixed(2)
+            .replace(".", ","),
+        );
+      }
+
+      setLoaded(true);
     }
 
-    setLoaded(true);
+    loadInvoice();
   }, [params.id]);
 
   if (!loaded) {
@@ -116,13 +119,13 @@ export default function InvoiceDetailPage() {
   const outstandingAmount =
     getInvoiceOutstandingAmount(invoice);
 
-  function execute(
-    action: () => Invoice,
+  async function execute(
+    action: () => Promise<Invoice>,
   ) {
     setError("");
 
     try {
-      setInvoice(action());
+      setInvoice(await action());
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -132,7 +135,7 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  function handlePayment() {
+  async function handlePayment() {
     if (!invoice) {
       setError("Factuur niet gevonden.");
       return;
@@ -141,7 +144,7 @@ export default function InvoiceDetailPage() {
     setError("");
 
     try {
-      const updated = registerInvoicePayment(
+      await registerInvoicePayment(
         invoice.id,
         {
           paymentDate,
@@ -153,6 +156,15 @@ export default function InvoiceDetailPage() {
           reference: paymentReference,
         },
       );
+
+      const updated =
+        await getInvoiceById(invoice.id);
+
+      if (!updated) {
+        throw new Error(
+          "Factuur kon niet opnieuw geladen worden.",
+        );
+      }
 
       setInvoice(updated);
       setShowPayment(false);
