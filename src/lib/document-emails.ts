@@ -1136,13 +1136,11 @@ STITCH ERP Fashion Management`,
     referenceNumber:
       invoice.invoiceNumber,
     to:
-      invoice.invoiceEmail ||
       customer?.invoiceEmail ||
       customer?.email ||
       invoice.email ||
       "",
     cc:
-      invoice.invoiceCc ||
       customer?.invoiceCc ||
       "",
     bcc: "",
@@ -1274,11 +1272,6 @@ export async function sendDocumentEmail({
             .filter(Boolean),
 
           cc: draft.cc
-            .split(",")
-            .map((value) => value.trim())
-            .filter(Boolean),
-
-          bcc: draft.bcc
             .split(",")
             .map((value) => value.trim())
             .filter(Boolean),

@@ -486,6 +486,14 @@ export function importCustomerFromExact(
     companyName: source.companyName,
     contactPerson: source.contactPerson,
     email: source.email,
+
+    invoiceEmail: "",
+    invoiceCc: "",
+    orderEmail: "",
+    orderCc: "",
+    deliveryEmail: "",
+    deliveryCc: "",
+
     phone: source.phone,
     address: "",
     postalCode: "",
