@@ -51,6 +51,8 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
 
+  console.log("DELETE PURCHASE ORDER", id);
+
   const supabase = await createClient();
 
   const { data: userData } =
