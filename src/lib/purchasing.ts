@@ -583,27 +583,32 @@ export function deletePurchaseOrder(id: string) {
 export function getPurchaseOrderTotals(
   order: PurchaseOrder,
 ) {
-  const subtotal = order.lines.reduce(
+  const lines = Array.isArray(order.lines)
+    ? order.lines
+    : [];
+
+  const subtotal = lines.reduce(
     (total, line) =>
       total +
-      line.orderedQuantity * line.purchasePrice,
+      Number(line.orderedQuantity ?? 0) *
+      Number(line.purchasePrice ?? 0),
     0,
   );
 
-  const receivedValue = order.lines.reduce(
+  const receivedValue = lines.reduce(
     (total, line) =>
       total +
       line.receivedQuantity * line.purchasePrice,
     0,
   );
 
-  const orderedQuantity = order.lines.reduce(
+  const orderedQuantity = lines.reduce(
     (total, line) =>
       total + line.orderedQuantity,
     0,
   );
 
-  const receivedQuantity = order.lines.reduce(
+  const receivedQuantity = lines.reduce(
     (total, line) =>
       total + line.receivedQuantity,
     0,

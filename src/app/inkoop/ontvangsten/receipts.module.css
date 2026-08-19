@@ -9,3 +9,46 @@
   text-align: center;
   font-size: 10px;
 }
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  padding: 8px 12px;
+}
+
+.detailColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  align-items: start;
+}
+
+.detailLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.detailValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.detailAddress {
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

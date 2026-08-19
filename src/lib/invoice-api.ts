@@ -111,7 +111,7 @@ export async function registerInvoicePayment(
 export function getInvoicePaidAmount(
   invoice: Invoice,
 ) {
-  return invoice.payments.reduce(
+  return (invoice.payments ?? []).reduce(
     (total, payment) =>
       total + payment.amount,
     0,

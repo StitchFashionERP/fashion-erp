@@ -79,6 +79,10 @@ function rowToProduct(row: Record<string, unknown>) {
     code: String(row.product_code ?? profile.code ?? ""),
     name: String(row.name ?? profile.name ?? ""),
     brand: String(row.brand ?? profile.brand ?? ""),
+    supplier: String(profile.supplier ?? ""),
+    supplierProductCode: String(
+      profile.supplierProductCode ?? "",
+    ),
     collection: String(row.season ?? profile.collection ?? ""),
     category: String(row.category ?? profile.category ?? ""),
     material: String(row.material ?? profile.material ?? ""),
@@ -210,9 +214,49 @@ export async function GET() {
       throw new ApiError(error.message, 500);
     }
 
-    return NextResponse.json(
-      (data ?? []).map((row: Record<string, unknown>) => rowToProduct(row)),
+    const products = (data ?? []).map(
+      (row: Record<string, unknown>) => rowToProduct(row),
     );
+
+    const supplierIds = [
+      ...new Set(
+        (data ?? [])
+          .map((row: Record<string, unknown>) => row.supplier_id)
+          .filter(Boolean),
+      ),
+    ];
+
+    if (supplierIds.length > 0) {
+      const { data: suppliers } = await supabase
+        .from("suppliers")
+        .select("id, company_name")
+        .in("id", supplierIds);
+
+      const supplierMap = new Map(
+        (suppliers ?? []).map((supplier) => [
+          supplier.id,
+          supplier.company_name,
+        ]),
+      );
+
+      products.forEach((product, index) => {
+        product.supplier = String(
+          supplierMap.get(
+            (data ?? [])[index].supplier_id,
+          ) ?? "",
+        );
+      });
+    }
+
+    console.log("ARTICLE SUPPLIERS DEBUG", {
+      suppliers: [
+        ...new Set(
+          products.map((p) => p.supplier),
+        ),
+      ],
+    });
+
+    return NextResponse.json(products);
   } catch (error) {
     return errorResponse(error);
   }

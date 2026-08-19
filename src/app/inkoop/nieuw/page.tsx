@@ -8,14 +8,13 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
-import { getStoredProducts } from "@/lib/articles";
+ 
 import {
   getCollections,
-  getSuppliers,
   type Supplier,
 } from "@/lib/master-data";
+import { fetchSuppliers } from "@/lib/suppliers";
 import {
-  createPurchaseOrder,
   type PurchaseOrderLine,
   type PurchaseOrderStatus,
 } from "@/lib/purchasing";
@@ -25,6 +24,22 @@ type SelectableLine = Omit<
   PurchaseOrderLine,
   "id" | "receivedQuantity"
 >;
+
+const SIZE_ORDER = [
+  "XXS",
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "34",
+  "36",
+  "38",
+  "40",
+  "42",
+  "44",
+];
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
@@ -56,42 +71,120 @@ export default function NewPurchaseOrderPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const supplierValues = getSuppliers().filter(
-      (item) => item.status === "Actief",
-    );
+    async function loadMasterData() {
+      const supplierValues = (await fetchSuppliers()).filter(
+        (item) => item.status === "Actief",
+      );
 
-    const collectionValues = getCollections()
-      .filter((item) => item.status !== "Gearchiveerd")
-      .map((item) => item.code);
+      const collectionValues = getCollections()
+        .filter((item) => item.status !== "Gearchiveerd")
+        .map((item) => item.code);
 
-    setSuppliers(supplierValues);
-    setCollections(collectionValues);
+      setSuppliers(supplierValues);
+      setCollections(collectionValues);
 
-    setSupplierId(supplierValues[0]?.id ?? "");
-    setCollectionCode(
-      collectionValues[0] ?? "",
-    );
+      setSupplierId("");
+      setCollectionCode(
+        collectionValues[0] ?? "",
+      );
+    }
+
+    loadMasterData();
   }, []);
 
   useEffect(() => {
-    const products = getStoredProducts();
+    console.log("SUPPLIER EFFECT TRIGGER", {
+      supplierId,
+      suppliersCount: suppliers.length,
+    });
 
-    const lines = products.flatMap((product) =>
-      product.variants.map((variant) => ({
-        productId: product.id,
-        productCode: product.code,
-        productName: product.name,
-        variantId: variant.id,
-        sku: variant.sku,
-        color: variant.color,
-        size: variant.size,
-        orderedQuantity: 0,
-        purchasePrice: variant.purchasePrice,
-      })),
-    );
+    async function loadProducts() {
+      if (!supplierId) {
+        setAllLines([]);
+        return;
+      }
 
-    setAllLines(lines);
-  }, []);
+      const supplier =
+        suppliers.find(
+          (item) => item.id === supplierId,
+        );
+
+      const response =
+        await fetch("/api/articles");
+
+      const products =
+        (await response.json()) as Array<{
+          id: string;
+          code: string;
+          name: string;
+          supplier: string;
+          variants: Array<{
+            id: string;
+            sku: string;
+            color: string;
+            size: string;
+            purchasePrice: number;
+          }>;
+        }>;
+
+      const normalizeSupplier = (
+        value: string,
+      ) =>
+        value
+          .toLowerCase()
+          .replace(
+            /s\.r\.l\.|srl|abbigliamento|group|\.|\s/g,
+            "",
+          );
+
+      const supplierProducts =
+        (Array.isArray(products)
+          ? products
+          : []
+        ).filter(
+          (product) =>
+            normalizeSupplier(
+              product.supplier ?? "",
+            ) ===
+            normalizeSupplier(
+              supplier?.companyName ?? "",
+            ),
+        );
+
+      const lines =
+        supplierProducts.flatMap((product) =>
+          product.variants.map((variant) => ({
+            productId: product.id,
+            productCode: product.code,
+            productName: product.name,
+            variantId: variant.id,
+            sku: variant.sku,
+            color: variant.color,
+            size: variant.size,
+            orderedQuantity: 0,
+            purchasePrice: variant.purchasePrice,
+          })),
+        );
+
+      console.log("INKOOP LINES DEBUG", {
+        selectedSupplier: supplier?.companyName,
+        productsFound: supplierProducts.length,
+        linesFound: lines.length,
+        products: supplierProducts.slice(0, 5).map((p) => ({
+          name: p.name,
+          supplier: p.supplier,
+          variants: p.variants.length,
+        })),
+      });
+
+      setAllLines(lines);
+    }
+
+    loadProducts();
+  }, [
+    supplierId,
+    suppliers,
+  ]);
 
   const filteredLines = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -107,27 +200,26 @@ export default function NewPurchaseOrderPage() {
           .includes(query) ||
         line.sku.toLowerCase().includes(query);
 
-      const product = getStoredProducts().find(
-        (item) => item.id === line.productId,
-      );
-
       const matchesCollection =
-        !collectionCode ||
-        product?.collection === collectionCode;
+        !collectionCode;
 
-      const matchesSupplier =
-        !supplierId ||
-        product?.supplier ===
-          suppliers.find(
-            (supplier) =>
-              supplier.id === supplierId,
-          )?.companyName;
+      const selectedSupplier =
+        suppliers.find(
+          (supplier) =>
+            supplier.id === supplierId,
+        )?.companyName ?? "";
 
-      return (
-        matchesSearch &&
-        matchesCollection &&
-        matchesSupplier
-      );
+      const normalizeSupplier = (value: string) =>
+        value
+          .toLowerCase()
+          .replace(
+            /s\.r\.l\.|srl|abbigliamento|group|\.|\s/g,
+            "",
+          );
+
+      const matchesSupplier = true;
+
+      return matchesSearch;
     });
   }, [
     allLines,
@@ -136,6 +228,88 @@ export default function NewPurchaseOrderPage() {
     supplierId,
     suppliers,
   ]);
+
+  const groupedLines = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        productId: string;
+        productName: string;
+        productCode: string;
+        color: string;
+        variants: SelectableLine[];
+        sizes: string[];
+      }
+    >();
+
+    filteredLines.forEach((line) => {
+      const key = `${line.productId}-${line.color}`;
+
+      const existing = groups.get(key);
+
+      if (existing) {
+        existing.variants.push(line);
+      } else {
+        groups.set(key, {
+          productId: line.productId,
+          productName: line.productName,
+          productCode: line.productCode,
+          color: line.color,
+          variants: [line],
+          sizes: [],
+        });
+      }
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      sizes: Array.from(
+        new Set(
+          group.variants.map(
+            (variant) => variant.size,
+          ),
+        ),
+      ).sort((a, b) => {
+        const aIndex = SIZE_ORDER.indexOf(a);
+        const bIndex = SIZE_ORDER.indexOf(b);
+
+        if (aIndex === -1 && bIndex === -1) {
+          return a.localeCompare(b);
+        }
+
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+
+        return aIndex - bIndex;
+      }),
+    }));
+  }, [filteredLines]);
+
+  const availableSizes = useMemo(() => {
+    const sizes = Array.from(
+      new Set(
+        groupedLines.flatMap((group) =>
+          group.variants.map(
+            (variant) => variant.size,
+          ),
+        ),
+      ),
+    );
+
+    return sizes.sort((a, b) => {
+      const aIndex = SIZE_ORDER.indexOf(a);
+      const bIndex = SIZE_ORDER.indexOf(b);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return a.localeCompare(b);
+      }
+
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+
+      return aIndex - bIndex;
+    });
+  }, [groupedLines]);
 
   const selectedLines = allLines
     .filter(
@@ -174,7 +348,7 @@ export default function NewPurchaseOrderPage() {
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     setError("");
 
     const supplier = suppliers.find(
@@ -198,19 +372,46 @@ export default function NewPurchaseOrderPage() {
       return;
     }
 
-    const order = createPurchaseOrder({
-      supplierId,
-      supplierName: supplier.companyName,
-      collectionCode,
-      expectedDeliveryDate,
-      status,
-      notes,
-      lines: selectedLines.map((line) => ({
-        ...line,
-        id: "",
-        receivedQuantity: 0,
-      })),
-    });
+    const response =
+      await fetch(
+        "/api/purchase-orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            supplierId,
+            collectionCode,
+            expectedDeliveryDate,
+            status,
+            notes,
+            lines: selectedLines.map(
+              (line) => ({
+                variantId:
+                  line.variantId,
+                orderedQuantity:
+                  line.orderedQuantity,
+                purchasePrice:
+                  line.purchasePrice,
+              }),
+            ),
+          }),
+        },
+      );
+
+    const order =
+      await response.json();
+
+    console.log("PURCHASE ORDER RESPONSE", order);
+
+    if (!response.ok) {
+      setError(
+        order.error ||
+          "Inkooporder maken mislukt.",
+      );
+      return;
+    }
 
     router.push(`/inkoop/${order.id}`);
   }
@@ -245,11 +446,15 @@ export default function NewPurchaseOrderPage() {
                 <span>Leverancier</span>
                 <select
                   value={supplierId}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    console.log(
+                      "SUPPLIER SELECT CHANGE",
+                      event.target.value,
+                    );
                     setSupplierId(
                       event.target.value,
-                    )
-                  }
+                    );
+                  }}
                 >
                   {suppliers.map((supplier) => (
                     <option
@@ -342,53 +547,90 @@ export default function NewPurchaseOrderPage() {
                 <thead>
                   <tr>
                     <th>Artikel</th>
-                    <th>SKU</th>
                     <th>Kleur</th>
-                    <th>Maat</th>
+
+                    {groupedLines[0]?.sizes.map((size) => (
+                      <th
+                        key={size}
+                        className="table-number"
+                      >
+                        {size}
+                      </th>
+                    ))}
+
                     <th className="table-number">
                       Inkoopprijs
-                    </th>
-                    <th className="table-number">
-                      Bestelaantal
                     </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredLines.map((line) => (
-                    <tr key={line.variantId}>
+                  {groupedLines.map((group) => (
+                    <tr key={`${group.productId}-${group.color}`}>
                       <td className="table-primary">
-                        {line.productName}
+                        {group.productName}
                       </td>
-                      <td>{line.sku}</td>
-                      <td>{line.color}</td>
-                      <td>{line.size}</td>
+
+                      <td>{group.color}</td>
+
+                      {group.sizes.map((size) => {
+                        const variant =
+                          group.variants.find(
+                            (item) =>
+                              item.size === size,
+                          );
+
+                        if (!variant) {
+                          return (
+                            <td
+                              key={size}
+                              className="table-number"
+                            >
+                              <input
+                                className={styles.quantityInput}
+                                type="number"
+                                min="0"
+                                disabled
+                                value=""
+                                placeholder="-"
+                              />
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td
+                            key={variant.variantId}
+                            className="table-number"
+                          >
+                            <input
+                              className={styles.quantityInput}
+                              type="number"
+                              min="0"
+                              value={
+                                quantities[
+                                  variant.variantId
+                                ] ?? 0
+                              }
+                              onChange={(event) =>
+                                setQuantity(
+                                  variant.variantId,
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                        );
+                      })}
+
                       <td className="table-number">
                         €{" "}
-                        {line.purchasePrice.toLocaleString(
+                        {group.variants[0].purchasePrice.toLocaleString(
                           "nl-NL",
                           {
                             minimumFractionDigits: 2,
                           },
                         )}
-                      </td>
-                      <td className="table-number">
-                        <input
-                          className={styles.quantityInput}
-                          type="number"
-                          min="0"
-                          value={
-                            quantities[
-                              line.variantId
-                            ] ?? 0
-                          }
-                          onChange={(event) =>
-                            setQuantity(
-                              line.variantId,
-                              event.target.value,
-                            )
-                          }
-                        />
                       </td>
                     </tr>
                   ))}

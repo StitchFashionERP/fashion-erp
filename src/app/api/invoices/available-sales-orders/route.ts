@@ -12,6 +12,50 @@ class ApiError extends Error {
   }
 }
 
+
+function rec(v: unknown): Row {
+  return v && typeof v === "object"
+    ? v as Row
+    : {};
+}
+
+function num(v: unknown) {
+  return Number.isFinite(Number(v))
+    ? Number(v)
+    : 0;
+}
+
+function lineFromRow(row: Row) {
+  const p = rec(row.profile);
+
+  return {
+    ...p,
+    id: String(row.id ?? ""),
+    variantId: String(row.variant_id ?? p.variantId ?? ""),
+    quantity: num(row.quantity),
+    deliveredQuantity: num(row.delivered_quantity),
+    reservedQuantity: num(row.reserved_quantity),
+    unitPrice: num(row.unit_price),
+    discountPercentage: num(row.discount_percentage),
+  };
+}
+
+function orderFromRow(row: Row) {
+  const p = rec(row.profile);
+
+  return {
+    ...p,
+    id: String(row.id ?? ""),
+    orderNumber: String(row.order_number ?? ""),
+    orderDate: String(row.order_date ?? ""),
+    status: String(row.status ?? "Concept"),
+    notes: String(row.notes ?? ""),
+    lines: Array.isArray(row.sales_order_lines)
+      ? (row.sales_order_lines as Row[]).map(lineFromRow)
+      : [],
+  };
+}
+
 async function getContext() {
   const supabase = await createClient();
 
@@ -86,9 +130,12 @@ export async function GET() {
           "organization_id",
           organizationId,
         )
-        .eq(
+        .in(
           "status",
-          "Verzonden",
+          [
+            "Bevestigd",
+            "Verzonden",
+          ],
         )
         .order(
           "created_at",
@@ -102,12 +149,16 @@ export async function GET() {
     }
 
     return NextResponse.json(
-      (data ?? []).filter(
-        (order) =>
-          !invoicedOrderIds.has(
-            String(order.id),
-          ),
-      ),
+      (data ?? [])
+        .filter(
+          (order) =>
+            !invoicedOrderIds.has(
+              String(order.id),
+            ),
+        )
+        .map((order) =>
+          orderFromRow(order as Row),
+        ),
     );
   } catch (error) {
     const e =

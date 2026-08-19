@@ -83,7 +83,19 @@ let customerCache: Customer[] = [];
 
 const initialNames: Record<MasterDataEntity, string[]> = {
   brands: ["Demo Fashion"],
-  suppliers: ["Nordic Fashion Supply"],
+  suppliers: [
+    "Nordic Fashion Supply",
+    "Milano Textile Group",
+    "Porto Garments",
+    "Noir",
+    "Mode Sofia",
+    "Wolf",
+    "LUMA s.r.l",
+    "Luma",
+    "Mode Sofia srl",
+    "Fashion",
+    "arnanknit",
+  ],
   collections: ["Core", "AW27", "SS27"],
   productTypes: ["T-shirt", "Blouse", "Jas", "Broek", "Jurk", "Trui"],
   categories: ["T-shirts", "Blouses", "Jassen", "Broeken", "Jurken", "Truien"],
@@ -232,6 +244,57 @@ export async function hydrateMasterData(): Promise<void> {
     masterDataCache = createInitialStore();
     await persistMasterDataStore(masterDataCache);
   }
+
+  const suppliers =
+    masterDataCache.suppliers;
+
+  const requiredSuppliers = [
+    "Nordic Fashion Supply",
+    "Milano Textile Group",
+    "Porto Garments",
+    "Aranknit srl",
+    "LUMA s.r.l",
+    "MIM'S Moda srl",
+    "Mode Sofia srl",
+    "Noir Abbigliamento",
+    "Pullover srl",
+    "Wolf Group s.r.l.",
+  ];
+
+  const now =
+    new Date().toISOString();
+
+  requiredSuppliers.forEach((name) => {
+    const exists =
+      suppliers.some(
+        (item) =>
+          item.name.toLowerCase() ===
+          name.toLowerCase(),
+      );
+
+    if (!exists) {
+      suppliers.push({
+        id: `suppliers-${name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")}`,
+        code: name
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, "_"),
+        name,
+        active: true,
+        sortOrder: suppliers.length + 1,
+        notes: "",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  });
+
+  masterDataCache.suppliers = suppliers;
+
+  await persistMasterDataStore(
+    masterDataCache,
+  );
 
   if (isBrowser()) {
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT));

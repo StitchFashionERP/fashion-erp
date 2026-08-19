@@ -23,6 +23,7 @@ import {
   type Invoice,
 } from "@/lib/invoice-api";
 import styles from "./invoice-detail.module.css";
+import { groupInvoiceLines } from "@/lib/invoice-lines-view";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("nl-NL", {
@@ -112,6 +113,26 @@ export default function InvoiceDetailPage() {
       </section>
     );
   }
+
+  const articleBlocks =
+    groupInvoiceLines(
+      invoice.lines,
+    );
+
+  const invoiceSizes = Array.from(
+    new Set(
+      articleBlocks.flatMap(
+        (block) => block.sizes ?? [],
+      ),
+    ),
+  );
+
+  console.log(
+    "INVOICE BLOCKS",
+    articleBlocks,
+    "SIZES",
+    invoiceSizes,
+  );
 
   const paidAmount =
     getInvoicePaidAmount(invoice);
@@ -240,7 +261,10 @@ export default function InvoiceDetailPage() {
               }}
             />
 
-            {invoice.status === "Concept" && (
+            {invoice.status !== "Verzonden" &&
+ invoice.status !== "Betaald" &&
+ invoice.status !== "Deels betaald" &&
+ invoice.status !== "Gecrediteerd" && (
               <button
                 className="button button-primary"
                 type="button"
@@ -574,54 +598,72 @@ export default function InvoiceDetailPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th>Artikelnummer</th>
                 <th>Artikel</th>
-                <th>SKU</th>
                 <th>Kleur</th>
-                <th>Maat</th>
+
+                {invoiceSizes.map(
+                  (size) => (
+                    <th
+                      key={size}
+                      className="table-number"
+                    >
+                      {size}
+                    </th>
+                  ),
+                )}
+
                 <th className="table-number">
-                  Aantal
+                  Totaal
                 </th>
+
                 <th className="table-number">
                   Prijs
                 </th>
+
                 <th className="table-number">
-                  Korting
-                </th>
-                <th className="table-number">
-                  Regelbedrag
+                  Bedrag
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {invoice.lines.map((line) => (
-                <tr key={line.id}>
+              {articleBlocks.map((block) => (
+                <tr key={`${block.productCode}-${block.color}`}>
+                  <td>
+                    {block.productCode || "—"}
+                  </td>
+
                   <td className="table-primary">
-                    {line.productName}
+                    {block.productName}
                   </td>
 
-                  <td>{line.sku}</td>
-                  <td>{line.color}</td>
-                  <td>{line.size}</td>
+                  <td>
+                    {block.color || "—"}
+                  </td>
+
+                  {invoiceSizes.map((size) => (
+                    <td
+                      key={size}
+                      className="table-number"
+                    >
+                      {block.quantities[size] || ""}
+                    </td>
+                  ))}
 
                   <td className="table-number">
-                    {line.quantity}
+                    {block.total}
                   </td>
 
                   <td className="table-number">
-                    {formatCurrency(line.unitPrice)}
-                  </td>
-
-                  <td className="table-number">
-                    {line.discountPercentage.toLocaleString(
-                      "nl-NL",
+                    {formatCurrency(
+                      block.unitPrice,
                     )}
-                    %
                   </td>
 
                   <td className="table-number table-primary">
                     {formatCurrency(
-                      line.lineSubtotal,
+                      block.lineTotal,
                     )}
                   </td>
                 </tr>
@@ -732,13 +774,16 @@ export default function InvoiceDetailPage() {
         </section>
       )}
 
-      {invoice.status === "Concept" && (
+      {invoice.status !== "Verzonden" &&
+ invoice.status !== "Betaald" &&
+ invoice.status !== "Deels betaald" &&
+ invoice.status !== "Gecrediteerd" && (
         <section className={styles.dangerZone}>
           <div>
-            <h2>Conceptfactuur verwijderen</h2>
+            <h2>Factuur verwijderen</h2>
 
             <p>
-              Definitieve facturen kunnen later alleen via
+              Verzonden of betaalde facturen kunnen later alleen via
               een creditfactuur worden gecorrigeerd.
             </p>
           </div>

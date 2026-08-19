@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { invoiceFromRow } from "@/lib/invoice-mapper";
 
 class ApiError extends Error {
   constructor(
@@ -70,6 +71,8 @@ async function context() {
   };
 }
 
+
+
 export async function GET() {
   try {
     const {
@@ -100,7 +103,12 @@ export async function GET() {
       throw new ApiError(error.message);
     }
 
-    return NextResponse.json(data ?? []);
+    return NextResponse.json(
+      (data ?? []).map(
+        (invoice) =>
+          invoiceFromRow(invoice as Row),
+      ),
+    );
   } catch (error) {
     const e =
       error instanceof ApiError

@@ -55,8 +55,18 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(value: string) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
   return new Intl.DateTimeFormat("nl-NL").format(
-    new Date(`${value}T12:00:00`),
+    date,
   );
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { invoiceFromRow } from "@/lib/invoice-mapper";
 
 type Row = Record<string, unknown>;
 
@@ -83,6 +84,11 @@ export async function GET(
   try {
     const { id } = await params;
 
+    console.log(
+      "INVOICE DETAIL REQUEST",
+      id,
+    );
+
     const {
       supabase,
       organizationId,
@@ -108,13 +114,20 @@ export async function GET(
     }
 
     if (!data) {
+      console.log(
+        "INVOICE DETAIL RESULT",
+        data,
+      );
+
       throw new ApiError(
         "Factuur niet gevonden.",
         404,
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(
+      invoiceFromRow(data as Row),
+    );
   } catch (error) {
     return response(error);
   }
@@ -130,6 +143,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    console.log(
+      "INVOICE DETAIL REQUEST",
+      id,
+    );
     const input = await request.json() as Row;
 
     const {
@@ -201,6 +219,11 @@ export async function DELETE(
   try {
     const { id } = await params;
 
+    console.log(
+      "INVOICE DETAIL REQUEST",
+      id,
+    );
+
     const {
       supabase,
       organizationId,
@@ -218,15 +241,25 @@ export async function DELETE(
         .maybeSingle();
 
     if (!data) {
+      console.log(
+        "INVOICE DETAIL RESULT",
+        data,
+      );
+
       throw new ApiError(
         "Factuur niet gevonden.",
         404,
       );
     }
 
-    if (data.status !== "Concept") {
+    if (
+      data.status === "Verzonden" ||
+      data.status === "Betaald" ||
+      data.status === "Deels betaald" ||
+      data.status === "Gecrediteerd"
+    ) {
       throw new ApiError(
-        "Alleen conceptfacturen kunnen worden verwijderd.",
+        "Deze factuur kan niet worden verwijderd. Maak een creditnota aan.",
         400,
       );
     }

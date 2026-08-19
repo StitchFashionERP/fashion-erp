@@ -16,6 +16,7 @@ type DocumentActionButtonsProps = {
 
   emailLabel: string;
   printLabel?: string;
+  showEnglishPdf?: boolean;
 
   emailButtonClassName?: string;
   printButtonClassName?: string;
@@ -28,6 +29,7 @@ export function DocumentActionButtons({
   documentType,
   emailLabel,
   printLabel = "PDF openen",
+  showEnglishPdf = false,
   emailButtonClassName = "button button-primary",
   printButtonClassName = "button button-secondary",
   onSent,
@@ -71,6 +73,26 @@ export function DocumentActionButtons({
     }
   }
 
+  async function handleOpenEnglishPdf() {
+    try {
+      await openBusinessDocumentPdf(
+        documentType,
+        referenceId,
+        {
+          language: "en",
+        },
+      );
+
+      setError("");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "English PDF openen is niet gelukt.",
+      );
+    }
+  }
+
   return (
     <>
       <div className={styles.actions}>
@@ -91,6 +113,16 @@ export function DocumentActionButtons({
         >
           ↓
         </button>
+
+        {showEnglishPdf && (
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={handleOpenEnglishPdf}
+          >
+            English PDF
+          </button>
+        )}
 
         <button
           type="button"

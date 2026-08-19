@@ -1,16 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  getPurchaseReceipts,
-  type PurchaseReceipt,
-} from "@/lib/purchasing";
 import styles from "./receipts.module.css";
+
+
+type PurchaseReceipt = {
+  id: string;
+  receiptNumber: string;
+  purchaseOrderNumber: string;
+  supplierName: string;
+  receiptDate: string;
+  packingSlipNumber: string;
+  receivedBy: string;
+  lines: Array<{
+    quantity: number;
+  }>;
+};
 
 function date(value: string) {
   return value
@@ -27,7 +38,23 @@ export default function PurchaseReceiptsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    setReceipts(getPurchaseReceipts());
+    async function loadReceipts() {
+      const response =
+        await fetch(
+          "/api/purchase-receipts",
+        );
+
+      const data =
+        await response.json();
+
+      setReceipts(
+        Array.isArray(data)
+          ? data
+          : [],
+      );
+    }
+
+    loadReceipts();
   }, []);
 
   const filtered = useMemo(() => {
@@ -99,7 +126,9 @@ export default function PurchaseReceiptsPage() {
               {filtered.map((receipt) => (
                 <tr key={receipt.id}>
                   <td className="table-primary">
-                    {receipt.receiptNumber}
+                    <Link href={`/inkoop/ontvangsten/${receipt.id}`}>
+                      {receipt.receiptNumber}
+                    </Link>
                   </td>
                   <td>
                     {receipt.purchaseOrderNumber}

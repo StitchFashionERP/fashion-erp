@@ -23,7 +23,6 @@ import {
   getPurchaseOrderTotals,
   getReceiptsForPurchaseOrder,
   isPurchaseOrderOverdue,
-  receivePurchaseOrder,
   reopenPurchaseOrder,
   updatePurchaseOrderStatus,
   type PurchaseOrder,
@@ -170,22 +169,40 @@ export default function PurchaseOrderDetailPage() {
     useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function reloadOrder() {
-    const selectedOrder = getPurchaseOrderById(
-      params.id,
+  async function reloadOrder() {
+    const response = await fetch(
+      "/api/purchase-orders",
     );
 
-    setOrder(selectedOrder);
+    const orders = await response.json();
+
+    const selectedOrder =
+      Array.isArray(orders)
+        ? orders.find(
+            (item) =>
+              item.id === params.id,
+          )
+        : null;
+
+    setOrder(selectedOrder ?? null);
 
     if (selectedOrder) {
       setReceiveValues(
         createReceiveValues(selectedOrder),
       );
 
+      const receiptResponse =
+        await fetch(
+          `/api/purchase-orders/${params.id}/receipts`,
+        );
+
+      const receiptData =
+        await receiptResponse.json();
+
       setReceipts(
-        getReceiptsForPurchaseOrder(
-          selectedOrder.id,
-        ),
+        Array.isArray(receiptData)
+          ? receiptData
+          : [],
       );
     } else {
       setReceipts([]);
@@ -359,14 +376,30 @@ export default function PurchaseOrderDetailPage() {
     setError(null);
   }
 
-  function handleMarkOrdered() {
-    const updated = updatePurchaseOrderStatus(
-      order!.id,
-      "Besteld",
+  async function handleMarkOrdered() {
+    const response = await fetch(
+      `/api/purchase-orders/${order!.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "Besteld",
+        }),
+      },
     );
 
-    updateLocalOrder(
-      updated,
+    if (!response.ok) {
+      setError(
+        "Status wijzigen mislukt.",
+      );
+      return;
+    }
+
+    await reloadOrder();
+
+    setNotification(
       "De inkooporder is gemarkeerd als besteld.",
     );
 
@@ -528,7 +561,7 @@ export default function PurchaseOrderDetailPage() {
     );
   }
 
-  function handleReceive() {
+  async function handleReceive() {
     if (totalToReceive <= 0) {
       setError(
         "Vul minimaal één te ontvangen aantal in.",
@@ -540,29 +573,40 @@ export default function PurchaseOrderDetailPage() {
     setError(null);
 
     try {
-      const result = receivePurchaseOrder(
-        order!.id,
-        {
-          receivedByLine: receiveValues,
-          receiptDate:
-            receiveForm.receiptDate,
-          packingSlipNumber:
-            receiveForm.packingSlipNumber,
-          receivedBy:
-            receiveForm.receivedBy,
-          notes: receiveForm.notes,
-        },
-      );
+      const response =
+        await fetch(
+          `/api/purchase-orders/${order!.id}/receive`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              receivedByLine:
+                receiveValues,
+              receiptDate:
+                receiveForm.receiptDate,
+              packingSlipNumber:
+                receiveForm.packingSlipNumber,
+              receivedBy:
+                receiveForm.receivedBy,
+              notes:
+                receiveForm.notes,
+            }),
+          },
+        );
 
-      setOrder(result.order);
-      setReceipts(
-        getReceiptsForPurchaseOrder(
-          result.order.id,
-        ),
-      );
-      setReceiveValues(
-        createReceiveValues(result.order),
-      );
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Ontvangst mislukt.",
+        );
+      }
+
+      window.location.reload();
       setShowReceiveDialog(false);
       setActiveTab("ontvangsten");
       setNotification(
@@ -645,6 +689,7 @@ export default function PurchaseOrderDetailPage() {
               referenceId={order.id}
               documentType="PURCHASE_ORDER"
               printLabel="Inkooporder PDF"
+              showEnglishPdf
               emailLabel="Versturen naar leverancier"
               onSent={() => {
                 const updated =

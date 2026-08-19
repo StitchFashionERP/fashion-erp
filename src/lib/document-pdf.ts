@@ -63,6 +63,8 @@ type DocumentMetaRow = {
   value: string;
 };
 
+type DocumentLanguage = "nl" | "en";
+
 type DocumentDefinition = {
   documentType: BusinessDocumentType;
   title: string;
@@ -920,6 +922,7 @@ function getSalesDefinition(
 
 function getPurchaseDefinition(
   referenceId: string,
+  language: DocumentLanguage = "nl",
 ): DocumentDefinition {
   const order = getPurchaseOrderById(referenceId);
 
@@ -1012,7 +1015,10 @@ function getPurchaseDefinition(
 
   return {
     documentType: "PURCHASE_ORDER",
-    title: "INKOOPORDER",
+    title:
+      language === "en"
+        ? "PURCHASE ORDER"
+        : "INKOOPORDER",
     number: order.orderNumber,
     date: order.orderDate,
     customerName: order.supplierName,
@@ -1024,33 +1030,57 @@ function getPurchaseDefinition(
     ].filter(Boolean),
     meta: [
       {
-        label: "Ordernummer",
+        label:
+          language === "en"
+            ? "Order number"
+            : "Ordernummer",
         value: order.orderNumber,
       },
       {
-        label: "Datum",
+        label:
+          language === "en"
+            ? "Date"
+            : "Datum",
         value: formatDate(order.orderDate),
       },
       {
-        label: "Stuks",
-        value: `${totals.orderedQuantity} stuks`,
+        label:
+          language === "en"
+            ? "Units"
+            : "Stuks",
+        value:
+          language === "en"
+            ? String(totals.orderedQuantity)
+            : `${totals.orderedQuantity} stuks`,
       },
       {
-        label: "Collectie",
+        label:
+          language === "en"
+            ? "Collection"
+            : "Collectie",
         value: order.collectionCode || "—",
       },
       {
-        label: "Verwachte levering",
+        label:
+          language === "en"
+            ? "Expected delivery"
+            : "Verwachte levering",
         value: formatDate(
           order.expectedDeliveryDate,
         ),
       },
       {
-        label: "Betalingstermijn",
+        label:
+          language === "en"
+            ? "Payment terms"
+            : "Betalingstermijn",
         value: getPaymentConditionText(order),
       },
       {
-        label: "Valuta",
+        label:
+          language === "en"
+            ? "Currency"
+            : "Valuta",
         value: order.currency,
       },
     ],
@@ -1064,7 +1094,9 @@ function getPurchaseDefinition(
     currency: order.currency,
     notes: order.notes || "",
     filename: sanitizeFilename(
-      `Inkooporder-${order.orderNumber}.pdf`,
+      language === "en"
+        ? `Purchase-Order-${order.orderNumber}.pdf`
+        : `Inkooporder-${order.orderNumber}.pdf`,
     ),
   };
 }
@@ -1405,9 +1437,13 @@ function getCreditNoteDefinition(
 function getDefinition(
   documentType: BusinessDocumentType,
   referenceId: string,
+  language: DocumentLanguage = "nl",
 ) {
   if (documentType === "PURCHASE_ORDER") {
-    return getPurchaseDefinition(referenceId);
+    return getPurchaseDefinition(
+      referenceId,
+      language,
+    );
   }
 
   if (
@@ -2758,10 +2794,17 @@ function drawFooter(
 export async function createBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
+  options?: {
+    language?: DocumentLanguage;
+  },
 ) {
+  const language =
+    options?.language ?? "nl";
+
   const definition = getDefinition(
     documentType,
     referenceId,
+    options?.language ?? "nl",
   );
   const settings = getCompanySettings();
 
@@ -2907,6 +2950,9 @@ export async function createBusinessDocumentPdf(
 export async function openBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
+  options?: {
+    language?: DocumentLanguage;
+  },
 ) {
   const pdfWindow = window.open(
     "about:blank",
@@ -2968,6 +3014,7 @@ export async function openBusinessDocumentPdf(
       await createBusinessDocumentPdf(
         documentType,
         referenceId,
+        options,
       );
 
     const blob = pdf.output("blob");
@@ -3004,11 +3051,15 @@ export async function openBusinessDocumentPdf(
 export async function downloadBusinessDocumentPdf(
   documentType: BusinessDocumentType,
   referenceId: string,
+  options?: {
+    language?: DocumentLanguage;
+  },
 ) {
   const { pdf, filename } =
     await createBusinessDocumentPdf(
       documentType,
       referenceId,
+      options,
     );
 
   pdf.save(filename);
@@ -3019,11 +3070,15 @@ export async function downloadBusinessDocumentPdf(
 export async function createBusinessDocumentPdfAttachment(
   documentType: BusinessDocumentType,
   referenceId: string,
+  options?: {
+    language?: DocumentLanguage;
+  },
 ): Promise<DocumentEmailAttachment> {
   const { pdf, filename } =
     await createBusinessDocumentPdf(
       documentType,
       referenceId,
+      options,
     );
 
   const dataUri = pdf.output("datauristring");

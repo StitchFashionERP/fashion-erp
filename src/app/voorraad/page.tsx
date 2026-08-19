@@ -9,7 +9,6 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import {
   createInventoryCorrection,
-  getInventoryRows,
   type InventoryCorrectionInput,
   type InventoryVariantRow,
 } from "@/lib/inventory";
@@ -135,10 +134,19 @@ export default function InventoryPage() {
       notes: "",
     });
 
-  function reload() {
-    const inventoryRows = getInventoryRows();
+  async function reload() {
+    const response =
+      await fetch("/api/inventory");
 
-    setRows(inventoryRows);
+    const inventoryRows =
+      await response.json();
+
+    setRows(
+      Array.isArray(inventoryRows)
+        ? inventoryRows
+        : [],
+    );
+
     setLoaded(true);
 
     setSelectedRow((current) => {
@@ -148,7 +156,7 @@ export default function InventoryPage() {
 
       return (
         inventoryRows.find(
-          (row) =>
+          (row: InventoryVariantRow) =>
             row.variantId === current.variantId,
         ) ?? null
       );

@@ -12,6 +12,7 @@ import {
 } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProductMediaManager } from "@/components/articles/product-media-manager";
+import { InventoryMovements } from "@/components/inventory/inventory-movements";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   deleteProduct,
@@ -1012,6 +1013,28 @@ export default function ProductDetailPage() {
           </table>
         </div>
       </section>
+
+      {product.variants.length > 0 && (
+        <section className="content-card">
+          <div className="content-card-header">
+            <div>
+              <h2 className="content-card-title">
+                Voorraadhistorie
+              </h2>
+
+              <p className="content-card-description">
+                Bekijk alle voorraadmutaties van deze variant.
+              </p>
+            </div>
+          </div>
+
+          <InventoryMovements
+            variantId={
+              product.variants[0].id
+            }
+          />
+        </section>
+      )}
 
       <section className={styles.dangerZone}>
         <div>

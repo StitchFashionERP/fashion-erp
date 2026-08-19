@@ -7,7 +7,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getSuppliers } from "@/lib/master-data";
 import {
   filterPurchaseOrders,
-  getPurchaseOrders,
   getPurchaseOrderTotals,
   isPurchaseOrderOverdue,
   type PurchaseOrder,
@@ -47,7 +46,46 @@ export default function PurchasingPage() {
   const [supplierId, setSupplierId] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
 
-  useEffect(() => setOrders(getPurchaseOrders()), []);
+  useEffect(() => {
+    async function loadOrders() {
+      const response =
+        await fetch("/api/purchase-orders");
+
+      const contentType =
+        response.headers.get(
+          "content-type",
+        ) || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          "Sessie verlopen. Log opnieuw in.",
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Inkooporders ophalen mislukt.",
+        );
+      }
+
+      if (Array.isArray(data)) {
+        console.log("PURCHASE ORDERS DEBUG", data);
+
+        setOrders(
+          data.map((order) => ({
+            ...order,
+            lines: order.lines ?? [],
+          })),
+        );
+      }
+    }
+
+    loadOrders();
+  }, []);
 
   const suppliers = useMemo(() => getSuppliers(), []);
   const filtered = useMemo(

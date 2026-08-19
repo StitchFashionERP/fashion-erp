@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { claimNextNumber } from "@/lib/number-series";
+import { claimNextNumberServer } from "@/lib/number-series-server";
 
 type Row = Record<string, unknown>;
 
@@ -122,9 +122,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (order.status !== "Verzonden") {
+    if (
+      order.status !== "Bevestigd" &&
+      order.status !== "Verzonden"
+    ) {
       throw new ApiError(
-        "Alleen verzonden verkooporders kunnen worden gefactureerd.",
+        "Alleen bevestigde of verzonden verkooporders kunnen worden gefactureerd.",
         400,
       );
     }
@@ -172,7 +175,7 @@ export async function POST(request: Request) {
     const invoiceDate = now.toISOString().slice(0, 10);
 
     const invoiceNumber =
-      await claimNextNumber("invoice");
+      await claimNextNumberServer("invoice");
 
     const lines = [];
 
@@ -195,7 +198,9 @@ export async function POST(request: Request) {
           .maybeSingle();
 
       const product =
-        variant?.products ?? {};
+        Array.isArray(variant?.products)
+          ? variant.products[0]
+          : variant?.products ?? {};
 
       const lineSubtotal =
         Number(line.quantity) *
@@ -215,8 +220,16 @@ export async function POST(request: Request) {
         line_total: lineSubtotal,
         profile: {
           productId: variant?.product_id ?? "",
+          productCode:
+            product.product_code ??
+            product.profile?.code ??
+            product.code ??
+            "",
           productName: product.name ?? "",
           sku: variant?.sku ?? "",
+          color: variant?.color ?? "",
+          colorCode: variant?.color_code ?? "",
+          size: variant?.size ?? "",
           vatCode: product.vat_code ?? "2V",
         },
       });
@@ -295,6 +308,12 @@ export async function POST(request: Request) {
     if (readError) {
       throw new ApiError(readError.message);
     }
+
+    console.log(
+      "CREATED INVOICE",
+      completeInvoice.id,
+      completeInvoice.invoice_number,
+    );
 
     return NextResponse.json(completeInvoice, {
       status: 201,
