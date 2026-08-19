@@ -15,9 +15,9 @@ import { DocumentActionButtons } from "@/components/documents/document-action-bu
 import { openBusinessDocumentPdf } from "@/lib/document-pdf";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  cancelPurchaseOrder,
+  updatePurchaseOrderStatusRemote,
   deletePurchaseOrder,
-  duplicatePurchaseOrder,
+    duplicatePurchaseOrder,
   getPurchaseOrderById,
   getPurchaseOrderDaysOverdue,
   getPurchaseOrderTotals,
@@ -406,7 +406,7 @@ export default function PurchaseOrderDetailPage() {
     setShowActions(false);
   }
 
-  function handleCancel() {
+  async function handleCancel() {
     const confirmed = window.confirm(
       "Weet je zeker dat je deze inkooporder wilt annuleren?",
     );
@@ -416,12 +416,14 @@ export default function PurchaseOrderDetailPage() {
     }
 
     try {
-      const updated = cancelPurchaseOrder(
+      await updatePurchaseOrderStatusRemote(
         order!.id,
+        "Geannuleerd",
       );
 
-      updateLocalOrder(
-        updated,
+      await reloadOrder();
+
+      setNotification(
         "De inkooporder is geannuleerd.",
       );
     } catch (caughtError) {
@@ -471,7 +473,7 @@ export default function PurchaseOrderDetailPage() {
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     const confirmed = window.confirm(
       "Weet je zeker dat je deze inkooporder definitief wilt verwijderen?",
     );
@@ -481,7 +483,13 @@ export default function PurchaseOrderDetailPage() {
     }
 
     try {
-      deletePurchaseOrder(order!.id);
+      await fetch(
+        `/api/purchase-orders/${order!.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
       router.push("/inkoop");
     } catch (caughtError) {
       setError(
@@ -1873,13 +1881,14 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </section>
 
-          {order.status === "Concept" && (
+          {(order.status === "Concept" ||
+            order.status === "Geannuleerd") && (
             <section
               className={
                 styles.dangerZone
               }
             >
-              <h2>Concept verwijderen</h2>
+              <h2>Inkooporder verwijderen</h2>
 
               <p>
                 Verwijder deze conceptorder

@@ -310,6 +310,35 @@ export function updatePurchaseOrderStatus(
   return updatePurchaseOrder(id, { status });
 }
 
+export async function updatePurchaseOrderStatusRemote(
+  id: string,
+  status: PurchaseOrderStatus,
+) {
+  const response = await fetch(
+    `/api/purchase-orders/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status,
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ??
+        "Inkooporder status wijzigen mislukt.",
+    );
+  }
+
+  return data;
+}
+
 export function duplicatePurchaseOrder(id: string) {
   const source = getPurchaseOrderById(id);
 

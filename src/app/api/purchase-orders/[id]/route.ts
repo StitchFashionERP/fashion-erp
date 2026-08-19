@@ -42,3 +42,41 @@ export async function PATCH(
 
   return NextResponse.json(data);
 }
+
+export async function DELETE(
+  _: Request,
+  context: {
+    params: Promise<{ id: string }>;
+  },
+) {
+  const { id } = await context.params;
+
+  const supabase = await createClient();
+
+  const { data: userData } =
+    await supabase.auth.getUser();
+
+  if (!userData.user) {
+    return NextResponse.json(
+      { error: "Geen gebruiker." },
+      { status: 401 },
+    );
+  }
+
+  const { error } =
+    await supabase
+      .from("purchase_orders")
+      .delete()
+      .eq("id", id);
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+  });
+}
