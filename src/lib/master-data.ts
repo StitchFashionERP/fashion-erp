@@ -124,6 +124,8 @@ const initialNames: Record<MasterDataEntity, string[]> = {
     "Oranje",
     "Bruin",
     "Beige",
+    "Castagne",
+    "Army light green",
   ],
   sizes: ["XXS","XS","S","M","L","XL","XXL","34","36","38","40","42","44"],
   seasons: ["Voorjaar/Zomer", "Herfst/Winter", "Doorlopend"],
@@ -263,6 +265,52 @@ export async function hydrateMasterData(): Promise<void> {
 
   const now =
     new Date().toISOString();
+
+  const requiredColorFamilies = [
+    "Castagne",
+    "Army light green",
+    "Navy",
+  ];
+
+  const colorFamilies =
+    masterDataCache.colorFamilies;
+
+  let colorFamiliesChanged = false;
+
+  requiredColorFamilies.forEach((name) => {
+    const exists =
+      colorFamilies.some(
+        (item) =>
+          item.name.toLowerCase() ===
+          name.toLowerCase(),
+      );
+
+    if (!exists) {
+      colorFamilies.push({
+        id: `colorFamilies-${slug(name)}-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 7)}`,
+        code: slug(name)
+          .toUpperCase()
+          .replace(/-/g, "_"),
+        name,
+        active: true,
+        sortOrder:
+          colorFamilies.length + 1,
+        notes: "",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      colorFamiliesChanged = true;
+    }
+  });
+
+  if (colorFamiliesChanged) {
+    await persistMasterDataStore(
+      masterDataCache,
+    );
+  }
 
   requiredSuppliers.forEach((name) => {
     const exists =
