@@ -400,7 +400,7 @@ export function ArticleForm({
     setSelectedColors((current) =>
       current.includes(color)
         ? current.filter((item) => item !== color)
-        : [...current, color],
+        : [...new Set([...current, color])],
     );
   }
 
