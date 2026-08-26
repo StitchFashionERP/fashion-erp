@@ -253,6 +253,15 @@ export function ArticleForm({
         : [],
     );
 
+
+  useEffect(() => {
+    if (initialProduct?.colors) {
+      setSelectedColors(
+        [...new Set(initialProduct.colors)],
+      );
+    }
+  }, [initialProduct]);
+
   const [selectedSizes, setSelectedSizes] =
     useState<string[]>(
       initialProduct?.sizes ?? [],
@@ -1047,7 +1056,7 @@ export function ArticleForm({
               </div>
               <div>
                 <dt>Kleuren</dt>
-                <dd>{selectedColors.length}</dd>
+                <dd>{JSON.stringify(selectedColors)}</dd>
               </div>
               <div>
                 <dt>Maten</dt>
