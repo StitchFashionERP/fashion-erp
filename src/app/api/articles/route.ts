@@ -251,6 +251,11 @@ export async function GET() {
       });
     }
 
+    console.log(
+      "DEBUG SS270520 COLORS",
+      products.find((p) => p.code === "SS270520")?.colors,
+    );
+
     return NextResponse.json(products);
   } catch (error) {
     return errorResponse(error);
