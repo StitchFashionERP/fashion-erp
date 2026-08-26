@@ -853,6 +853,13 @@ export default function ArtikelenPage() {
           selectedCount={
             selectedIds.length
           }
+          onOpen={() => {
+            const product = selectedProducts[0];
+
+            if (product) {
+              window.location.href = `/artikelen/${product.id}`;
+            }
+          }}
           onEdit={() =>
             setBulkDrawerOpen(true)
           }

@@ -2,6 +2,7 @@
 
 type BulkActionToolbarProps = {
   selectedCount: number;
+  onOpen?: () => void;
   onEdit: () => void;
   onExport: () => void;
   onArchive: () => void;
@@ -11,6 +12,7 @@ type BulkActionToolbarProps = {
 
 export function BulkActionToolbar({
   selectedCount,
+  onOpen,
   onEdit,
   onExport,
   onArchive,
@@ -53,12 +55,28 @@ export function BulkActionToolbar({
           flexWrap: "wrap",
         }}
       >
+        {selectedCount === 1 && onOpen && (
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={onOpen}
+          >
+            Openen
+          </button>
+        )}
+
         <button
           type="button"
-          className="button button-primary"
+          className={
+            selectedCount === 1
+              ? "button"
+              : "button button-primary"
+          }
           onClick={onEdit}
         >
-          Bulk aanpassen
+          {selectedCount === 1
+            ? "Bewerken"
+            : "Bulk aanpassen"}
         </button>
 
         <button
