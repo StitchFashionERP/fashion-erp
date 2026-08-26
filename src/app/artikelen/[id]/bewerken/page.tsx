@@ -28,6 +28,12 @@ export default function EditArticlePage() {
   const [isLoaded, setIsLoaded] =
     useState(false);
 
+  const [isSaving, setIsSaving] =
+    useState(false);
+
+  const [saveError, setSaveError] =
+    useState("");
+
   useEffect(() => {
     let active = true;
     void fetchProductById(params.id)
@@ -43,13 +49,26 @@ export default function EditArticlePage() {
   }, [params.id]);
 
   async function handleSubmit(input: ProductInput) {
-    const updated = await updateProduct(
-      params.id,
-      input,
-    );
+    setSaveError("");
+    setIsSaving(true);
 
-    window.alert("Artikel succesvol opgeslagen.");
-    router.push(`/artikelen/${updated.id}`);
+    try {
+      const updated = await updateProduct(
+        params.id,
+        input,
+      );
+
+      window.alert("Artikel succesvol opgeslagen.");
+      router.push(`/artikelen/${updated.id}`);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Het artikel kon niet worden opgeslagen.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   if (!isLoaded) {
@@ -101,9 +120,28 @@ export default function EditArticlePage() {
         description="Wijzig productgegevens, prijzen, varianten en beginvoorraad."
       />
 
+      {saveError && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 16px",
+            borderRadius: "10px",
+            border: "1px solid #e5b7b7",
+            background: "#fff5f5",
+            color: "#8b1e1e",
+          }}
+        >
+          {saveError}
+        </div>
+      )}
+
       <ArticleForm
         initialProduct={product}
-        submitLabel="Wijzigingen opslaan"
+        submitLabel={
+          isSaving
+            ? "Opslaan..."
+            : "Wijzigingen opslaan"
+        }
         onSubmit={handleSubmit}
       />
     </div>

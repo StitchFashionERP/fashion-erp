@@ -42,35 +42,60 @@ export function BusinessDataBootstrap({ children }: { children: ReactNode }) {
 
     async function initialize() {
       try {
-        await Promise.all([
-          fetchProducts(),
-          hydrateMasterData(),
-          hydrateCustomers(),
-          loadCompanySettings(),
-          hydrateSharedState([
-            ...inventorySharedStateKeys,
-            ...purchasingSharedStateKeys,
-            ...warehouseSharedStateKeys,
-            ...invoiceSharedStateKeys,
-            ...numberSeriesSharedStateKeys,
-            ...productionSharedStateKeys,
-            ...returnsSharedStateKeys,
-            ...debtorManagementSharedStateKeys,
-            ...documentEmailSharedStateKeys,
-            ...appUsersSharedStateKeys,
-            ...communicationSettingsSharedStateKeys,
-            ...barcodeSharedStateKeys,
-            ...eanCenterSharedStateKeys,
-            ...exactBridgeSharedStateKeys,
-            ...historyEngineSharedStateKeys,
-            ...priceListsSharedStateKeys,
-            ...pricingHistorySharedStateKeys,
-            ...pricingProfessionalSharedStateKeys,
-            ...pricingPromotionsSharedStateKeys,
-            ...productMediaSharedStateKeys,
-            ...scheduledPricesSharedStateKeys,
-          ]),
-        ]);
+        const steps = [
+          ["artikelen", () => fetchProducts()],
+          ["stamgegevens", () => hydrateMasterData()],
+          ["klanten", () => hydrateCustomers()],
+          ["bedrijfsinstellingen", () => loadCompanySettings()],
+          [
+            "gedeelde bedrijfsdata",
+            () =>
+              hydrateSharedState([
+                ...inventorySharedStateKeys,
+                ...purchasingSharedStateKeys,
+                ...warehouseSharedStateKeys,
+                ...invoiceSharedStateKeys,
+                ...numberSeriesSharedStateKeys,
+                ...productionSharedStateKeys,
+                ...returnsSharedStateKeys,
+                ...debtorManagementSharedStateKeys,
+                ...documentEmailSharedStateKeys,
+                ...appUsersSharedStateKeys,
+                ...communicationSettingsSharedStateKeys,
+                ...barcodeSharedStateKeys,
+                ...eanCenterSharedStateKeys,
+                ...exactBridgeSharedStateKeys,
+                ...historyEngineSharedStateKeys,
+                ...priceListsSharedStateKeys,
+                ...pricingHistorySharedStateKeys,
+                ...pricingProfessionalSharedStateKeys,
+                ...pricingPromotionsSharedStateKeys,
+                ...productMediaSharedStateKeys,
+                ...scheduledPricesSharedStateKeys,
+              ]),
+          ],
+        ] as const;
+
+        for (const [name, loader] of steps) {
+          try {
+            console.log(`[BusinessDataBootstrap] START: ${name}`);
+            await loader();
+            console.log(`[BusinessDataBootstrap] OK: ${name}`);
+          } catch (error) {
+            console.error(
+              `[BusinessDataBootstrap] FAILED: ${name}`,
+              error,
+            );
+
+            throw new Error(
+              `${name}: ${
+                error instanceof Error
+                  ? error.message
+                  : String(error)
+              }`,
+            );
+          }
+        }
 
         if (!cancelled) {
           setStatus("ready");
