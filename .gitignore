@@ -44,3 +44,5 @@ storage-audit.csv
 storage-audit.md
 storage-references.txt
 supabase/.temp/
+.vercel
+.env*
