@@ -115,6 +115,8 @@ export type ProductInput = {
 
   stockByVariant?: Record<string, number>;
   importedVariants?: Array<{
+    id?: string;
+    sku?: string;
     color: string;
     size: string;
     stock?: number;
@@ -277,13 +279,19 @@ export function generateVariants(
     const existing = existingByKey.get(key);
 
     return {
-      id: existing?.id ?? `${key}-${Date.now()}-${Math.random()}`,
-      sku: generateSku(
-        input.collection,
-        input.code,
-        color,
-        size,
-      ),
+      id:
+        requested.id ??
+        existing?.id ??
+        `${key}-${Date.now()}-${Math.random()}`,
+      sku:
+        requested.sku ??
+        existing?.sku ??
+        generateSku(
+          input.collection,
+          input.code,
+          color,
+          size,
+        ),
       color,
       size,
       ean: requested.ean || existing?.ean,
@@ -495,7 +503,7 @@ function normalizeLegacyProduct(
   const defaults = getPricingDefaults();
 
   const colors = Array.isArray(product.colors)
-    ? (product.colors as string[])
+    ? [...new Set(product.colors as string[])]
     : [];
 
   const sizes = Array.isArray(product.sizes)
