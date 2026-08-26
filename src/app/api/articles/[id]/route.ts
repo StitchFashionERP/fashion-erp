@@ -135,7 +135,10 @@ function rowToProduct(row: Record<string, unknown>) {
 
   return {
     ...profile,
-    id: String(row.id ?? ""),
+    colors: Array.isArray(profile.colors)
+      ? [...new Set(profile.colors as string[])]
+      : [],
+    id: String(row.id ?? ""), 
     code: String(
       row.product_code ?? profile.code ?? "",
     ),
