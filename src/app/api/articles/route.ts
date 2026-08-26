@@ -248,14 +248,6 @@ export async function GET() {
       });
     }
 
-    console.log("ARTICLE SUPPLIERS DEBUG", {
-      suppliers: [
-        ...new Set(
-          products.map((p) => p.supplier),
-        ),
-      ],
-    });
-
     return NextResponse.json(products);
   } catch (error) {
     return errorResponse(error);
