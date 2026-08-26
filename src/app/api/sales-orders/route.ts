@@ -36,13 +36,47 @@ async function resolveCustomerId(supabase: Awaited<ReturnType<typeof createClien
   if (!data?.id) throw new ApiError("De geselecteerde klant bestaat niet in Supabase.", 400);
   return String(data.id);
 }
-async function resolveVariantId(supabase: Awaited<ReturnType<typeof createClient>>, organizationId: string, suppliedId: string) {
-  let query = supabase.from("product_variants").select("id").eq("organization_id", organizationId);
-  query = isUuid(suppliedId) ? query.or(`id.eq.${suppliedId},legacy_id.eq.${suppliedId}`) : query.eq("legacy_id", suppliedId);
-  const { data } = await query.limit(1).maybeSingle();
-  if (!data?.id) throw new ApiError(`Artikelvariant ${suppliedId} bestaat niet in Supabase.`, 400);
+async function resolveVariantId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  suppliedId: string,
+  profile?: Row,
+) {
+  let query = supabase
+    .from("product_variants")
+    .select("id")
+    .eq("organization_id", organizationId);
+
+  query = isUuid(suppliedId)
+    ? query.or(`id.eq.${suppliedId},legacy_id.eq.${suppliedId}`)
+    : query.eq("legacy_id", suppliedId);
+
+  let { data } = await query.limit(1).maybeSingle();
+
+  if (!data?.id && profile?.sku) {
+    const fallback = await supabase
+      .from("product_variants")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("sku", String(profile.sku))
+      .eq("color", String(profile.color ?? ""))
+      .eq("size", String(profile.size ?? ""))
+      .limit(1)
+      .maybeSingle();
+
+    data = fallback.data;
+  }
+
+  if (!data?.id) {
+    throw new ApiError(
+      `Artikelvariant ${suppliedId} bestaat niet in Supabase.`,
+      400,
+    );
+  }
+
   return String(data.id);
 }
+
 function response(error: unknown) { const e = error instanceof ApiError ? error : new ApiError(error instanceof Error ? error.message : "De verkooporderbewerking is mislukt."); return NextResponse.json({ error: e.message }, { status: e.status }); }
 
 export async function GET() {
@@ -81,7 +115,12 @@ export async function POST(request: Request) {
     if (error) throw new ApiError(error.message);
     const lineRows = [];
     for (const line of lines) {
-      const variantId = await resolveVariantId(supabase, organizationId, String(line.variantId ?? ""));
+      const variantId = await resolveVariantId(
+        supabase,
+        organizationId,
+        String(line.variantId ?? ""),
+        line,
+      );
       const quantity = num(line.quantity); const unitPrice = num(line.unitPrice); const discountPercentage = num(line.discountPercentage);
       lineRows.push({ organization_id: organizationId, sales_order_id: order.id, variant_id: variantId, quantity, delivered_quantity: 0, reserved_quantity: 0, unit_price: unitPrice, discount_percentage: discountPercentage, line_total: quantity * unitPrice * (1 - discountPercentage / 100), profile: line });
     }
