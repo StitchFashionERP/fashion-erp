@@ -248,7 +248,9 @@ export function ArticleForm({
 
   const [selectedColors, setSelectedColors] =
     useState<string[]>(
-      initialProduct?.colors ?? [],
+      initialProduct?.colors
+        ? [...new Set(initialProduct.colors)]
+        : [],
     );
 
   const [selectedSizes, setSelectedSizes] =
@@ -291,6 +293,7 @@ export function ArticleForm({
       ),
     );
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -479,11 +482,15 @@ export function ArticleForm({
     return result;
   }
 
-  function handleSubmit(
+  async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    if (saving) return;
+
     setError("");
+    setSaving(true);
 
     const normalizedCode = code
       .trim()
@@ -557,7 +564,8 @@ export function ArticleForm({
       return;
     }
 
-    onSubmit({
+    try {
+      await onSubmit({
       code: normalizedCode,
       name: name.trim(),
       collection,
@@ -588,13 +596,31 @@ export function ArticleForm({
       colors: selectedColors,
       sizes: selectedSizes,
       stockByVariant,
-      importedVariants: variantRows.map((variant) => ({
-        color: variant.color,
-        size: variant.size,
-        stock: stockByVariant[variant.key] ?? 0,
-        ean: variantEans[variant.key] || undefined,
-      })),
-    });
+      importedVariants: variantRows.map((variant) => {
+        const existing = initialProduct?.variants.find(
+          (item) =>
+            getVariantKey(item.color, item.size) === variant.key,
+        );
+
+        return {
+          color: variant.color,
+          size: variant.size,
+          stock: stockByVariant[variant.key] ?? 0,
+          ean: variantEans[variant.key] || undefined,
+          id: existing?.id,
+          sku: existing?.sku,
+        };
+      }),
+      });
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Opslaan is niet gelukt.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -1057,8 +1083,9 @@ export function ArticleForm({
         <button
           className="button button-primary"
           type="submit"
+          disabled={saving}
         >
-          {submitLabel}
+          {saving ? "Opslaan…" : submitLabel}
         </button>
       </div>
     </form>
