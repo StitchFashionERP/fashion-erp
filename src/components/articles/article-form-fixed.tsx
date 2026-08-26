@@ -395,7 +395,7 @@ export function ArticleForm({
 
   const variantRows = useMemo(
     () =>
-      selectedColors.flatMap((color) =>
+      [...new Set(selectedColors)].flatMap((color) =>
         selectedSizes.map((size) => ({
           key: getVariantKey(color, size),
           color,
@@ -1056,7 +1056,7 @@ export function ArticleForm({
               </div>
               <div>
                 <dt>Kleuren</dt>
-                <dd>{JSON.stringify(selectedColors)}</dd>
+                <dd>{[...new Set(selectedColors)].length}</dd>
               </div>
               <div>
                 <dt>Maten</dt>
