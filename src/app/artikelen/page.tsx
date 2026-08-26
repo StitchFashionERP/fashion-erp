@@ -1114,52 +1114,6 @@ export default function ArtikelenPage() {
                         </td>
                       )}
 
-                      <td className="table-number">
-                        <div className="master-data-row-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPropertiesProduct(
-                                product,
-                              )
-                            }
-                          >
-                            Eigenschappen
-                          </button>
-
-                          <Link
-                            href={`/artikelen/${product.id}/bewerken`}
-                          >
-                            Bewerken
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void archiveProduct(
-                                product,
-                              );
-                            }}
-                          >
-                            {product.status ===
-                            "Inactief"
-                              ? "Activeren"
-                              : "Archiveren"}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="danger"
-                            onClick={() => {
-                              void removeProduct(
-                                product,
-                              );
-                            }}
-                          >
-                            Verwijderen
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 },
