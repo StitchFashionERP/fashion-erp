@@ -1056,7 +1056,7 @@ export function ArticleForm({
               </div>
               <div>
                 <dt>Kleuren</dt>
-                <dd>{JSON.stringify(selectedColors)}</dd>
+                <dd>{selectedColors.length}</dd>
               </div>
               <div>
                 <dt>Maten</dt>
