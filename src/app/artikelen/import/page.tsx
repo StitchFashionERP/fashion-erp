@@ -12,6 +12,7 @@ import {
 } from "@/lib/articles";
 import { getPricingDefaults } from "@/lib/company-settings";
 import { calculatePricing } from "@/lib/pricing-engine";
+import { resolveColor } from "@/lib/master-data";
 import { parseCsv, parseXlsx } from "./xlsx-parser";
 import styles from "./article-import.module.css";
 
@@ -380,7 +381,18 @@ export default function ArticleImportPage() {
           text(row, mapping, "garmentType") || "XX";
         const brand = text(row, mapping, "brand") || "Onbekend";
         const supplier = text(row, mapping, "supplier");
-        const color = text(row, mapping, "color");
+        const importedColor = text(row, mapping, "color");
+
+        const colorMaster = resolveColor(importedColor);
+
+        if (!colorMaster) {
+          throw new Error(
+            `Kleur "${importedColor}" bestaat niet in stamgegevens.`,
+          );
+        }
+
+        const color = colorMaster.name;
+
         const size = text(row, mapping, "size");
         const ean = normalizedEan(text(row, mapping, "ean"));
 

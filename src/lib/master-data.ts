@@ -704,4 +704,20 @@ export const getCountries = () => getMasterDataItems("countries").map(toNamedMas
 
 export const getColors = () => getMasterDataItems("colorFamilies", true).map(toNamedMasterData);
 
+
+export function resolveColor(
+  colorName: string,
+): NamedMasterData | undefined {
+  const normalized = colorName
+    .trim()
+    .toLowerCase();
+
+  return getColors().find(
+    (color) =>
+      color.name
+        .trim()
+        .toLowerCase() === normalized,
+  );
+}
+
 export const getSizes = () => getMasterDataItems("sizes", true).map(toNamedMasterData);
