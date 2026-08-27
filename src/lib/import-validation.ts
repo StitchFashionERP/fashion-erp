@@ -9,21 +9,32 @@ import {
 } from "@/lib/master-data";
 
 function normalize(value: string) {
-  return value
-    .trim()
-    .toLowerCase();
+  return value.trim().toLowerCase();
 }
 
-function resolve(
-  value: string,
+function exists(
+  value: string | undefined,
   items: { name: string }[],
 ) {
-  const normalized = normalize(value);
+  if (!value) return true;
 
-  return items.find(
+  return items.some(
     (item) =>
-      normalize(item.name) === normalized,
+      normalize(item.name) === normalize(value),
   );
+}
+
+function addMissing(
+  target: string[],
+  value: string | undefined,
+  items: { name: string }[],
+) {
+  if (
+    value &&
+    !exists(value, items)
+  ) {
+    target.push(value);
+  }
 }
 
 export function validateImportMasterData(input: {
@@ -35,79 +46,81 @@ export function validateImportMasterData(input: {
   supplier?: string;
   collection?: string;
 }) {
-  const errors: string[] = [];
+  const missing = {
+    brands: [] as string[],
+    colors: [] as string[],
+    sizes: [] as string[],
+    categories: [] as string[],
+    productTypes: [] as string[],
+    suppliers: [] as string[],
+    collections: [] as string[],
+  };
 
-  if (
-    input.brand &&
-    !resolve(input.brand, getBrands())
-  ) {
-    errors.push(
-      `Merk "${input.brand}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.brands,
+    input.brand,
+    getBrands(),
+  );
 
-  if (
-    input.color &&
-    !resolve(input.color, getColors())
-  ) {
-    errors.push(
-      `Kleur "${input.color}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.colors,
+    input.color,
+    getColors(),
+  );
 
-  if (
-    input.size &&
-    !resolve(input.size, getSizes())
-  ) {
-    errors.push(
-      `Maat "${input.size}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.sizes,
+    input.size,
+    getSizes(),
+  );
 
-  if (
-    input.category &&
-    !resolve(input.category, getCategories())
-  ) {
-    errors.push(
-      `Categorie "${input.category}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.categories,
+    input.category,
+    getCategories(),
+  );
 
-  if (
-    input.productType &&
-    !resolve(input.productType, getProductTypes())
-  ) {
-    errors.push(
-      `Producttype "${input.productType}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.productTypes,
+    input.productType,
+    getProductTypes(),
+  );
+
+  const suppliers = getSuppliers();
 
   if (
     input.supplier &&
-    !getSuppliers().some(
+    !suppliers.some(
       (supplier) =>
-        supplier.companyName
-          .trim()
-          .toLowerCase() ===
-        input.supplier!.trim().toLowerCase(),
+        normalize(supplier.companyName) ===
+        normalize(input.supplier!),
     )
   ) {
-    errors.push(
-      `Leverancier "${input.supplier}" bestaat niet in Stamgegevens.`,
-    );
+    missing.suppliers.push(input.supplier);
   }
 
-  if (
-    input.collection &&
-    !resolve(input.collection, getCollections())
-  ) {
-    errors.push(
-      `Collectie "${input.collection}" bestaat niet in Stamgegevens.`,
-    );
-  }
+  addMissing(
+    missing.collections,
+    input.collection,
+    getCollections(),
+  );
+
+  const hasErrors =
+    Object.values(missing)
+      .some(
+        (items) => items.length > 0,
+      );
 
   return {
-    valid: errors.length === 0,
-    errors,
+    valid: !hasErrors,
+    missing,
+    errors: Object.entries(missing)
+      .flatMap(
+        ([type, items]) =>
+          items.map(
+            (item) =>
+              `${type}: ${item}`,
+          ),
+      ),
   };
 }
