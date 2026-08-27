@@ -12,6 +12,8 @@ import {
   recordPricingHistory,
 } from "@/lib/pricing-history";
 
+import { getColors } from "@/lib/master-data";
+
 export type ProductStatus = "Actief" | "Concept" | "Inactief";
 
 export type ProductVariant = {
@@ -180,6 +182,16 @@ export function getVariantKey(color: string, size: string) {
   return `${color}__${size}`;
 }
 
+function getColorCode(color: string) {
+  return (
+    getColors().find(
+      (item) =>
+        item.name.trim().toLowerCase() ===
+        color.trim().toLowerCase(),
+    )?.code ?? color
+  );
+}
+
 export function generateSku(
   collection: string,
   productCode: string,
@@ -291,10 +303,11 @@ export function generateVariants(
         generateSku(
           input.collection,
           input.code,
-          color,
+          getColorCode(color),
           size,
         ),
       color,
+      colorCode: getColorCode(color),
       size,
       ean: requested.ean || existing?.ean,
       supplierVariantCode:
