@@ -13,6 +13,7 @@ import {
 import { getPricingDefaults } from "@/lib/company-settings";
 import { calculatePricing } from "@/lib/pricing-engine";
 import { resolveColor } from "@/lib/master-data";
+import { validateImportMasterData } from "@/lib/import-validation";
 import { parseCsv, parseXlsx } from "./xlsx-parser";
 import styles from "./article-import.module.css";
 
@@ -141,6 +142,21 @@ function buildPreview(
     const garmentType = text(row, mapping, "garmentType");
     const requestedCode = normalizedCode(text(row, mapping, "code"));
     const ean = normalizedEan(text(row, mapping, "ean"));
+
+    const masterDataValidation =
+      validateImportMasterData({
+        brand: text(row, mapping, "brand"),
+        color,
+        size,
+        category: text(row, mapping, "category"),
+        productType: text(row, mapping, "garmentType"),
+        supplier: text(row, mapping, "supplier"),
+        collection,
+      });
+
+    if (!masterDataValidation.valid) {
+      messages.push(...masterDataValidation.errors);
+    }
 
     if (!name) messages.push("Productnaam ontbreekt.");
     if (!color) messages.push("Kleur ontbreekt.");
@@ -401,7 +417,7 @@ export default function ArticleImportPage() {
           name: text(row, mapping, "productName"),
           collection,
           category: garmentType === "XX" ? "" : garmentType,
-          supplier,
+          supplier: text(row, mapping, "supplier"),
           supplierProductCode: text(row, mapping, "supplierSku"),
           status: truthy(text(row, mapping, "active"))
             ? "Actief"
