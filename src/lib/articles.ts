@@ -181,13 +181,13 @@ export function getVariantKey(color: string, size: string) {
 export function generateSku(
   collection: string,
   productCode: string,
-  color: string,
+  colorCode: string,
   size: string,
 ) {
   return [
     cleanCodePart(collection, 5),
     cleanCodePart(productCode, 10),
-    cleanCodePart(color, 4),
+    cleanCodePart(colorCode, 6),
     cleanCodePart(size, 4),
   ]
     .filter(Boolean)
