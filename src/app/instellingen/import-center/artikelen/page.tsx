@@ -13,6 +13,7 @@ import {
 import { getPricingDefaults } from "@/lib/company-settings";
 import { calculatePricing } from "@/lib/pricing-engine";
 import { resolveColor } from "@/lib/master-data";
+import { validateImportMasterData } from "@/lib/import-validation";
 import { parseCsv, parseXlsx } from "./xlsx-parser";
 import styles from "./article-import.module.css";
 
@@ -212,6 +213,21 @@ function buildPreview(
     const garmentType = suppliedGarmentType || "XX";
     const suppliedCode = normalizeCode(text(row, mapping, "code"));
     const ean = normalizeEan(text(row, mapping, "ean"));
+
+    const masterDataValidation =
+      validateImportMasterData({
+        brand: text(row, mapping, "brand"),
+        color,
+        size,
+        category: text(row, mapping, "category"),
+        productType: text(row, mapping, "garmentType"),
+        supplier,
+        collection,
+      });
+
+    if (!masterDataValidation.valid) {
+      errors.push(...masterDataValidation.errors);
+    }
 
     if (!productName) {
       errors.push("Productnaam ontbreekt.");
