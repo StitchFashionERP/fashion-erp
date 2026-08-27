@@ -165,20 +165,45 @@ export function SalesOrderForm({
             >)
           : {};
 
+        console.log(
+          "DEBUG PRODUCT RESULT VARIANT",
+          productResult
+            .flatMap((p) => p.variants)
+            .slice(0,10)
+            .map((v) => ({
+              color: v.color,
+              colorCode: v.colorCode,
+              sku: v.sku,
+            })),
+        );
+
         const loadedVariants = productResult.flatMap((product) => {
           const primaryImageUrl =
             mediaByProduct[product.id]?.imageUrl ?? "";
 
           return product.variants.map((variant) => {
             const colorCode =
-              colorMap.get(variant.color.toLowerCase()) ??
+              variant.colorCode?.trim() ||
+              colorMap.get(variant.color.toLowerCase()) ||
               variant.color.slice(0, 3).toUpperCase();
+
+            console.log("COLOR DEBUG", {
+              color: variant.color,
+              variantColorCode: variant.colorCode,
+              resolved: colorCode,
+            });
+
+            const masterColor =
+              colors.find(
+                (color) => color.code === colorCode,
+              )?.name ??
+              variant.color;
 
             return {
               productId: product.id,
               productName: product.name,
               productCode: product.code,
-              color: variant.color,
+              color: masterColor,
               colorCode,
               articleCode: getColorArticleCode(
                 product.code,

@@ -307,7 +307,10 @@ export function generateVariants(
           size,
         ),
       color,
-      colorCode: getColorCode(color),
+      colorCode:
+        requested.colorCode ??
+        existing?.colorCode ??
+        getColorCode(color),
       size,
       ean: requested.ean || existing?.ean,
       supplierVariantCode:
@@ -517,8 +520,27 @@ function normalizeLegacyProduct(
   const now = new Date().toISOString();
   const defaults = getPricingDefaults();
 
+  const masterColors = getColors();
+
   const colors = Array.isArray(product.colors)
-    ? [...new Set(product.colors as string[])]
+    ? [
+        ...new Set(
+          (product.colors as string[]).map((color) => {
+            const normalized = color
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "");
+
+            return (
+              masterColors.find(
+                (master) =>
+                  master.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "") === normalized,
+              )?.name ?? color
+            );
+          }),
+        ),
+      ]
     : [];
 
   const sizes = Array.isArray(product.sizes)
@@ -639,12 +661,16 @@ function normalizeLegacyProduct(
 
   const normalizedInput = normalizePricingInput(input);
 
+
   const storedVariants = Array.isArray(product.variants)
     ? (product.variants as Record<string, unknown>[]).map(
         (variant) => ({
           id: String(variant.id ?? ""),
           sku: String(variant.sku ?? ""),
           color: String(variant.color ?? ""),
+          colorCode:
+            String(variant.colorCode ?? "").trim() ||
+            getColorCode(String(variant.color ?? "")),
           size: String(variant.size ?? ""),
           physicalStock: Number(
             variant.physicalStock ?? 0,
@@ -739,9 +765,15 @@ export function getStoredProducts(): Product[] {
 }
 
 export function setProductCache(products: Product[]) {
-  productCache = products.map((product) =>
-    normalizeLegacyProduct(product as unknown as Record<string, unknown>),
-  );
+  productCache = products.map((product) => {
+    const normalized = normalizeLegacyProduct(product as unknown as Record<string, unknown>);
+
+    if (normalized.name === "Angela Dress") {
+      console.log("AFTER NORMALIZE ANGELA COLORS", normalized.colors);
+    }
+
+    return normalized;
+  });
 }
 
 async function persistProductChanges(previous: Product[], next: Product[]) {

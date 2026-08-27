@@ -34,7 +34,31 @@ function statusToActive(status: unknown) {
   return String(status ?? "Concept") !== "Inactief";
 }
 
-function rowToProduct(row: Record<string, unknown>) {
+async function getColorFamilies(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const { data } = await supabase
+    .from("shared_application_state")
+    .select("storage_value")
+    .eq("storage_key", "stitch-master-data-v1")
+    .maybeSingle();
+
+  if (!data?.storage_value) return [];
+
+  try {
+    const parsed = JSON.parse(data.storage_value);
+    return Array.isArray(parsed.colorFamilies)
+      ? parsed.colorFamilies
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function rowToProduct(
+  row: Record<string, unknown>,
+  colorFamilies: { name: string; code: string }[] = [],
+) {
   const profile = asRecord(row.profile);
   const variants = Array.isArray(row.product_variants)
     ? (row.product_variants as Record<string, unknown>[]).map((variantRow) => {
@@ -43,7 +67,16 @@ function rowToProduct(row: Record<string, unknown>) {
           ...variantProfile,
           id: String(variantRow.id ?? variantProfile.id ?? ""),
           sku: String(variantRow.sku ?? variantProfile.sku ?? ""),
-          color: String(variantRow.color ?? variantProfile.color ?? ""),
+          color:
+            colorFamilies.find(
+              (color) =>
+                color.code === String(variantRow.color_code ?? ""),
+            )?.name ??
+            String(
+              variantRow.color ??
+                variantProfile.color ??
+                "",
+            ),
           colorCode: String(
             variantRow.color_code ??
               variantProfile.colorCode ??
@@ -212,6 +245,7 @@ function errorResponse(error: unknown) {
 export async function GET() {
   try {
     const { organizationId, supabase } = await getApiContext();
+    const colorFamilies = await getColorFamilies(supabase);
     const { data, error } = await supabase
       .from("products")
       .select("*, product_variants(*)")
@@ -223,7 +257,7 @@ export async function GET() {
     }
 
     const products = (data ?? []).map(
-      (row: Record<string, unknown>) => rowToProduct(row),
+      (row: Record<string, unknown>) => rowToProduct(row, colorFamilies),
     );
 
     const supplierIds = [
@@ -276,6 +310,7 @@ export async function POST(request: Request) {
     }
 
     const { organizationId, supabase } = await getApiContext();
+    const colorFamilies = await getColorFamilies(supabase);
     const row = productToRow(organizationId, product);
     const { data: savedProduct, error: productError } = await supabase
       .from("products")
@@ -316,7 +351,10 @@ export async function POST(request: Request) {
       throw new ApiError(error.message, 500);
     }
 
-    return NextResponse.json(rowToProduct(data as Record<string, unknown>));
+    return NextResponse.json(rowToProduct(
+      data as Record<string, unknown>,
+      colorFamilies,
+    ));
   } catch (error) {
     return errorResponse(error);
   }

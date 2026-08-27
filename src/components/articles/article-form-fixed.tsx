@@ -405,6 +405,20 @@ export function ArticleForm({
     [selectedColors, selectedSizes],
   );
 
+  function sameColor(
+    left: string,
+    right: string,
+  ) {
+    return (
+      left
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "") ===
+      right
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+    );
+  }
+
   function toggleColor(color: string) {
     setSelectedColors((current) =>
       current.includes(color)
@@ -613,6 +627,7 @@ export function ArticleForm({
 
         return {
           color: variant.color,
+          colorCode: existing?.colorCode,
           size: variant.size,
           stock: stockByVariant[variant.key] ?? 0,
           ean: variantEans[variant.key] || undefined,
@@ -864,8 +879,9 @@ export function ArticleForm({
                 <label
                   key={color.id}
                   className={`${styles.optionCard} ${
-                    selectedColors.includes(
-                      color.name,
+                    selectedColors.some(
+                      (selected) =>
+                        sameColor(selected, color.name),
                     )
                       ? styles.optionCardSelected
                       : ""
@@ -873,8 +889,9 @@ export function ArticleForm({
                 >
                   <input
                     type="checkbox"
-                    checked={selectedColors.includes(
-                      color.name,
+                    checked={selectedColors.some(
+                      (selected) =>
+                        sameColor(selected, color.name),
                     )}
                     onChange={() =>
                       toggleColor(color.name)

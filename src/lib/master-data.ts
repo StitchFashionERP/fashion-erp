@@ -124,7 +124,6 @@ const initialNames: Record<MasterDataEntity, string[]> = {
     "Oranje",
     "Bruin",
     "Beige",
-    "Castagne",
     "Army light green",
   ],
   sizes: ["XXS","XS","S","M","L","XL","XXL","34","36","38","40","42","44"],
@@ -199,8 +198,12 @@ function normalizeMasterDataStore(
 
 export function getMasterDataStore(): Record<MasterDataEntity, MasterDataItem[]> {
   if (!masterDataCache) {
+    console.warn(
+      "[master-data] requested before hydration, using temporary defaults",
+    );
     masterDataCache = createInitialStore();
   }
+
   return masterDataCache;
 }
 
@@ -267,7 +270,6 @@ export async function hydrateMasterData(): Promise<void> {
     new Date().toISOString();
 
   const requiredColorFamilies = [
-    "Castagne",
     "Army light green",
     "Navy",
   ];
