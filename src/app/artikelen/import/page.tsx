@@ -13,7 +13,7 @@ import {
 import { getPricingDefaults } from "@/lib/company-settings";
 import { calculatePricing } from "@/lib/pricing-engine";
 import { resolveColor } from "@/lib/master-data";
-import { validateImportMasterData } from "@/lib/import-validation";
+import { validateImportMasterData, formatMasterDataErrors } from "@/lib/import-validation";
 import { parseCsv, parseXlsx } from "./xlsx-parser";
 import styles from "./article-import.module.css";
 
@@ -155,7 +155,11 @@ function buildPreview(
       });
 
     if (!masterDataValidation.valid) {
-      messages.push(...masterDataValidation.errors);
+      messages.push(
+        ...formatMasterDataErrors(
+          masterDataValidation.missing,
+        ),
+      );
     }
 
     if (!name) messages.push("Productnaam ontbreekt.");

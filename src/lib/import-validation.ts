@@ -124,3 +124,49 @@ export function validateImportMasterData(input: {
       ),
   };
 }
+
+
+export function formatMasterDataErrors(
+  missing: {
+    brands: string[];
+    colors: string[];
+    sizes: string[];
+    categories: string[];
+    productTypes: string[];
+    suppliers: string[];
+    collections: string[];
+  },
+) {
+  const labels: Record<string, string> = {
+    brands: "Merken",
+    colors: "Kleuren",
+    sizes: "Maten",
+    categories: "Categorieën",
+    productTypes: "Producttypes",
+    suppliers: "Leveranciers",
+    collections: "Collecties",
+  };
+
+  const lines: string[] = [
+    "Import kan niet worden uitgevoerd.",
+    "",
+    "De volgende gegevens ontbreken in Stamgegevens:",
+    "",
+  ];
+
+  Object.entries(missing).forEach(([key, values]) => {
+    if (values.length > 0) {
+      lines.push(`${labels[key]}:`);
+      values.forEach((value) => {
+        lines.push(`- ${value}`);
+      });
+      lines.push("");
+    }
+  });
+
+  lines.push(
+    "Maak deze gegevens eerst aan via Instellingen → Stamgegevens en upload daarna opnieuw.",
+  );
+
+  return lines;
+}
