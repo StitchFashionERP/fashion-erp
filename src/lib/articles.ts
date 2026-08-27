@@ -18,6 +18,7 @@ export type ProductVariant = {
   id: string;
   sku: string;
   color: string;
+  colorCode?: string;
   size: string;
   ean?: string;
   supplierVariantCode?: string;
@@ -118,6 +119,7 @@ export type ProductInput = {
     id?: string;
     sku?: string;
     color: string;
+    colorCode?: string;
     size: string;
     stock?: number;
     ean?: string;
