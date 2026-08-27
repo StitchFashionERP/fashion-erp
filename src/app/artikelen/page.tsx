@@ -33,6 +33,7 @@ import {
   type ProductStatus,
 } from "@/lib/articles";
 import { getArticleHistoryCheck } from "@/lib/article-history";
+import { subscribeToMasterData } from "@/lib/master-data";
 
 type StatusTone =
   | "success"
@@ -195,6 +196,12 @@ export default function ArtikelenPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload();
+
+    const unsubscribe = subscribeToMasterData(() => {
+      void reload();
+    });
+
+    return unsubscribe;
   }, []);
 
   const collections = useMemo(
