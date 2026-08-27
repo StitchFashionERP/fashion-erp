@@ -79,6 +79,11 @@ function rowToProduct(row: Record<string, unknown>) {
                 variantProfile.color ??
                 "",
             ),
+            colorCode: String(
+              variantRow.color_code ??
+                variantProfile.colorCode ??
+                "",
+            ),
             size: String(
               variantRow.size ??
                 variantProfile.size ??

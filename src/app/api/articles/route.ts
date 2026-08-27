@@ -44,6 +44,11 @@ function rowToProduct(row: Record<string, unknown>) {
           id: String(variantRow.id ?? variantProfile.id ?? ""),
           sku: String(variantRow.sku ?? variantProfile.sku ?? ""),
           color: String(variantRow.color ?? variantProfile.color ?? ""),
+          colorCode: String(
+            variantRow.color_code ??
+              variantProfile.colorCode ??
+              "",
+          ),
           size: String(variantRow.size ?? variantProfile.size ?? ""),
           ean: String(variantRow.barcode ?? variantProfile.ean ?? "") || undefined,
           supplierVariantCode:
