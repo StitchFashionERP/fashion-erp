@@ -9,19 +9,20 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  getStoredProducts,
-} from "@/lib/articles";
-import {
   getInvoiceOutstandingAmount,
   getInvoices,
   type Invoice,
 } from "@/lib/invoices";
+import {
+  type InventoryVariantRow,
+} from "@/lib/inventory";
 import {
   getPurchaseOrders,
   type PurchaseOrder,
 } from "@/lib/purchasing";
 import {
   getSalesOrders,
+  loadSalesOrders,
   getSalesOrderTotals,
   type SalesOrder,
 } from "@/lib/sales";
@@ -139,13 +140,38 @@ export default function DashboardPage() {
   const [invoices, setInvoices] = useState<
     Invoice[]
   >([]);
+  const [inventoryRows, setInventoryRows] = useState<
+    InventoryVariantRow[]
+  >([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setSalesOrders(getSalesOrders());
-    setPurchaseOrders(getPurchaseOrders());
-    setInvoices(getInvoices());
-    setLoaded(true);
+    async function loadDashboardData() {
+      const [
+        orders,
+        inventoryResponse,
+      ] = await Promise.all([
+        loadSalesOrders(),
+        fetch("/api/inventory"),
+      ]);
+
+      const inventory =
+        await inventoryResponse.json();
+
+      setSalesOrders(orders);
+
+      setInventoryRows(
+        Array.isArray(inventory)
+          ? inventory
+          : [],
+      );
+
+      setPurchaseOrders(getPurchaseOrders());
+      setInvoices(getInvoices());
+      setLoaded(true);
+    }
+
+    void loadDashboardData();
   }, []);
 
   const dashboard = useMemo(() => {
@@ -207,19 +233,12 @@ export default function DashboardPage() {
           ].includes(order.status),
       );
 
-    const products = getStoredProducts();
-
     const lowStockVariants =
-      products.reduce(
-        (total, product) =>
-          total +
-          product.variants.filter(
-            (variant) =>
-              variant.physicalStock <=
-              ((variant as any).minimumStock ?? 0),
-          ).length,
-        0,
-      );
+      inventoryRows.filter(
+        (variant) =>
+          variant.physicalStock <=
+          ((variant as any).minimumStock ?? 0),
+      ).length;
 
     const ytdInvoices =
       bookedInvoices.filter((invoice) => {
@@ -281,7 +300,7 @@ export default function DashboardPage() {
       lowStockVariants,
       topCustomers,
     };
-  }, [invoices, salesOrders]);
+  }, [invoices, salesOrders, inventoryRows]);
 
   const recentSalesOrders = useMemo(
     () =>
