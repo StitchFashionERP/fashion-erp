@@ -147,28 +147,25 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboardData() {
-      const [
-        orders,
-        inventoryResponse,
-      ] = await Promise.all([
-        loadSalesOrders(),
-        fetch("/api/inventory"),
-      ]);
-
-      const inventory =
-        await inventoryResponse.json();
+      const orders = await loadSalesOrders();
 
       setSalesOrders(orders);
-
-      setInventoryRows(
-        Array.isArray(inventory)
-          ? inventory
-          : [],
-      );
-
       setPurchaseOrders(getPurchaseOrders());
       setInvoices(getInvoices());
       setLoaded(true);
+
+      fetch("/api/inventory")
+        .then((response) => response.json())
+        .then((inventory) => {
+          setInventoryRows(
+            Array.isArray(inventory)
+              ? inventory
+              : [],
+          );
+        })
+        .catch(() => {
+          setInventoryRows([]);
+        });
     }
 
     void loadDashboardData();
