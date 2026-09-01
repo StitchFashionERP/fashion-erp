@@ -41,6 +41,10 @@ import {
   type NamedMasterData,
 } from "@/lib/master-data";
 import { fetchSuppliers } from "@/lib/suppliers";
+import {
+  validateImportMasterData,
+  formatMasterDataErrors,
+} from "@/lib/import-validation";
 import styles from "./article-form.module.css";
 
 type EanAssignmentMode = "AUTO" | "MANUAL" | "NONE";
@@ -579,6 +583,26 @@ export function ArticleForm({
       setError(
         "Selecteer minimaal één kleur en één maat.",
       );
+      return;
+    }
+
+    const masterDataValidation = validateImportMasterData({
+      brand,
+      color: selectedColors[0],
+      size: selectedSizes[0],
+      category,
+      productType: garmentType,
+      supplier,
+      collection,
+    });
+
+    if (!masterDataValidation.valid) {
+      setError(
+        formatMasterDataErrors(
+          masterDataValidation.missing,
+        ).join("\n"),
+      );
+      setSaving(false);
       return;
     }
 
