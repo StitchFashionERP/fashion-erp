@@ -52,6 +52,46 @@ function getVariantKey(variant: Record<string, unknown>) {
   ].join("|");
 }
 
+async function getColorFamilies(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const { data } = await supabase
+    .from("shared_application_state")
+    .select("storage_value")
+    .eq("storage_key", "stitch-master-data-v1")
+    .maybeSingle();
+
+  if (!data?.storage_value) return [];
+
+  try {
+    const parsed = JSON.parse(data.storage_value);
+
+    return Array.isArray(parsed.colorFamilies)
+      ? parsed.colorFamilies
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function getColorCode(
+  color: string,
+  colorFamilies: { name: string; code: string }[],
+) {
+  const normalized = color
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  return (
+    colorFamilies.find(
+      (item) =>
+        item.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "") === normalized,
+    )?.code ?? null
+  );
+}
+
 function rowToProduct(row: Record<string, unknown>) {
   const profile = asRecord(row.profile);
 
@@ -352,6 +392,7 @@ export async function PUT(
     } = await findProduct(id);
 
     const productId = String(product.id);
+    const colorFamilies = await getColorFamilies(supabase);
     const now = new Date().toISOString();
 
     const productRow = {
@@ -451,7 +492,10 @@ export async function PUT(
         sku: normalizeText(variant.sku),
         color:
           normalizeText(variant.color) || null,
-        color_code: null,
+        color_code: getColorCode(
+          normalizeText(variant.color),
+          colorFamilies,
+        ),
         size:
           normalizeText(variant.size) || null,
         barcode:

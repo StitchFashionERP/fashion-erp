@@ -130,6 +130,12 @@ function rowToProduct(
     vatCode: String(row.vat_code ?? profile.vatCode ?? "2V"),
     purchasePrice: asNumber(row.purchase_price, profile.purchasePrice),
     wholesalePrice: asNumber(row.sales_price, profile.wholesalePrice),
+    recommendedRetailPrice: asNumber(
+      profile.recommendedRetailPrice,
+    ),
+    retailerMarkup: asNumber(
+      profile.retailerMarkup,
+    ),
     status: row.active === false ? "Inactief" : String(profile.status ?? "Actief"),
     variants,
     createdAt: String(row.created_at ?? profile.createdAt ?? ""),
@@ -160,6 +166,7 @@ function variantToRow(
   organizationId: string,
   productId: string,
   variant: VariantPayload,
+  colorFamilies: { name: string; code: string }[],
 ) {
   return {
     organization_id: organizationId,
@@ -167,7 +174,16 @@ function variantToRow(
     legacy_id: String(variant.id ?? "") || null,
     sku: String(variant.sku ?? "").trim(),
     color: String(variant.color ?? "") || null,
-    color_code: null,
+    color_code:
+      colorFamilies.find(
+        (color) =>
+          color.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "") ===
+          String(variant.color ?? "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, ""),
+      )?.code ?? null,
     size: String(variant.size ?? "") || null,
     barcode: String(variant.ean ?? "") || null,
     profile: variant,
@@ -295,7 +311,11 @@ export async function GET() {
       products.find((p) => p.code === "SS270520")?.colors,
     );
 
-    return NextResponse.json(products);
+    
+
+
+
+return NextResponse.json(products);
   } catch (error) {
     return errorResponse(error);
   }
@@ -331,7 +351,12 @@ export async function POST(request: Request) {
         .from("product_variants")
         .insert(
           variants.map((variant) =>
-            variantToRow(organizationId, String(savedProduct.id), variant),
+            variantToRow(
+              organizationId,
+              String(savedProduct.id),
+              variant,
+              colorFamilies,
+            ),
           ),
         );
 

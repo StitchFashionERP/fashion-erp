@@ -319,13 +319,52 @@ export function ArticleForm({
       (item) => item.isActive,
     );
 
+    // Kleuren die al op een bestaand artikel staan, blijven zichtbaar,
+    // ook wanneer ze niet (meer) als actieve stamkleur beschikbaar zijn.
+    // Zo kan een opgeslagen artikelkleur niet stilzwijgend verdwijnen.
+    const existingColors = initialProduct?.colors ?? [];
+    const existingColorOptions = existingColors
+      .filter(
+        (existingColor) =>
+          !activeColors.some(
+            (activeColor) =>
+              activeColor.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "") ===
+              existingColor
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, ""),
+          ),
+      )
+      .map((name, index) => {
+        const masterColor = getColors().find(
+          (color) =>
+            color.name
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "") ===
+            name
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ""),
+        );
+
+        return {
+          id: `existing-color-${index}`,
+          code: masterColor?.code ?? "",
+          name,
+          isActive: true,
+        };
+      });
+
     const activeSizes = getSizes().filter(
       (item) => item.isActive,
     );
 
     setCollections(collectionValues);
     setCategories(categoryValues);
-    setColorOptions(activeColors);
+    setColorOptions([
+      ...existingColorOptions,
+      ...activeColors,
+    ]);
     setSizeOptions(activeSizes);
 
     setCollection(
