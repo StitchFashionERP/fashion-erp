@@ -224,7 +224,38 @@ export function SalesOrderForm({
           });
         });
 
-        setVariants(loadedVariants);
+        const mergedVariants = [...loadedVariants];
+
+        if (mode === "edit" && existingOrder) {
+          existingOrder.lines.forEach((line) => {
+            const exists = mergedVariants.some(
+              (variant) =>
+                variant.variantId === line.variantId ||
+                variant.sku === line.sku,
+            );
+
+            if (!exists) {
+              mergedVariants.push({
+                productId: line.productId,
+                productName: line.productName,
+                productCode: line.productCode ?? "",
+                color: line.color,
+                colorCode: "",
+                articleCode: line.productCode ?? "",
+                imageUrl: "",
+                variantId: line.variantId,
+                sku: line.sku,
+                size: line.size,
+                availableStock: 0,
+                unitPrice: line.unitPrice,
+                recommendedRetailPrice:
+                  line.recommendedRetailPrice ?? 0,
+              });
+            }
+          });
+        }
+
+        setVariants(mergedVariants);
 
         console.log("EDIT ORDER:", existingOrder);
 
@@ -239,7 +270,7 @@ export function SalesOrderForm({
                 line,
               ) => {
                 const matchingVariant =
-                  loadedVariants.find(
+                  mergedVariants.find(
                     (variant) =>
                       variant.variantId === line.variantId ||
                       variant.sku === line.sku ||
