@@ -26,5 +26,31 @@ function line(row:Row){
 function order(row:Row){const p=rec(row.profile);return {...p,id:String(row.id??""),orderNumber:String(row.order_number??""),orderDate:String(row.order_date??""),requestedDeliveryDate:String(row.requested_delivery_date??""),status:String(row.status??"Concept"),notes:String(row.notes??""),lines:Array.isArray(row.sales_order_lines)?(row.sales_order_lines as Row[]).map(line):[],createdAt:String(row.created_at??""),updatedAt:String(row.updated_at??"")};}
 function response(e:unknown){const x=e instanceof ApiError?e:new ApiError(e instanceof Error?e.message:"De verkooporderbewerking is mislukt.");return NextResponse.json({error:x.message},{status:x.status});}
 export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params;const {supabase,organizationId}=await context();const {data,error}=await supabase.from("sales_orders").select("*, sales_order_lines(*)").eq("organization_id",organizationId).eq("id",id).maybeSingle();if(error)throw new ApiError(error.message);if(!data)throw new ApiError("Verkooporder niet gevonden.",404);return NextResponse.json(order(data as Row));}catch(e){return response(e);}}
-export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params;const input=await request.json() as Row;const lines=Array.isArray(input.lines)?input.lines as Row[]:[];const {supabase,organizationId}=await context();const subtotalBefore=lines.reduce((t,l)=>t+num(l.quantity)*num(l.unitPrice),0);const discount=lines.reduce((t,l)=>t+num(l.quantity)*num(l.unitPrice)*num(l.discountPercentage)/100,0);const subtotal=subtotalBefore-discount;const updatedAt=new Date().toISOString();const {error}=await supabase.from("sales_orders").update({status:String(input.status??"Concept"),requested_delivery_date:String(input.requestedDeliveryDate??"")||null,notes:String(input.notes??"")||null,subtotal,vat:subtotal*.21,total:subtotal*1.21,profile:{...input,updatedAt},updated_at:updatedAt}).eq("organization_id",organizationId).eq("id",id);if(error)throw new ApiError(error.message);for(const l of lines){if(!l.id)continue;const {error:le}=await supabase.from("sales_order_lines").update({quantity:num(l.quantity),delivered_quantity:num(l.deliveredQuantity),reserved_quantity:num(l.reservedQuantity),unit_price:num(l.unitPrice),discount_percentage:num(l.discountPercentage),line_total:num(l.quantity)*num(l.unitPrice)*(1-num(l.discountPercentage)/100),profile:l}).eq("organization_id",organizationId).eq("id",String(l.id));if(le)throw new ApiError(le.message);}const {data,error:readError}=await supabase.from("sales_orders").select("*, sales_order_lines(*)").eq("id",id).single();if(readError)throw new ApiError(readError.message);return NextResponse.json(order(data as Row));}catch(e){return response(e);}}
+export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params;const input=await request.json() as Row;const lines=Array.isArray(input.lines)?input.lines as Row[]:[];const {supabase,organizationId}=await context();const subtotalBefore=lines.reduce((t,l)=>t+num(l.quantity)*num(l.unitPrice),0);const discount=lines.reduce((t,l)=>t+num(l.quantity)*num(l.unitPrice)*num(l.discountPercentage)/100,0);const subtotal=subtotalBefore-discount;const updatedAt=new Date().toISOString();const {error}=await supabase.from("sales_orders").update({status:String(input.status??"Concept"),requested_delivery_date:String(input.requestedDeliveryDate??"")||null,notes:String(input.notes??"")||null,subtotal,vat:subtotal*.21,total:subtotal*1.21,profile:{...input,updatedAt},updated_at:updatedAt}).eq("organization_id",organizationId).eq("id",id);if(error)throw new ApiError(error.message);for(const l of lines){
+if(!l.id)continue;
+
+const { data: existingLine } = await supabase
+  .from("sales_order_lines")
+  .select("profile")
+  .eq("organization_id", organizationId)
+  .eq("id", String(l.id))
+  .single();
+
+const existingProfile = rec(existingLine?.profile);
+
+const {error:le}=await supabase.from("sales_order_lines").update({
+  quantity:num(l.quantity),
+  delivered_quantity:num(l.deliveredQuantity),
+  reserved_quantity:num(l.reservedQuantity),
+  unit_price:num(l.unitPrice),
+  discount_percentage:num(l.discountPercentage),
+  line_total:num(l.quantity)*num(l.unitPrice)*(1-num(l.discountPercentage)/100),
+  profile:{
+    ...existingProfile,
+    ...l,
+  }
+}).eq("organization_id",organizationId).eq("id",String(l.id));
+
+if(le)throw new ApiError(le.message);
+}const {data,error:readError}=await supabase.from("sales_orders").select("*, sales_order_lines(*)").eq("id",id).single();if(readError)throw new ApiError(readError.message);return NextResponse.json(order(data as Row));}catch(e){return response(e);}}
 export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params;const {supabase,organizationId}=await context();const {data}=await supabase.from("sales_orders").select("status").eq("organization_id",organizationId).eq("id",id).maybeSingle();if(!data)throw new ApiError("Verkooporder niet gevonden.",404);if(data.status!=="Concept")throw new ApiError("Alleen conceptorders kunnen worden verwijderd.",400);const {error}=await supabase.from("sales_orders").delete().eq("organization_id",organizationId).eq("id",id);if(error)throw new ApiError(error.message);return NextResponse.json({ok:true});}catch(e){return response(e);}}
