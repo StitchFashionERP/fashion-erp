@@ -22,6 +22,7 @@ import {
 import styles from "@/app/verkoop/nieuw/new-sales-order.module.css";
 
 type MatrixVariant = {
+  id?: string;
   productId: string;
   productName: string;
   productCode: string;
@@ -177,7 +178,8 @@ export function SalesOrderForm({
             })),
         );
 
-        const loadedVariants = productResult.flatMap((product) => {
+        const loadedVariants: MatrixVariant[] =
+          productResult.flatMap((product) => {
           const primaryImageUrl =
             mediaByProduct[product.id]?.imageUrl ?? "";
 
@@ -236,6 +238,7 @@ export function SalesOrderForm({
 
             if (!exists) {
               mergedVariants.push({
+                id: String(line.id ?? ""),
                 productId: line.productId,
                 productName: line.productName,
                 productCode: line.productCode ?? "",
@@ -282,6 +285,7 @@ export function SalesOrderForm({
                   );
 
                 if (matchingVariant) {
+                  matchingVariant.id = String(line.id ?? "");
                   result[matchingVariant.variantId] =
                     line.quantity;
                 }
@@ -405,7 +409,11 @@ export function SalesOrderForm({
   );
 
   const selectedLines = variants
-    .filter((variant) => (quantities[variant.variantId] ?? 0) > 0)
+    .filter((variant) =>
+      mode === "edit"
+        ? quantities[variant.variantId] !== undefined
+        : (quantities[variant.variantId] ?? 0) > 0,
+    )
     .map((variant) => {
       const quantity = quantities[variant.variantId] ?? 0;
 
@@ -468,6 +476,8 @@ export function SalesOrderForm({
 
     try {
       if (mode === "edit" && orderId) {
+        console.log("SAVE SALES ORDER LINES", selectedLines);
+
         const response = await fetch(
           `/api/sales-orders/${orderId}`,
           {
@@ -493,6 +503,7 @@ export function SalesOrderForm({
                 customer.discountPercentage,
               notes,
               lines: selectedLines.map((line) => ({
+                id: line.id,
                 productId: line.productId,
                 productCode: line.articleCode,
                 productName: line.productName,
