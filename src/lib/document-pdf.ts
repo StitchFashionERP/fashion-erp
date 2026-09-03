@@ -703,7 +703,9 @@ function groupSalesLines(
     SalesOrderLine[]
   >();
 
-  order.lines.forEach((line) => {
+  order.lines
+    .filter((line) => line.quantity > 0)
+    .forEach((line) => {
     const key = [
       line.productId,
       line.productCode,
