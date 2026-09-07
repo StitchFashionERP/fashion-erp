@@ -659,8 +659,15 @@ function normalizeLegacyProduct(
     sizes,
   };
 
-  const normalizedInput = normalizePricingInput(input);
-
+  const normalizedInput: NormalizedProductInput = {
+    ...input,
+    pricingStrategy:
+      input.pricingStrategy ?? "automatic",
+    pricingLocks: {
+      ...defaultPricingLocks,
+      ...input.pricingLocks,
+    },
+  };
 
   const storedVariants = Array.isArray(product.variants)
     ? (product.variants as Record<string, unknown>[]).map(
@@ -766,11 +773,9 @@ export function getStoredProducts(): Product[] {
 
 export function setProductCache(products: Product[]) {
   productCache = products.map((product) => {
-    const normalized = normalizeLegacyProduct(product as unknown as Record<string, unknown>);
-
-    if (normalized.name === "Angela Dress") {
-      console.log("AFTER NORMALIZE ANGELA COLORS", normalized.colors);
-    }
+    const normalized = normalizeLegacyProduct(
+      product as unknown as Record<string, unknown>,
+    );
 
     return normalized;
   });
