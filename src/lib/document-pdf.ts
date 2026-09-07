@@ -21,7 +21,10 @@ import {
   type CompanySettings,
 } from "@/lib/company-settings";
 import { getPaymentConditionText } from "@/lib/pricing-engine";
-import { getStoredProducts } from "@/lib/articles";
+import {
+  fetchProducts,
+  getStoredProducts,
+} from "@/lib/articles";
 import { getCustomers } from "@/lib/master-data";
 import type {
   BusinessDocumentType,
@@ -803,7 +806,11 @@ function groupSalesLines(
         orderNumber: order.orderNumber,
         salesPrice: first.unitPrice,
         recommendedRetailPrice:
-          first.recommendedRetailPrice || 0,
+          order.status === "Concept"
+            ? product?.recommendedRetailPrice ??
+              first.recommendedRetailPrice ??
+              0
+            : first.recommendedRetailPrice ?? 0,
         lineTotal: lines.reduce(
           (sum, line) =>
             sum +
@@ -2802,6 +2809,17 @@ export async function createBusinessDocumentPdf(
 ) {
   const language =
     options?.language ?? "nl";
+
+  if (
+    documentType === "SALES_ORDER_CONFIRMATION"
+  ) {
+    const salesOrder =
+      getSalesOrderById(referenceId);
+
+    if (salesOrder?.status === "Concept") {
+      await fetchProducts();
+    }
+  }
 
   const definition = getDefinition(
     documentType,
