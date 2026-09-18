@@ -239,7 +239,7 @@ export async function POST(
       );
     }
 
-    await supabase
+    const { error: linesError } = await supabase
       .from("purchase_order_lines")
       .insert(
         lines.map(
@@ -268,6 +268,15 @@ export async function POST(
           }),
         ),
       );
+
+    if (linesError) {
+      await supabase
+        .from("purchase_orders")
+        .delete()
+        .eq("id", order.id);
+
+      throw new ApiError(linesError.message);
+    }
 
     return NextResponse.json(
       order,

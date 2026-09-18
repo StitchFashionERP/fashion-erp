@@ -66,6 +66,11 @@ const groups: NavigationGroup[] = [
     icon: "purchasing",
     items: [
       {
+        label: "Inkoopbehoefte",
+        href: "/inkoop/behoefte",
+        icon: "sales",
+      },
+      {
         label: "Inkooporders",
         href: "/inkoop",
         icon: "document",
