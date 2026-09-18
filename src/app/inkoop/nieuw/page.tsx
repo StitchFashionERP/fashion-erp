@@ -117,7 +117,7 @@ export default function NewPurchaseOrderPage() {
           id: string;
           code: string;
           name: string;
-          supplier: string;
+          supplierId: string;
           variants: Array<{
             id: string;
             sku: string;
@@ -127,28 +127,13 @@ export default function NewPurchaseOrderPage() {
           }>;
         }>;
 
-      const normalizeSupplier = (
-        value: string,
-      ) =>
-        value
-          .toLowerCase()
-          .replace(
-            /s\.r\.l\.|srl|abbigliamento|group|\.|\s/g,
-            "",
-          );
-
       const supplierProducts =
         (Array.isArray(products)
           ? products
           : []
         ).filter(
           (product) =>
-            normalizeSupplier(
-              product.supplier ?? "",
-            ) ===
-            normalizeSupplier(
-              supplier?.companyName ?? "",
-            ),
+            product.supplierId === supplier?.id,
         );
 
       const lines =
@@ -172,7 +157,7 @@ export default function NewPurchaseOrderPage() {
         linesFound: lines.length,
         products: supplierProducts.slice(0, 5).map((p) => ({
           name: p.name,
-          supplier: p.supplier,
+          supplierId: p.supplierId,
           variants: p.variants.length,
         })),
       });

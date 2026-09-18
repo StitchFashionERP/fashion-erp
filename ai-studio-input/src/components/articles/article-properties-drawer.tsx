@@ -119,6 +119,7 @@ export function ArticlePropertiesDrawer({
       collection: currentForm.collection.trim(),
       category: currentForm.category.trim(),
       supplier: currentForm.supplier.trim(),
+      supplierId: currentProduct.supplierId,
       supplierProductCode: (currentProduct as Product & { supplierProductCode?: string }).supplierProductCode ?? "",
       status: currentForm.status,
       vatCode: currentProduct.vatCode,

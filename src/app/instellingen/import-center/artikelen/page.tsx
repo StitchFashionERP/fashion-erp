@@ -13,6 +13,7 @@ import {
 import { getPricingDefaults } from "@/lib/company-settings";
 import { calculatePricing } from "@/lib/pricing-engine";
 import { resolveColor } from "@/lib/master-data";
+import { fetchSuppliers } from "@/lib/suppliers";
 import { validateImportMasterData, formatMasterDataErrors } from "@/lib/import-validation";
 import { parseCsv, parseXlsx } from "./xlsx-parser";
 import styles from "./article-import.module.css";
@@ -447,6 +448,13 @@ export default function ArticleImportPage() {
 
     try {
       const defaults = getPricingDefaults();
+      const suppliers = await fetchSuppliers();
+      const supplierByName = new Map(
+        suppliers.map((item) => [
+          item.companyName.trim().toLowerCase(),
+          item,
+        ]),
+      );
 
       for (let index = 0; index < rows.length; index += 1) {
         const row = rows[index];
@@ -492,6 +500,9 @@ export default function ArticleImportPage() {
         const brand =
           text(row, mapping, "brand") || "Onbekend";
         const supplier = text(row, mapping, "supplier");
+        const matchedSupplier = supplierByName.get(
+          supplier.trim().toLowerCase(),
+        );
         const importedColor = text(row, mapping, "color");
 
         const colorMaster = resolveColor(importedColor);
@@ -512,7 +523,8 @@ export default function ArticleImportPage() {
           name: text(row, mapping, "productName"),
           collection,
           category: garmentType,
-          supplier,
+          supplier: matchedSupplier?.companyName ?? supplier,
+          supplierId: matchedSupplier?.id ?? "",
           supplierProductCode: text(row, mapping, "supplierSku"),
           status: truthy(text(row, mapping, "active"))
             ? "Actief"

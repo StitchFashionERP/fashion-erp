@@ -120,7 +120,12 @@ function rowToProduct(
     code: String(row.product_code ?? profile.code ?? ""),
     name: String(row.name ?? profile.name ?? ""),
     brand: String(row.brand ?? profile.brand ?? ""),
-    supplier: String(profile.supplier ?? ""),
+    supplier: String(
+      (row.suppliers as Record<string, unknown> | null)?.company_name ??
+        profile.supplier ??
+        "",
+    ),
+    supplierId: String(row.supplier_id ?? ""),
     supplierProductCode: String(
       profile.supplierProductCode ?? "",
     ),
@@ -157,6 +162,7 @@ function productToRow(organizationId: string, product: ProductPayload) {
     sales_price: asNumber(product.wholesalePrice),
     purchase_price: asNumber(product.purchasePrice),
     active: statusToActive(product.status),
+    supplier_id: String(product.supplierId ?? "") || null,
     profile: product,
     updated_at: new Date().toISOString(),
   };
@@ -264,7 +270,7 @@ export async function GET() {
     const colorFamilies = await getColorFamilies(supabase);
     const { data, error } = await supabase
       .from("products")
-      .select("*, product_variants(*)")
+      .select("*, product_variants(*), suppliers(company_name)")
       .eq("organization_id", organizationId)
       .order("name");
 
@@ -275,36 +281,6 @@ export async function GET() {
     const products = (data ?? []).map(
       (row: Record<string, unknown>) => rowToProduct(row, colorFamilies),
     );
-
-    const supplierIds = [
-      ...new Set(
-        (data ?? [])
-          .map((row: Record<string, unknown>) => row.supplier_id)
-          .filter(Boolean),
-      ),
-    ];
-
-    if (supplierIds.length > 0) {
-      const { data: suppliers } = await supabase
-        .from("suppliers")
-        .select("id, company_name")
-        .in("id", supplierIds);
-
-      const supplierMap = new Map(
-        (suppliers ?? []).map((supplier) => [
-          supplier.id,
-          supplier.company_name,
-        ]),
-      );
-
-      products.forEach((product, index) => {
-        product.supplier = String(
-          supplierMap.get(
-            (data ?? [])[index].supplier_id,
-          ) ?? "",
-        );
-      });
-    }
 
     return NextResponse.json(products);
   } catch (error) {
@@ -359,7 +335,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*, product_variants(*)")
+      .select("*, product_variants(*), suppliers(company_name)")
       .eq("id", savedProduct.id)
       .single();
 

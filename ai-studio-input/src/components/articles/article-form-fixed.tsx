@@ -563,6 +563,7 @@ export function ArticleForm({
       collection,
       category,
       supplier,
+      supplierId: initialProduct?.supplierId ?? "",
       supplierProductCode: supplierProductCode.trim(),
       status,
       vatCode,

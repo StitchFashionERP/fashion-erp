@@ -85,6 +85,7 @@ function productToInput(
     collection: product.collection,
     category: product.category,
     supplier: product.supplier,
+    supplierId: product.supplierId,
     supplierProductCode:
       product.supplierProductCode,
     status: product.status,

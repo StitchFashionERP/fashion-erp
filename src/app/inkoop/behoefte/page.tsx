@@ -324,19 +324,14 @@ export default function PurchaseDemandPage() {
       }
     }
 
-    const supplierByName = new Map(
-      suppliers.map((supplier) => [
-        supplier.companyName.trim().toLowerCase(),
-        supplier,
-      ]),
+    const supplierById = new Map(
+      suppliers.map((supplier) => [supplier.id, supplier]),
     );
 
     const grouped = new Map<string, SupplierGroup>();
 
     for (const item of demand.values()) {
-      const supplier = supplierByName.get(
-        item.product.supplier.trim().toLowerCase(),
-      );
+      const supplier = supplierById.get(item.product.supplierId);
 
       if (!supplier) continue;
 

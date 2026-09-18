@@ -40,7 +40,7 @@ import {
   getSizes,
   type NamedMasterData,
 } from "@/lib/master-data";
-import { fetchSuppliers } from "@/lib/suppliers";
+import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 import {
   validateImportMasterData,
   formatMasterDataErrors,
@@ -67,7 +67,7 @@ export function ArticleForm({
     string[]
   >([]);
   const [suppliers, setSuppliers] = useState<
-    string[]
+    Supplier[]
   >([]);
   const [colorOptions, setColorOptions] = useState<
     NamedMasterData[]
@@ -88,8 +88,8 @@ export function ArticleForm({
   const [category, setCategory] = useState(
     initialProduct?.category ?? "",
   );
-  const [supplier, setSupplier] = useState(
-    initialProduct?.supplier ?? "",
+  const [supplierId, setSupplierId] = useState(
+    initialProduct?.supplierId ?? "",
   );
   const [supplierProductCode, setSupplierProductCode] = useState(
     initialProduct?.supplierProductCode ?? "",
@@ -385,30 +385,28 @@ export function ArticleForm({
         const cloudSuppliers = await fetchSuppliers();
         if (cancelled) return;
 
-        const activeSupplierNames = cloudSuppliers
-          .filter((item) => item.status === "Actief")
-          .map((item) => item.companyName.trim())
-          .filter(Boolean);
+        const activeSuppliers = cloudSuppliers.filter(
+          (item) => item.status === "Actief",
+        );
 
         // Een leverancier die al op een bestaand artikel staat, blijft zichtbaar
         // ook wanneer die inmiddels inactief is. Daardoor wordt de opgeslagen
-        // waarde niet stilzwijgend vervangen.
-        const currentSupplier = initialProduct?.supplier?.trim() ?? "";
-        const supplierValues = Array.from(
-          new Set(
-            currentSupplier
-              ? [currentSupplier, ...activeSupplierNames]
-              : activeSupplierNames,
-          ),
+        // koppeling niet stilzwijgend vervangen.
+        const currentSupplierId = initialProduct?.supplierId ?? "";
+        const currentSupplier = cloudSuppliers.find(
+          (item) => item.id === currentSupplierId,
         );
 
-        setSuppliers(supplierValues);
-        setSupplier((current) => current || supplierValues[0] || "");
+        const supplierOptions =
+          currentSupplier &&
+          !activeSuppliers.some((item) => item.id === currentSupplier.id)
+            ? [currentSupplier, ...activeSuppliers]
+            : activeSuppliers;
+
+        setSuppliers(supplierOptions);
       } catch (supplierError) {
         if (cancelled) return;
-        setSuppliers(
-          initialProduct?.supplier ? [initialProduct.supplier] : [],
-        );
+        setSuppliers([]);
         setError(
           supplierError instanceof Error
             ? supplierError.message
@@ -430,11 +428,11 @@ export function ArticleForm({
         "Selecteer een collectie, categorie en leverancier." &&
       collection &&
       category &&
-      supplier
+      supplierId
     ) {
       setError("");
     }
-  }, [collection, category, supplier, error]);
+  }, [collection, category, supplierId, error]);
 
   const variantRows = useMemo(
     () =>
@@ -569,12 +567,16 @@ export function ArticleForm({
       return;
     }
 
-    if (!collection || !category || !supplier) {
+    if (!collection || !category || !supplierId) {
       setError(
         "Selecteer een collectie, categorie en leverancier.",
       );
       return;
     }
+
+    const selectedSupplier = suppliers.find(
+      (item) => item.id === supplierId,
+    );
 
     if (
       selectedColors.length === 0 ||
@@ -592,7 +594,6 @@ export function ArticleForm({
       size: selectedSizes[0],
       category,
       productType: garmentType,
-      supplier,
       collection,
     });
 
@@ -656,7 +657,8 @@ export function ArticleForm({
       name: name.trim(),
       collection,
       category,
-      supplier,
+      supplier: selectedSupplier?.companyName ?? "",
+      supplierId,
       supplierProductCode: supplierProductCode.trim(),
       status,
       vatCode,
@@ -798,14 +800,15 @@ export function ArticleForm({
                 <span>Leverancier</span>
 
                 <select
-                  value={supplier}
+                  value={supplierId}
                   onChange={(event) =>
-                    setSupplier(event.target.value)
+                    setSupplierId(event.target.value)
                   }
                 >
+                  <option value="">Kies een leverancier</option>
                   {suppliers.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                    <option key={item.id} value={item.id}>
+                      {item.companyName}
                     </option>
                   ))}
                 </select>

@@ -67,6 +67,7 @@ export function NewArticleWizard() {
       collection: collection.code,
       category: productType.name,
       supplier: "",
+      supplierId: "",
       supplierProductCode: "",
       status: "Concept",
       vatCode: "2V",

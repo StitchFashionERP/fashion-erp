@@ -45,6 +45,7 @@ export type Product = {
   collection: string;
   category: string;
   supplier: string;
+  supplierId: string;
   supplierProductCode: string;
   status: ProductStatus;
   vatCode: VatCode;
@@ -86,6 +87,7 @@ export type ProductInput = {
   collection: string;
   category: string;
   supplier: string;
+  supplierId: string;
   supplierProductCode: string;
   status: ProductStatus;
   vatCode: VatCode;
@@ -340,7 +342,7 @@ export function generateVariants(
 }
 
 function makeDefaultProduct(
-  partial: Omit<ProductInput, "stockByVariant" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
+  partial: Omit<ProductInput, "stockByVariant" | "supplierId" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType"> & Partial<Pick<ProductInput, "supplierId" | "supplierProductCode" | "shippingCosts" | "otherCosts" | "totalCost" | "brandMarkup" | "recommendedRetailPrice" | "retailerMarkup" | "pricingStrategy" | "pricingLocks" | "vatCode" | "garmentType" | "fit" | "colorFamily" | "seasonType">> & {
     id: string;
     stockByVariant?: Record<string, number>;
   },
@@ -353,6 +355,7 @@ function makeDefaultProduct(
     collection: partial.collection,
     category: partial.category,
     supplier: partial.supplier,
+    supplierId: partial.supplierId ?? "",
     supplierProductCode: partial.supplierProductCode ?? "",
     status: partial.status,
     vatCode: partial.vatCode ?? "2V",
@@ -624,6 +627,7 @@ function normalizeLegacyProduct(
     collection: String(product.collection ?? ""),
     category: String(product.category ?? ""),
     supplier: String(product.supplier ?? ""),
+    supplierId: String(product.supplierId ?? ""),
     supplierProductCode: String(product.supplierProductCode ?? product.supplierArticleNumber ?? ""),
     status:
       (product.status as ProductStatus | undefined) ??
@@ -1023,6 +1027,7 @@ export async function duplicateProduct(id: string) {
     collection: source.collection,
     category: source.category,
     supplier: source.supplier,
+    supplierId: source.supplierId,
     supplierProductCode: source.supplierProductCode,
     status: "Concept",
     vatCode: source.vatCode,

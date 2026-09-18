@@ -89,8 +89,8 @@ export default function NewProductionOrderPage() {
             product.collection ===
               collectionCode) &&
           (!supplier ||
-            product.supplier ===
-              supplier.companyName),
+            product.supplierId ===
+              supplier.id),
       )
       .flatMap((product) =>
         product.variants.map((variant) => ({

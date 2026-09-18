@@ -191,6 +191,12 @@ function rowToProduct(row: Record<string, unknown>) {
     brand: String(
       row.brand ?? profile.brand ?? "",
     ),
+    supplier: String(
+      (row.suppliers as Record<string, unknown> | null)?.company_name ??
+        profile.supplier ??
+        "",
+    ),
+    supplierId: String(row.supplier_id ?? ""),
     collection: String(
       row.season ?? profile.collection ?? "",
     ),
@@ -302,7 +308,7 @@ async function findProduct(id: string) {
 
   const { data, error } = await supabase
     .from("products")
-    .select("*, product_variants(*)")
+    .select("*, product_variants(*), suppliers(company_name)")
     .eq("organization_id", organizationId)
     .or(
       `id.eq.${decodedId},legacy_id.eq.${decodedId}`,
@@ -421,6 +427,8 @@ export async function PUT(
       active:
         String(payload.status ?? "Concept") !==
         "Inactief",
+      supplier_id:
+        String(payload.supplierId ?? "") || null,
       profile: payload,
       updated_at: now,
     };
@@ -594,7 +602,7 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from("products")
-      .select("*, product_variants(*)")
+      .select("*, product_variants(*), suppliers(company_name)")
       .eq("id", productId)
       .single();
 

@@ -8,6 +8,7 @@ import {
   type ProductInput,
   type ProductStatus,
 } from "@/lib/articles";
+import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 
 type ArticlePropertiesDrawerProps = {
   product: Product | null;
@@ -20,7 +21,7 @@ type FormState = {
   name: string;
   collection: string;
   brand: string;
-  supplier: string;
+  supplierId: string;
   garmentType: string;
   category: string;
   material: string;
@@ -41,7 +42,7 @@ function createFormState(product: Product): FormState {
     name: product.name,
     collection: product.collection,
     brand: product.brand,
-    supplier: product.supplier,
+    supplierId: product.supplierId,
     garmentType: product.garmentType,
     category: product.category,
     material: product.material,
@@ -69,6 +70,23 @@ export function ArticlePropertiesDrawer({
 }: ArticlePropertiesDrawerProps) {
   const [form, setForm] = useState<FormState | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchSuppliers()
+      .then((items) => {
+        if (!cancelled) setSupplierOptions(items);
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierOptions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (product) {
@@ -118,7 +136,11 @@ export function ArticlePropertiesDrawer({
       name: currentForm.name.trim(),
       collection: currentForm.collection.trim(),
       category: currentForm.category.trim(),
-      supplier: currentForm.supplier.trim(),
+      supplier:
+        supplierOptions.find(
+          (item) => item.id === currentForm.supplierId,
+        )?.companyName ?? currentProduct.supplier,
+      supplierId: currentForm.supplierId,
       supplierProductCode: (currentProduct as Product & { supplierProductCode?: string }).supplierProductCode ?? "",
       status: currentForm.status,
       vatCode: currentProduct.vatCode,
@@ -313,15 +335,23 @@ export function ArticlePropertiesDrawer({
                 }}
               />
 
-              <MasterSelect
-                entity="suppliers"
-                label="Leverancier"
-                value={form.supplier}
-                onChange={(value) => {
-                  setForm((current) => current ? { ...current, supplier: value } : current);
-                  setDirty(true);
-                }}
-              />
+              <label>
+                <span style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                  Leverancier
+                </span>
+                <select
+                  value={form.supplierId}
+                  onChange={(event) => updateField("supplierId", event)}
+                  style={inputStyle}
+                >
+                  <option value="">Kies een leverancier</option>
+                  {supplierOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.companyName}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
               <MasterSelect
                 entity="productTypes"
