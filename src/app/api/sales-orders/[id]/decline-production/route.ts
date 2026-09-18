@@ -65,7 +65,7 @@ export async function POST(
 
     const { data: order, error: orderError } = await supabase
       .from("sales_orders")
-      .select("status, discount_percentage")
+      .select("status")
       .eq("organization_id", organizationId)
       .eq("id", id)
       .maybeSingle();
