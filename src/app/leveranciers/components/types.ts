@@ -2,6 +2,7 @@ import type {
   Dispatch,
   SetStateAction,
 } from "react";
+import { commonCountries } from "@/lib/vat-engine";
 
 export type SupplierStatus =
   | "Actief"
@@ -109,31 +110,11 @@ export const supplierTabs: SupplierTab[] = [
   "Notities",
 ];
 
+// Same list the customer form uses (src/lib/vat-engine.ts), plus "Overig"
+// as a supplier-specific fallback — kept as one shared list so the two
+// forms don't quietly drift apart on what counts as a valid country.
 export const supplierCountries = [
-  "Nederland",
-  "België",
-  "Duitsland",
-  "Frankrijk",
-  "Luxemburg",
-  "Oostenrijk",
-  "Zwitserland",
-  "Verenigd Koninkrijk",
-  "Denemarken",
-  "Zweden",
-  "Noorwegen",
-  "Spanje",
-  "Portugal",
-  "Italië",
-  "Polen",
-  "Tsjechië",
-  "Turkije",
-  "China",
-  "India",
-  "Vietnam",
-  "Bangladesh",
-  "Pakistan",
-  "Verenigde Staten",
-  "Canada",
+  ...commonCountries,
   "Overig",
 ] as const;
 

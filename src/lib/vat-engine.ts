@@ -234,23 +234,33 @@ const euCountries = new Set([
   "zweden",
 ]);
 
+// Shared by both the customer and supplier forms — keep this the single
+// source of truth for country options instead of maintaining separate
+// lists that quietly drift apart.
 export const commonCountries = [
   "Nederland",
   "België",
   "Duitsland",
   "Frankrijk",
+  "Luxemburg",
   "Italië",
   "Spanje",
   "Portugal",
   "Oostenrijk",
   "Denemarken",
   "Zweden",
+  "Noorwegen",
   "Ierland",
   "Polen",
   "Tsjechië",
   "Verenigd Koninkrijk",
   "Zwitserland",
-  "Noorwegen",
+  "Turkije",
+  "China",
+  "India",
+  "Vietnam",
+  "Bangladesh",
+  "Pakistan",
   "Verenigde Staten",
   "Canada",
   "Australië",
