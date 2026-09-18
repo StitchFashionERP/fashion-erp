@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -143,6 +144,7 @@ function getSortValue(
 }
 
 export default function ArtikelenPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<
     Product[]
   >([]);
@@ -864,7 +866,7 @@ export default function ArtikelenPage() {
             const product = selectedProducts[0];
 
             if (product) {
-              window.location.href = `/artikelen/${product.id}`;
+              router.push(`/artikelen/${product.id}`);
             }
           }}
           onEdit={() =>

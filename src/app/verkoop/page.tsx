@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -62,6 +63,7 @@ function formatDate(value: string) {
 }
 
 export default function SalesPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<
     SalesOrder[]
   >([]);
@@ -220,7 +222,7 @@ export default function SalesPage() {
                   <tr
                     key={order.id}
                     onClick={() => {
-                      window.location.assign(
+                      router.push(
                         `/verkoop/${encodeURIComponent(order.id)}`,
                       );
                     }}
@@ -232,7 +234,7 @@ export default function SalesPage() {
                         className="table-link"
                         onClick={(event) => {
                           event.stopPropagation();
-                          window.location.assign(
+                          router.push(
                             `/verkoop/${encodeURIComponent(order.id)}`,
                           );
                         }}
