@@ -1,7 +1,7 @@
 "use client";
 
 export type SalesOrderStatus = "Concept" | "Bevestigd" | "Gereserveerd" | "Gereed" | "Verzonden" | "Geannuleerd";
-export type SalesOrderLine = { id:string; productId:string; productCode:string; productName:string; variantId:string; sku:string; color:string; size:string; quantity:number; deliveredQuantity:number; reservedQuantity:number; unitPrice:number; recommendedRetailPrice:number; discountPercentage:number; productionNote?:string; };
+export type SalesOrderLine = { id:string; productId:string; productCode:string; productName:string; variantId:string; sku:string; color:string; size:string; quantity:number; deliveredQuantity:number; reservedQuantity:number; unitPrice:number; recommendedRetailPrice:number; discountPercentage:number; productionNote?:string; originalQuantity?:number; };
 export type SalesOrder = { id:string; orderNumber:string; customerId:string; customerNumber:string; customerName:string; contactPerson:string; email:string; invoiceEmail:string; invoiceCc:string; orderEmail:string; orderCc:string; deliveryEmail:string; deliveryCc:string; city:string; orderDate:string; requestedDeliveryDate:string; status:SalesOrderStatus; paymentDays:number; paymentDiscountPercentage:number; paymentDiscountDays:number; discountPercentage:number; notes:string; lines:SalesOrderLine[]; createdAt:string; updatedAt:string; };
 export type SalesOrderInput = Omit<SalesOrder,"id"|"orderNumber"|"orderDate"|"createdAt"|"updatedAt"|"lines"> & { lines:Omit<SalesOrderLine,"id"|"deliveredQuantity"|"reservedQuantity">[] };
 export type SalesOrderAvailability = { orderedQuantity:number; deliveredQuantity:number; openQuantity:number; reservedQuantity:number; backorderQuantity:number; allocationPercentage:number; fullyAllocated:boolean; };
@@ -48,6 +48,7 @@ export async function confirmSalesOrder(id:string){
   });
 }
 export async function allocateSalesOrderStock(id:string){ await parse(await fetch(`/api/sales-orders/${id}/allocate`,{method:"POST"})); return loadSalesOrderById(id); }
+export async function declineOrderLineProduction(id:string, productId:string, color:string){ await parse(await fetch(`/api/sales-orders/${id}/decline-production`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,color})})); return loadSalesOrderById(id); }
 export async function allocateOpenSalesOrders(){ const result=[] as SalesOrder[]; for(const o of cache.filter(x=>["Bevestigd","Gereserveerd"].includes(x.status))) result.push(await allocateSalesOrderStock(o.id)); return result; }
 export async function markSalesOrderReady(id:string){ const o=getSalesOrderById(id); if(!o) throw new Error("Verkooporder niet gevonden."); if(o.status!=="Gereserveerd") throw new Error("Alleen volledig gereserveerde orders kunnen gereedgemeld worden."); if(!getSalesOrderAvailability(o).fullyAllocated) throw new Error("De order is nog niet volledig gereserveerd."); return put({...o,status:"Gereed",updatedAt:new Date().toISOString()}); }
 export async function cancelSalesOrder(id:string){ const o=getSalesOrderById(id); if(!o) throw new Error("Verkooporder niet gevonden."); return put({...o,status:"Geannuleerd",lines:o.lines.map(l=>({...l,reservedQuantity:0})),updatedAt:new Date().toISOString()}); }

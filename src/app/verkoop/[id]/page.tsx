@@ -17,6 +17,7 @@ import {
   allocateSalesOrderStock,
   cancelSalesOrder,
   confirmSalesOrder,
+  declineOrderLineProduction,
   deleteSalesOrder,
   getSalesOrderAvailability,
   loadSalesOrderById,
@@ -54,6 +55,8 @@ export default function SalesOrderDetailPage() {
   const [error, setError] = useState("");
   const [notification, setNotification] =
     useState("");
+  const [decliningKey, setDecliningKey] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -175,6 +178,28 @@ export default function SalesOrderDetailPage() {
           : "De actie kon niet worden uitgevoerd.",
       );
     }
+  }
+
+  async function handleDeclineProduction(
+    productId: string,
+    color: string,
+  ) {
+    if (!order) return;
+
+    const key = `${productId}__${color}`;
+    setDecliningKey(key);
+
+    await execute(
+      () =>
+        declineOrderLineProduction(
+          order.id,
+          productId,
+          color,
+        ),
+      "Aantallen op 0 gezet en voorraad vrijgegeven.",
+    );
+
+    setDecliningKey(null);
   }
 
   async function handleDelete() {
@@ -660,13 +685,14 @@ export default function SalesOrderDetailPage() {
           const groups = Array.from(
             order.lines.reduce(
               (map, line) => {
-                const key = `${line.productName}__${line.color}`;
+                const key = `${line.productId}__${line.color}`;
                 const existing = map.get(key);
 
                 if (existing) {
                   existing.lines.push(line);
                 } else {
                   map.set(key, {
+                    productId: line.productId,
                     productName: line.productName,
                     color: line.color,
                     unitPrice: line.unitPrice,
@@ -682,6 +708,7 @@ export default function SalesOrderDetailPage() {
               new Map<
                 string,
                 {
+                  productId: string;
                   productName: string;
                   color: string;
                   unitPrice: number;
@@ -750,9 +777,32 @@ export default function SalesOrderDetailPage() {
                       (1 -
                         group.discountPercentage / 100);
 
+                    const reducedQuantity =
+                      group.lines.reduce(
+                        (sum, line) =>
+                          sum +
+                          Math.max(
+                            0,
+                            (line.originalQuantity ??
+                              line.quantity) -
+                              line.quantity,
+                          ),
+                        0,
+                      );
+
+                    const isDeclined =
+                      reducedQuantity > 0;
+
+                    const groupKey = `${group.productId}__${group.color}`;
+
                     return (
                       <tr
-                        key={`${group.productName}-${group.color}`}
+                        key={groupKey}
+                        className={
+                          isDeclined
+                            ? styles.declinedRow
+                            : undefined
+                        }
                       >
                         <td className="table-primary">
                           {group.productName}
@@ -765,6 +815,41 @@ export default function SalesOrderDetailPage() {
                             >
                               {group.productionNote}
                             </div>
+                          )}
+
+                          {isDeclined ? (
+                            <div
+                              className={
+                                styles.declinedNote
+                              }
+                            >
+                              -{reducedQuantity} stuks
+                              niet geproduceerd
+                            </div>
+                          ) : (
+                            group.productionNote && (
+                              <button
+                                type="button"
+                                className={
+                                  styles.declineButton
+                                }
+                                disabled={
+                                  decliningKey ===
+                                  groupKey
+                                }
+                                onClick={() =>
+                                  handleDeclineProduction(
+                                    group.productId,
+                                    group.color,
+                                  )
+                                }
+                              >
+                                {decliningKey ===
+                                groupKey
+                                  ? "Bezig..."
+                                  : "Zet op 0"}
+                              </button>
+                            )
                           )}
                         </td>
 

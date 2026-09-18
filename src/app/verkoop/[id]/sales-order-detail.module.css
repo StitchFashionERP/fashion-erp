@@ -84,6 +84,34 @@
   color: var(--danger);
 }
 
+.declineButton {
+  margin-top: 6px;
+  border: 1px solid var(--danger);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 650;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.declineButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.declinedRow {
+  background: var(--danger-light);
+}
+
+.declinedNote {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--danger);
+}
+
 .notesCard {
   margin-top: 18px;
   padding: 18px;
