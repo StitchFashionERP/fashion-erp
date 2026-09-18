@@ -632,7 +632,7 @@ export default function SuppliersPage() {
         province:
           primaryAddress?.province.trim() ??
           "",
-        country_code:
+        country:
           primaryAddress?.country.trim() ||
           "Nederland",
         vat_number:

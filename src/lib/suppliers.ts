@@ -55,6 +55,7 @@ export type Supplier = {
   street: string;
   houseNumber: string;
   houseNumberAddition: string;
+  address: string;
   postalCode: string;
   city: string;
   province: string;
@@ -210,6 +211,7 @@ function normalizeSupplier(value: Record<string, unknown>, index = 0): Supplier 
     houseNumberAddition: String(
       value.houseNumberAddition ?? value.addition ?? "",
     ),
+    address: String(value.address ?? ""),
     postalCode: String(value.postalCode ?? ""),
     city: String(value.city ?? ""),
     province: String(value.province ?? value.state ?? ""),
