@@ -149,7 +149,7 @@ export default function PurchaseOrderDetailPage() {
   >([]);
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] =
-    useState<Tab>("overzicht");
+    useState<Tab>("orderregels");
   const [showReceiveDialog, setShowReceiveDialog] =
     useState(false);
   const [showActions, setShowActions] =
@@ -1222,185 +1222,322 @@ export default function PurchaseOrderDetailPage() {
                   )}
                 </div>
 
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Artikel</th>
-                        <th>SKU</th>
-                        <th>Kleur</th>
-                        <th>Maat</th>
-                        <th className="table-number">
-                          Besteld
-                        </th>
-                        <th className="table-number">
-                          Ontvangen
-                        </th>
-                        <th className="table-number">
-                          Open
-                        </th>
-                        <th className="table-number">
-                          Inkoopprijs
-                        </th>
-                        <th className="table-number">
-                          Waarde
-                        </th>
-                      </tr>
-                    </thead>
+                {(() => {
+                  const preferredSizeOrder = [
+                    "XXXS",
+                    "XXS",
+                    "XS",
+                    "S",
+                    "M",
+                    "L",
+                    "XL",
+                    "XXL",
+                    "XXXL",
+                  ];
 
-                    <tbody>
-                      {order.lines.map((line) => {
-                        const remaining =
-                          Math.max(
-                            0,
-                            line.orderedQuantity -
-                              line.receivedQuantity,
-                          );
+                  const sizes = Array.from(
+                    new Set(
+                      order.lines.map((line) => line.size),
+                    ),
+                  ).sort((a, b) => {
+                    const aIndex =
+                      preferredSizeOrder.indexOf(
+                        a.toUpperCase(),
+                      );
+                    const bIndex =
+                      preferredSizeOrder.indexOf(
+                        b.toUpperCase(),
+                      );
 
-                        const progress =
-                          line.orderedQuantity > 0
-                            ? Math.round(
-                                (line.receivedQuantity /
-                                  line.orderedQuantity) *
-                                  100,
-                              )
-                            : 0;
+                    if (aIndex !== -1 && bIndex !== -1) {
+                      return aIndex - bIndex;
+                    }
 
-                        return (
-                          <tr key={line.id}>
-                            <td>
-                              <div className="table-primary">
-                                {line.productName}
-                              </div>
+                    if (aIndex !== -1) return -1;
+                    if (bIndex !== -1) return 1;
 
-                              <div
-                                className={
-                                  styles.secondaryText
-                                }
+                    return a.localeCompare(b, "nl", {
+                      numeric: true,
+                    });
+                  });
+
+                  const groups = Array.from(
+                    order.lines.reduce(
+                      (map, line) => {
+                        const key =
+                          `${line.productCode}__${line.color}`;
+
+                        const existing = map.get(key);
+
+                        if (existing) {
+                          existing.lines.push(line);
+                        } else {
+                          map.set(key, {
+                            productName: line.productName,
+                            productCode: line.productCode,
+                            color: line.color,
+                            lines: [line],
+                          });
+                        }
+
+                        return map;
+                      },
+                      new Map<
+                        string,
+                        {
+                          productName: string;
+                          productCode: string;
+                          color: string;
+                          lines: typeof order.lines;
+                        }
+                      >(),
+                    ).values(),
+                  );
+
+                  return (
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Artikel</th>
+                            <th>Kleur</th>
+
+                            {sizes.map((size) => (
+                              <th
+                                key={size}
+                                className="table-number"
                               >
-                                {line.productCode}
-                              </div>
-                            </td>
+                                {size}
+                              </th>
+                            ))}
 
-                            <td>
-                              <span
-                                className={
-                                  styles.sku
-                                }
+                            <th className="table-number">
+                              Besteld
+                            </th>
+                            <th className="table-number">
+                              Ontvangen
+                            </th>
+                            <th className="table-number">
+                              Open
+                            </th>
+                            <th className="table-number">
+                              Inkoopprijs
+                            </th>
+                            <th className="table-number">
+                              Waarde
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {groups.map((group) => {
+                            const ordered =
+                              group.lines.reduce(
+                                (total, line) =>
+                                  total +
+                                  line.orderedQuantity,
+                                0,
+                              );
+
+                            const received =
+                              group.lines.reduce(
+                                (total, line) =>
+                                  total +
+                                  line.receivedQuantity,
+                                0,
+                              );
+
+                            const remaining = Math.max(
+                              0,
+                              ordered - received,
+                            );
+
+                            const value =
+                              group.lines.reduce(
+                                (total, line) =>
+                                  total +
+                                  line.orderedQuantity *
+                                    line.purchasePrice,
+                                0,
+                              );
+
+                            const prices = Array.from(
+                              new Set(
+                                group.lines.map(
+                                  (line) =>
+                                    line.purchasePrice,
+                                ),
+                              ),
+                            );
+
+                            return (
+                              <tr
+                                key={`${group.productCode}-${group.color}`}
                               >
-                                {line.sku}
-                              </span>
-                            </td>
+                                <td>
+                                  <div className="table-primary">
+                                    {group.productName}
+                                  </div>
 
-                            <td>{line.color}</td>
-                            <td>{line.size}</td>
-
-                            <td className="table-number">
-                              {line.orderedQuantity}
-                            </td>
-
-                            <td className="table-number">
-                              <div
-                                className={
-                                  styles.lineProgress
-                                }
-                              >
-                                <span>
-                                  {
-                                    line.receivedQuantity
-                                  }
-                                </span>
-
-                                <div
-                                  className={
-                                    styles.lineProgressTrack
-                                  }
-                                >
                                   <div
                                     className={
-                                      styles.lineProgressBar
+                                      styles.secondaryText
                                     }
-                                    style={{
-                                      width: `${Math.min(
-                                        progress,
-                                        100,
-                                      )}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
+                                  >
+                                    {group.productCode}
+                                  </div>
+                                </td>
+
+                                <td>{group.color}</td>
+
+                                {sizes.map((size) => {
+                                  const line =
+                                    group.lines.find(
+                                      (item) =>
+                                        item.size === size,
+                                    );
+
+                                  if (!line) {
+                                    return (
+                                      <td
+                                        key={size}
+                                        className="table-number"
+                                      >
+                                        -
+                                      </td>
+                                    );
+                                  }
+
+                                  return (
+                                    <td
+                                      key={size}
+                                      className="table-number"
+                                      title={`${line.receivedQuantity} ontvangen`}
+                                    >
+                                      <strong>
+                                        {
+                                          line.orderedQuantity
+                                        }
+                                      </strong>
+
+                                      {line.receivedQuantity >
+                                        0 && (
+                                        <div
+                                          className={
+                                            styles.secondaryText
+                                          }
+                                        >
+                                          {
+                                            line.receivedQuantity
+                                          }{" "}
+                                          ontv.
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+
+                                <td className="table-number">
+                                  <strong>{ordered}</strong>
+                                </td>
+
+                                <td className="table-number">
+                                  {received}
+                                </td>
+
+                                <td className="table-number">
+                                  <strong
+                                    className={
+                                      remaining > 0
+                                        ? styles.openQuantity
+                                        : styles.completeQuantity
+                                    }
+                                  >
+                                    {remaining}
+                                  </strong>
+                                </td>
+
+                                <td className="table-number">
+                                  {prices.length === 1
+                                    ? formatCurrency(
+                                        prices[0],
+                                        order.currency,
+                                      )
+                                    : "Variabel"}
+                                </td>
+
+                                <td className="table-number table-primary">
+                                  {formatCurrency(
+                                    value,
+                                    order.currency,
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+
+                        <tfoot>
+                          <tr>
+                            <td colSpan={2}>
+                              <strong>Totaal</strong>
                             </td>
 
-                            <td className="table-number">
-                              <strong
-                                className={
-                                  remaining > 0
-                                    ? styles.openQuantity
-                                    : styles.completeQuantity
-                                }
+                            {sizes.map((size) => (
+                              <td
+                                key={size}
+                                className="table-number"
                               >
-                                {remaining}
+                                <strong>
+                                  {order.lines
+                                    .filter(
+                                      (line) =>
+                                        line.size === size,
+                                    )
+                                    .reduce(
+                                      (total, line) =>
+                                        total +
+                                        line.orderedQuantity,
+                                      0,
+                                    )}
+                                </strong>
+                              </td>
+                            ))}
+
+                            <td className="table-number">
+                              <strong>
+                                {totals.orderedQuantity}
                               </strong>
                             </td>
 
                             <td className="table-number">
-                              {formatCurrency(
-                                line.purchasePrice,
-                                order.currency,
-                              )}
+                              <strong>
+                                {totals.receivedQuantity}
+                              </strong>
                             </td>
 
-                            <td className="table-number table-primary">
-                              {formatCurrency(
-                                line.orderedQuantity *
-                                  line.purchasePrice,
-                                order.currency,
-                              )}
+                            <td className="table-number">
+                              <strong>
+                                {totals.remainingQuantity}
+                              </strong>
+                            </td>
+
+                            <td />
+
+                            <td className="table-number">
+                              <strong>
+                                {formatCurrency(
+                                  totals.subtotal,
+                                  order.currency,
+                                )}
+                              </strong>
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-
-                    <tfoot>
-                      <tr>
-                        <td colSpan={4}>
-                          <strong>Totaal</strong>
-                        </td>
-                        <td className="table-number">
-                          <strong>
-                            {
-                              totals.orderedQuantity
-                            }
-                          </strong>
-                        </td>
-                        <td className="table-number">
-                          <strong>
-                            {
-                              totals.receivedQuantity
-                            }
-                          </strong>
-                        </td>
-                        <td className="table-number">
-                          <strong>
-                            {
-                              totals.remainingQuantity
-                            }
-                          </strong>
-                        </td>
-                        <td />
-                        <td className="table-number">
-                          <strong>
-                            {formatCurrency(
-                              totals.subtotal,
-                              order.currency,
-                            )}
-                          </strong>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                        </tfoot>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
