@@ -22,7 +22,6 @@ import {
   loadSalesOrderById,
   getSalesOrderTotals,
   markSalesOrderReady,
-  shipSalesOrder,
   type SalesOrder,
 } from "@/lib/sales";
 import styles from "./sales-order-detail.module.css";
@@ -348,7 +347,7 @@ export default function SalesOrderDetailPage() {
             {order.status ===
               "Gereserveerd" && (
               <button
-                className="button button-primary"
+                className="button button-secondary"
                 type="button"
                 onClick={() =>
                   void execute(
@@ -364,22 +363,18 @@ export default function SalesOrderDetailPage() {
               </button>
             )}
 
-            {order.status === "Gereed" && (
-              <button
+            {!["Concept", "Verzonden", "Geannuleerd"].includes(
+              order.status,
+            ) &&
+              order.lines.some(
+                (line) => line.reservedQuantity > 0,
+              ) && (
+              <Link
+                href={`/verkoop/${order.id}/leveren`}
                 className="button button-primary"
-                type="button"
-                onClick={() =>
-                  void execute(
-                    () =>
-                      shipSalesOrder(
-                        order.id,
-                      ),
-                    "De verkooporder is verzonden.",
-                  )
-                }
               >
-                Verzenden
-              </button>
+                Leveren
+              </Link>
             )}
           </div>
         }
@@ -627,111 +622,182 @@ export default function SalesOrderDetailPage() {
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Artikel</th>
-                <th>SKU</th>
-                <th>Kleur</th>
-                <th>Maat</th>
-                <th className="table-number">
-                  Besteld
-                </th>
-                <th className="table-number">
-                  Gereserveerd
-                </th>
-                <th className="table-number">
-                  Voororder
-                </th>
-                <th className="table-number">
-                  Geleverd
-                </th>
-                <th className="table-number">
-                  Prijs
-                </th>
-                <th className="table-number">
-                  Regelbedrag
-                </th>
-              </tr>
-            </thead>
+        {(() => {
+          const preferredSizeOrder = [
+            "XXXS",
+            "XXS",
+            "XS",
+            "S",
+            "M",
+            "L",
+            "XL",
+            "XXL",
+            "XXXL",
+          ];
 
-            <tbody>
-              {order.lines.map((line) => {
-                const lineTotal =
-                  line.quantity *
-                  line.unitPrice *
-                  (1 -
-                    line.discountPercentage /
-                      100);
+          const sizes = Array.from(
+            new Set(order.lines.map((line) => line.size)),
+          ).sort((a, b) => {
+            const aIndex = preferredSizeOrder.indexOf(
+              a.toUpperCase(),
+            );
+            const bIndex = preferredSizeOrder.indexOf(
+              b.toUpperCase(),
+            );
 
-                const openQuantity =
-                  Math.max(
-                    0,
-                    line.quantity -
-                      line.deliveredQuantity,
-                  );
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
 
-                const backorderQuantity =
-                  Math.max(
-                    0,
-                    openQuantity -
-                      line.reservedQuantity,
-                  );
+            if (aIndex !== -1) return -1;
+            if (bIndex !== -1) return 1;
 
-                return (
-                  <tr key={line.id}>
-                    <td className="table-primary">
-                      {line.productName}
+            return a.localeCompare(b, "nl", {
+              numeric: true,
+            });
+          });
 
-                      {line.productionNote && (
-                        <div
-                          className={
-                            styles.productionWarning
-                          }
-                        >
-                          {line.productionNote}
-                        </div>
-                      )}
-                    </td>
+          const groups = Array.from(
+            order.lines.reduce(
+              (map, line) => {
+                const key = `${line.productName}__${line.color}`;
+                const existing = map.get(key);
 
-                    <td>{line.sku}</td>
-                    <td>{line.color}</td>
-                    <td>{line.size}</td>
+                if (existing) {
+                  existing.lines.push(line);
+                } else {
+                  map.set(key, {
+                    productName: line.productName,
+                    color: line.color,
+                    unitPrice: line.unitPrice,
+                    discountPercentage:
+                      line.discountPercentage,
+                    productionNote: line.productionNote,
+                    lines: [line],
+                  });
+                }
 
-                    <td className="table-number">
-                      {line.quantity}
-                    </td>
+                return map;
+              },
+              new Map<
+                string,
+                {
+                  productName: string;
+                  color: string;
+                  unitPrice: number;
+                  discountPercentage: number;
+                  productionNote?: string;
+                  lines: typeof order.lines;
+                }
+              >(),
+            ).values(),
+          );
 
-                    <td className="table-number">
-                      {line.reservedQuantity}
-                    </td>
+          return (
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Artikel</th>
+                    <th>Kleur</th>
 
-                    <td className="table-number">
-                      <strong>
-                        {backorderQuantity}
-                      </strong>
-                    </td>
+                    {sizes.map((size) => (
+                      <th
+                        key={size}
+                        className="table-number"
+                      >
+                        {size}
+                      </th>
+                    ))}
 
-                    <td className="table-number">
-                      {line.deliveredQuantity}
-                    </td>
-
-                    <td className="table-number">
-                      {formatCurrency(
-                        line.unitPrice,
-                      )}
-                    </td>
-
-                    <td className="table-number table-primary">
-                      {formatCurrency(lineTotal)}
-                    </td>
+                    <th className="table-number">
+                      Aantal
+                    </th>
+                    <th className="table-number">
+                      Prijs
+                    </th>
+                    <th className="table-number">
+                      Regelbedrag
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+
+                <tbody>
+                  {groups.map((group) => {
+                    const quantityBySize = new Map<
+                      string,
+                      number
+                    >();
+
+                    group.lines.forEach((line) => {
+                      quantityBySize.set(
+                        line.size,
+                        (quantityBySize.get(line.size) ??
+                          0) + line.quantity,
+                      );
+                    });
+
+                    const totalQuantity = Array.from(
+                      quantityBySize.values(),
+                    ).reduce(
+                      (sum, value) => sum + value,
+                      0,
+                    );
+
+                    const lineTotal =
+                      totalQuantity *
+                      group.unitPrice *
+                      (1 -
+                        group.discountPercentage / 100);
+
+                    return (
+                      <tr
+                        key={`${group.productName}-${group.color}`}
+                      >
+                        <td className="table-primary">
+                          {group.productName}
+
+                          {group.productionNote && (
+                            <div
+                              className={
+                                styles.productionWarning
+                              }
+                            >
+                              {group.productionNote}
+                            </div>
+                          )}
+                        </td>
+
+                        <td>{group.color}</td>
+
+                        {sizes.map((size) => (
+                          <td
+                            key={size}
+                            className="table-number"
+                          >
+                            {quantityBySize.get(size) ?? 0}
+                          </td>
+                        ))}
+
+                        <td className="table-number">
+                          <strong>{totalQuantity}</strong>
+                        </td>
+
+                        <td className="table-number">
+                          {formatCurrency(group.unitPrice)}
+                        </td>
+
+                        <td className="table-number table-primary">
+                          {formatCurrency(lineTotal)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
 
       {order.notes && (

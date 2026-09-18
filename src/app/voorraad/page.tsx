@@ -141,6 +141,18 @@ export default function InventoryPage() {
     const inventoryRows =
       await response.json();
 
+    if (!response.ok) {
+      setError(
+        (inventoryRows as { error?: string })?.error ??
+          "Voorraad ophalen is mislukt.",
+      );
+      setRows([]);
+      setLoaded(true);
+      return;
+    }
+
+    setError(null);
+
     setRows(
       Array.isArray(inventoryRows)
         ? inventoryRows

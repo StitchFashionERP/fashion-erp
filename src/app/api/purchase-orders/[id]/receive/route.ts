@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { increaseStock } from "@/lib/stock-service";
 import { getDefaultStockLocation } from "@/lib/stock-location";
+import { topUpBackordersForVariant } from "@/lib/fulfillment/allocate-stock";
 
 class ApiError extends Error {
   constructor(
@@ -177,6 +178,13 @@ export async function POST(
         referenceId:
           receipt.id,
       });
+
+      await topUpBackordersForVariant(
+        supabase,
+        organizationId,
+        location.id,
+        line.variant_id,
+      );
 
       await supabase
         .from("purchase_order_lines")
