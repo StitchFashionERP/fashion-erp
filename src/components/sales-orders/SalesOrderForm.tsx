@@ -355,7 +355,12 @@ export function SalesOrderForm({
     variants
       .filter((variant) => {
         if (!query) {
-          return true;
+          // Without a search term, only show rows already part of this
+          // order — the full catalog can be large, and rendering (and
+          // loading images for) every product by default made opening an
+          // order for editing noticeably slow. Typing a search still finds
+          // anything in the catalog to add.
+          return quantities[variant.variantId] !== undefined;
         }
 
         return [
@@ -394,7 +399,7 @@ export function SalesOrderForm({
           rankSize(left.size) - rankSize(right.size),
       ),
     }));
-  }, [variants, search]);
+  }, [variants, search, quantities]);
 
   const allSizes = useMemo(
     () =>
@@ -733,6 +738,23 @@ export function SalesOrderForm({
                   </thead>
 
                   <tbody>
+                    {rows.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={3 + allSizes.length}
+                          style={{
+                            padding: 24,
+                            textAlign: "center",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {search.trim()
+                            ? "Geen artikelen gevonden voor deze zoekopdracht."
+                            : "Zoek hierboven een artikel om aan de order toe te voegen."}
+                        </td>
+                      </tr>
+                    )}
+
                     {rows.map((row) => {
                       const variantsBySize = new Map(
                         row.variants.map((variant) => [

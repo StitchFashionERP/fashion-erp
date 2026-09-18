@@ -86,13 +86,25 @@ export async function getPrimaryProductImages({
     throw new Error(error.message);
   }
 
-  const result: PrimaryProductMediaMap = {};
+  // First pass: pick the primary asset per product (no network calls yet),
+  // grouped by storage bucket so the signed URLs for an entire catalog can
+  // be requested in one call per bucket instead of one call per product.
+  type PendingAsset = {
+    productId: string;
+    storagePath: string;
+    assetId: string;
+    name: string;
+    versionNumber: number;
+  };
+
+  const pendingByBucket = new Map<string, PendingAsset[]>();
+  const seenProductIds = new Set<string>();
 
   for (const rawLink of links ?? []) {
     const link = rawLink as unknown as DatabaseRow;
     const productId = asString(link.entity_id);
 
-    if (!productId || result[productId]) {
+    if (!productId || seenProductIds.has(productId)) {
       continue;
     }
 
@@ -122,29 +134,48 @@ export async function getPrimaryProductImages({
       continue;
     }
 
-    const { data: signed, error: signedUrlError } =
+    seenProductIds.add(productId);
+
+    const bucketList = pendingByBucket.get(storageBucket) ?? [];
+    bucketList.push({
+      productId,
+      storagePath,
+      assetId: asString(asset.id),
+      name: asString(asset.name),
+      versionNumber: Number(asset.version_number ?? 1),
+    });
+    pendingByBucket.set(storageBucket, bucketList);
+  }
+
+  const result: PrimaryProductMediaMap = {};
+
+  for (const [storageBucket, pending] of pendingByBucket) {
+    const { data: signedUrls, error: signedUrlError } =
       await supabase.storage
         .from(storageBucket)
-        .createSignedUrl(
-          storagePath,
+        .createSignedUrls(
+          pending.map((item) => item.storagePath),
           signedUrlExpiresInSeconds,
         );
 
-    if (
-      signedUrlError ||
-      !signed?.signedUrl
-    ) {
+    if (signedUrlError || !signedUrls) {
       continue;
     }
 
-    result[productId] = {
-      assetId: asString(asset.id),
-      imageUrl: signed.signedUrl,
-      name: asString(asset.name),
-      versionNumber: Number(
-        asset.version_number ?? 1,
-      ),
-    };
+    pending.forEach((item, index) => {
+      const signed = signedUrls[index];
+
+      if (!signed || signed.error || !signed.signedUrl) {
+        return;
+      }
+
+      result[item.productId] = {
+        assetId: item.assetId,
+        imageUrl: signed.signedUrl,
+        name: item.name,
+        versionNumber: item.versionNumber,
+      };
+    });
   }
 
   return result;
