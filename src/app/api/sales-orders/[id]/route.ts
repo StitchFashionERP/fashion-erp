@@ -32,12 +32,24 @@ console.log("PUT SALES ORDER LINES", JSON.stringify(lines, null, 2));const {supa
   if(l.id){
     const { data: existingLine } = await supabase
       .from("sales_order_lines")
-      .select("profile")
+      .select("profile, quantity")
       .eq("organization_id", organizationId)
       .eq("id", String(l.id))
       .single();
 
     const existingProfile = rec(existingLine?.profile);
+    const quantityChanged =
+      existingLine !== null &&
+      num(existingLine.quantity) !== num(l.quantity);
+
+    const mergedProfile: Row = {
+      ...existingProfile,
+      ...l,
+    };
+
+    if (quantityChanged) {
+      delete mergedProfile.productionNote;
+    }
 
     const {error:le}=await supabase.from("sales_order_lines").update({
       quantity:num(l.quantity),
@@ -46,10 +58,7 @@ console.log("PUT SALES ORDER LINES", JSON.stringify(lines, null, 2));const {supa
       unit_price:num(l.unitPrice),
       discount_percentage:num(l.discountPercentage),
       line_total:num(l.quantity)*num(l.unitPrice)*(1-num(l.discountPercentage)/100),
-      profile:{
-        ...existingProfile,
-        ...l,
-      }
+      profile: mergedProfile,
     }).eq("organization_id",organizationId).eq("id",String(l.id));
 
     if(le)throw new ApiError(le.message);

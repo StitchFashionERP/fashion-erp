@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/auth/current-context";
+import { syncSalesOrderProductionNotes } from "@/lib/purchase-demand/sync-sales-order-production-notes";
 
 type Decision = "PRODUCE" | "DO_NOT_PRODUCE";
 
@@ -126,6 +127,14 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) throw error;
+
+    await syncSalesOrderProductionNotes(
+      supabase,
+      organization.id,
+      body.productId,
+      body.color ?? "",
+      body.decision,
+    );
 
     return NextResponse.json({
       productId: data.product_id,

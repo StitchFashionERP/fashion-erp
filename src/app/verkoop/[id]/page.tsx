@@ -152,6 +152,10 @@ export default function SalesOrderDetailPage() {
     );
   }
 
+  const affectedLines = order.lines.filter(
+    (line) => line.productionNote,
+  );
+
   async function execute(
     action: () => Promise<SalesOrder>,
     successMessage?: string,
@@ -250,6 +254,14 @@ export default function SalesOrderDetailPage() {
         </div>
       )}
 
+      {affectedLines.length > 0 && (
+        <div className={styles.error}>
+          {affectedLines.length === 1
+            ? "1 orderregel wordt niet meer geproduceerd en moet worden aangepast."
+            : `${affectedLines.length} orderregels worden niet meer geproduceerd en moeten worden aangepast.`}
+        </div>
+      )}
+
       <PageHeader
         eyebrow="Verkooporder"
         title={order.orderNumber}
@@ -258,7 +270,8 @@ export default function SalesOrderDetailPage() {
         }`}
         action={
           <div className="button-group">
-            {order.status === "Concept" && (
+            {(order.status === "Concept" ||
+              affectedLines.length > 0) && (
               <Link
                 href={`/verkoop/${order.id}/bewerken`}
                 className="button button-secondary"
@@ -670,6 +683,16 @@ export default function SalesOrderDetailPage() {
                   <tr key={line.id}>
                     <td className="table-primary">
                       {line.productName}
+
+                      {line.productionNote && (
+                        <div
+                          className={
+                            styles.productionWarning
+                          }
+                        >
+                          {line.productionNote}
+                        </div>
+                      )}
                     </td>
 
                     <td>{line.sku}</td>

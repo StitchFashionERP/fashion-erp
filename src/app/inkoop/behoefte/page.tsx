@@ -6,12 +6,18 @@ import { useRouter } from "next/navigation";
 import { fetchProducts, type Product } from "@/lib/articles";
 import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 import { loadSalesOrders, type SalesOrder } from "@/lib/sales";
+import { getPurchaseOrders } from "@/lib/purchasing";
 
 type DemandVariant = {
   variantId: string;
   size: string;
   quantity: number;
+  alreadyOrdered: number;
 };
+
+function netVariantQuantity(variant: DemandVariant, extra: number) {
+  return Math.max(0, variant.quantity + extra - variant.alreadyOrdered);
+}
 
 type DemandRow = {
   productId: string;
@@ -263,6 +269,20 @@ export default function PurchaseDemandPage() {
       }
     }
 
+    const alreadyOrderedByVariant = new Map<string, number>();
+
+    for (const purchaseOrder of getPurchaseOrders()) {
+      if (purchaseOrder.status === "Geannuleerd") continue;
+
+      for (const line of purchaseOrder.lines) {
+        alreadyOrderedByVariant.set(
+          line.variantId,
+          (alreadyOrderedByVariant.get(line.variantId) ?? 0) +
+            line.orderedQuantity,
+        );
+      }
+    }
+
     const demand = new Map<
       string,
       {
@@ -296,6 +316,8 @@ export default function PurchaseDemandPage() {
           variantId: line.variantId,
           size: line.size,
           quantity: (existing?.quantity ?? 0) + line.quantity,
+          alreadyOrdered:
+            alreadyOrderedByVariant.get(line.variantId) ?? 0,
         });
 
         demand.set(key, current);
@@ -383,9 +405,10 @@ export default function PurchaseDemandPage() {
       return row.variants
         .map((variant) => ({
           variantId: variant.variantId,
-          orderedQuantity:
-            variant.quantity +
-            (extraByVariant[variant.variantId] ?? 0),
+          orderedQuantity: netVariantQuantity(
+            variant,
+            extraByVariant[variant.variantId] ?? 0,
+          ),
           purchasePrice: row.purchasePrice,
         }))
         .filter(
@@ -463,7 +486,8 @@ export default function PurchaseDemandPage() {
         <h1 style={{ margin: 0 }}>Inkoopbehoefte</h1>
         <p style={{ color: "#6b7280" }}>
           Gebaseerd op bevestigde en verdere verkooporders. Concept en geannuleerd
-          tellen niet mee.
+          tellen niet mee. Aantallen die al op een bestaande (niet-geannuleerde)
+          inkooporder staan worden automatisch afgetrokken van "Te bestellen".
         </p>
       </div>
 
@@ -550,7 +574,7 @@ export default function PurchaseDemandPage() {
           0,
         );
 
-        const includedSold = group.rows.reduce(
+        const alreadyOrderedTotal = group.rows.reduce(
           (total, row) => {
             if (
               decisionByProductColor[
@@ -563,8 +587,7 @@ export default function PurchaseDemandPage() {
             return (
               total +
               row.variants.reduce(
-                (sum, variant) =>
-                  sum + variant.quantity,
+                (sum, variant) => sum + variant.alreadyOrdered,
                 0,
               )
             );
@@ -572,7 +595,29 @@ export default function PurchaseDemandPage() {
           0,
         );
 
-        const totalToOrder = includedSold + visibleExtra;
+        const totalToOrder = group.rows.reduce((total, row) => {
+          if (
+            decisionByProductColor[
+              `${row.productId}__${row.color}`
+            ] === "DO_NOT_PRODUCE"
+          ) {
+            return total;
+          }
+
+          return (
+            total +
+            row.variants.reduce(
+              (sum, variant) =>
+                sum +
+                netVariantQuantity(
+                  variant,
+                  extraByVariant[variant.variantId] ?? 0,
+                ),
+              0,
+            )
+          );
+        }, 0);
+
         const moq = group.supplier.minimumOrderQuantity ?? 0;
         const remaining = Math.max(0, moq - totalToOrder);
 
@@ -616,6 +661,12 @@ export default function PurchaseDemandPage() {
                   <div style={{ color: "#6b7280" }}>Extra inkoop</div>
                   <strong>{visibleExtra} stuks</strong>
                 </div>
+                {alreadyOrderedTotal > 0 && (
+                  <div>
+                    <div style={{ color: "#6b7280" }}>Al besteld</div>
+                    <strong>{alreadyOrderedTotal} stuks</strong>
+                  </div>
+                )}
                 <div>
                   <div style={{ color: "#6b7280" }}>Te bestellen</div>
                   <strong>{totalToOrder} stuks</strong>
@@ -680,9 +731,25 @@ export default function PurchaseDemandPage() {
                       ? 0
                       : extraQuantity;
 
+                    const alreadyOrderedQuantity = row.variants.reduce(
+                      (total, variant) => total + variant.alreadyOrdered,
+                      0,
+                    );
+
                     const orderQuantity = excluded
                       ? 0
-                      : quantity + effectiveExtraQuantity;
+                      : row.variants.reduce(
+                          (total, variant) =>
+                            total +
+                            netVariantQuantity(
+                              variant,
+                              extraByVariant[variant.variantId] ?? 0,
+                            ),
+                          0,
+                        );
+
+                    const rowSpan =
+                      alreadyOrderedQuantity > 0 ? 4 : 3;
 
                     const impactedOrders =
                       affectedOrders(
@@ -699,14 +766,14 @@ export default function PurchaseDemandPage() {
                     return (
                       <Fragment key={`${row.productId}-${row.color}`}>
                         <tr key={`${row.productId}-${row.color}-sold`}>
-                          <td style={td} rowSpan={3}>
+                          <td style={td} rowSpan={rowSpan}>
                             <strong>{row.productName}</strong>
                             <div style={{ color: "#6b7280", fontSize: 12 }}>
                               {row.productCode}
                             </div>
                           </td>
-                          <td style={td} rowSpan={3}>{row.color}</td>
-                          <td style={td} rowSpan={3}>
+                          <td style={td} rowSpan={rowSpan}>{row.color}</td>
+                          <td style={td} rowSpan={rowSpan}>
                             <div
                               style={{
                                 fontWeight: 700,
@@ -830,7 +897,7 @@ export default function PurchaseDemandPage() {
                           <td style={td}>
                             <strong>Verkocht</strong>
                           </td>
-                          <td style={tdRight} rowSpan={3}>
+                          <td style={tdRight} rowSpan={rowSpan}>
                             {money(row.purchasePrice)}
                           </td>
 
@@ -914,6 +981,38 @@ export default function PurchaseDemandPage() {
                           </td>
                         </tr>
 
+                        {alreadyOrderedQuantity > 0 && (
+                          <tr key={`${row.productId}-${row.color}-already-ordered`}>
+                            <td style={td}>
+                              Al besteld
+                            </td>
+
+                            {sizes.map((size) => {
+                              const variant = row.variants.find(
+                                (item) => item.size === size,
+                              );
+
+                              return (
+                                <td key={size} style={tdCenter}>
+                                  {variant?.alreadyOrdered ?? 0}
+                                </td>
+                              );
+                            })}
+
+                            <td style={tdCenter}>
+                              <strong>{alreadyOrderedQuantity}</strong>
+                            </td>
+                            <td style={tdRight}>
+                              <strong>
+                                {money(
+                                  alreadyOrderedQuantity *
+                                    row.purchasePrice,
+                                )}
+                              </strong>
+                            </td>
+                          </tr>
+                        )}
+
                         <tr key={`${row.productId}-${row.color}-total`}>
                           <td style={{ ...td, fontWeight: 700 }}>
                             Te bestellen
@@ -924,18 +1023,17 @@ export default function PurchaseDemandPage() {
                               (item) => item.size === size,
                             );
 
-                            const sold = excluded
-                              ? 0
-                              : variant?.quantity ?? 0;
-
-                            const extra =
+                            const net =
                               !excluded && variant
-                                ? extraByVariant[variant.variantId] ?? 0
+                                ? netVariantQuantity(
+                                    variant,
+                                    extraByVariant[variant.variantId] ?? 0,
+                                  )
                                 : 0;
 
                             return (
                               <td key={size} style={{ ...tdCenter, fontWeight: 700 }}>
-                                {sold + extra}
+                                {net}
                               </td>
                             );
                           })}

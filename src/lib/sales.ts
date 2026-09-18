@@ -1,7 +1,7 @@
 "use client";
 
 export type SalesOrderStatus = "Concept" | "Bevestigd" | "Gereserveerd" | "Gereed" | "Verzonden" | "Geannuleerd";
-export type SalesOrderLine = { id:string; productId:string; productCode:string; productName:string; variantId:string; sku:string; color:string; size:string; quantity:number; deliveredQuantity:number; reservedQuantity:number; unitPrice:number; recommendedRetailPrice:number; discountPercentage:number; };
+export type SalesOrderLine = { id:string; productId:string; productCode:string; productName:string; variantId:string; sku:string; color:string; size:string; quantity:number; deliveredQuantity:number; reservedQuantity:number; unitPrice:number; recommendedRetailPrice:number; discountPercentage:number; productionNote?:string; };
 export type SalesOrder = { id:string; orderNumber:string; customerId:string; customerNumber:string; customerName:string; contactPerson:string; email:string; invoiceEmail:string; invoiceCc:string; orderEmail:string; orderCc:string; deliveryEmail:string; deliveryCc:string; city:string; orderDate:string; requestedDeliveryDate:string; status:SalesOrderStatus; paymentDays:number; paymentDiscountPercentage:number; paymentDiscountDays:number; discountPercentage:number; notes:string; lines:SalesOrderLine[]; createdAt:string; updatedAt:string; };
 export type SalesOrderInput = Omit<SalesOrder,"id"|"orderNumber"|"orderDate"|"createdAt"|"updatedAt"|"lines"> & { lines:Omit<SalesOrderLine,"id"|"deliveredQuantity"|"reservedQuantity">[] };
 export type SalesOrderAvailability = { orderedQuantity:number; deliveredQuantity:number; openQuantity:number; reservedQuantity:number; backorderQuantity:number; allocationPercentage:number; fullyAllocated:boolean; };
