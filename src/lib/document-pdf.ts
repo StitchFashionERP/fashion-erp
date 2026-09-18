@@ -9,6 +9,7 @@ import {
 import {
   getSalesOrderById,
   getSalesOrderTotals,
+  loadSalesOrderById,
   type SalesOrder,
   type SalesOrderLine,
 } from "@/lib/sales";
@@ -827,13 +828,148 @@ function groupSalesLines(
   );
 }
 
-function getSalesDefinition(
+type SalesDeliveryLineData = {
+  id: string;
+  sales_order_line_id: string;
+  product_id: string;
+  product_name: string;
+  product_code: string;
+  sku: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
+
+type SalesDeliveryData = {
+  id: string;
+  delivery_number: string;
+  delivery_date: string;
+  sales_order_id: string;
+  sales_delivery_lines: SalesDeliveryLineData[];
+};
+
+/**
+ * Packing slips are requested by referenceId without saying whether it's a
+ * whole sales order or one specific delivery out of it, so this just tries
+ * the delivery lookup and treats a miss as "it's an order id" — the only
+ * two things referenceId can be for PACKING_SLIP.
+ */
+async function fetchSalesDelivery(
+  id: string,
+): Promise<SalesDeliveryData | null> {
+  try {
+    const response = await fetch(
+      `/api/sales-deliveries/${id}`,
+      { cache: "no-store" },
+    );
+
+    if (!response.ok) return null;
+
+    return (await response.json()) as SalesDeliveryData;
+  } catch {
+    return null;
+  }
+}
+
+function groupDeliveryLines(
+  delivery: SalesDeliveryData,
+  order: SalesOrder,
+): FashionArticleBlock[] {
+  const orderLinesById = new Map(
+    order.lines.map((line) => [line.id, line]),
+  );
+
+  const groups = new Map<string, SalesDeliveryLineData[]>();
+
+  delivery.sales_delivery_lines
+    .filter((line) => line.quantity > 0)
+    .forEach((line) => {
+      const key = [
+        line.product_id,
+        line.product_name,
+        line.color,
+      ].join("::");
+
+      const current = groups.get(key) ?? [];
+      current.push(line);
+      groups.set(key, current);
+    });
+
+  const resolveProduct = createProductResolver();
+
+  return Array.from(groups.values()).map((lines) => {
+    const first = lines[0];
+    const orderLine = orderLinesById.get(
+      first.sales_order_line_id,
+    );
+    const product = resolveProduct({
+      productId: first.product_id,
+      sku: first.sku,
+    });
+    const sizes = getSortedSizes(
+      lines.map((line) => line.size),
+    );
+
+    const delivered: Record<string, number> = {};
+    sizes.forEach((size) => {
+      delivered[size] = 0;
+    });
+
+    lines.forEach((line) => {
+      delivered[normalizeSize(line.size)] += line.quantity;
+    });
+
+    const total = lines.reduce(
+      (sum, line) => sum + line.quantity,
+      0,
+    );
+
+    const unitPrice = orderLine?.unitPrice ?? 0;
+    const discountPercentage =
+      orderLine?.discountPercentage ?? 0;
+
+    return {
+      productId: product?.id ?? first.product_id,
+      productCode: first.product_code,
+      productName: first.product_name,
+      brand: product?.brand ?? "",
+      season: product?.seasonType ?? "",
+      color: first.color,
+      colorCode: "",
+      sku: first.sku,
+      barcode: "",
+      sizes,
+      matrixRows: [
+        {
+          label: "Geleverd",
+          quantities: delivered,
+        },
+      ],
+      total,
+      orderNumber: order.orderNumber,
+      salesPrice: unitPrice,
+      recommendedRetailPrice:
+        orderLine?.recommendedRetailPrice ?? 0,
+      lineTotal:
+        total * unitPrice * (1 - discountPercentage / 100),
+    } satisfies FashionArticleBlock;
+  });
+}
+
+async function getSalesDefinition(
   referenceId: string,
   documentType:
     | "SALES_ORDER_CONFIRMATION"
     | "PACKING_SLIP",
-): DocumentDefinition {
-  const order = getSalesOrderById(referenceId);
+): Promise<DocumentDefinition> {
+  const delivery =
+    documentType === "PACKING_SLIP"
+      ? await fetchSalesDelivery(referenceId)
+      : null;
+
+  const order = delivery
+    ? await loadSalesOrderById(delivery.sales_order_id)
+    : getSalesOrderById(referenceId);
 
   if (!order) {
     throw new Error(
@@ -856,11 +992,29 @@ function getSalesDefinition(
       ? "ORDERBEVESTIGING"
       : "PAKBON";
 
+  const documentNumber = delivery
+    ? delivery.delivery_number
+    : order.orderNumber;
+  const documentDate = delivery
+    ? delivery.delivery_date
+    : order.orderDate;
+
+  const articleBlocks = delivery
+    ? groupDeliveryLines(delivery, order)
+    : groupSalesLines(order, documentType);
+
+  const totalUnits = delivery
+    ? delivery.sales_delivery_lines.reduce(
+        (sum, line) => sum + line.quantity,
+        0,
+      )
+    : totals.quantity;
+
   return {
     documentType,
     title,
-    number: order.orderNumber,
-    date: order.orderDate,
+    number: documentNumber,
+    date: documentDate,
     customerId: order.customerId,
     customerName: documentCustomer.name,
     customerLines: documentCustomer.lines,
@@ -871,15 +1025,15 @@ function getSalesDefinition(
           "SALES_ORDER_CONFIRMATION"
             ? "Ordernummer"
             : "Pakbonnummer",
-        value: order.orderNumber,
+        value: documentNumber,
       },
       {
         label: "Datum",
-        value: formatDate(order.orderDate),
+        value: formatDate(documentDate),
       },
       {
         label: "Stuks",
-        value: `${totals.quantity} stuks`,
+        value: `${totalUnits} stuks`,
       },
       {
         label: "Debiteurnummer",
@@ -900,13 +1054,10 @@ function getSalesDefinition(
         value: order.status,
       },
     ],
-    articleBlocks: groupSalesLines(
-      order,
-      documentType,
-    ),
-    totalUnits: totals.quantity,
+    articleBlocks,
+    totalUnits,
     totalArticles: new Set(
-      order.lines.map((line) => line.productId),
+      articleBlocks.map((block) => block.productId),
     ).size,
     subtotal:
       documentType ===
@@ -926,7 +1077,7 @@ function getSalesDefinition(
     currency: "EUR",
     notes: order.notes || "",
     filename: sanitizeFilename(
-      `${title}-${order.orderNumber}.pdf`,
+      `${title}-${documentNumber}.pdf`,
     ),
   };
 }

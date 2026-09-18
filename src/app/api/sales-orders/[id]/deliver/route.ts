@@ -10,6 +10,9 @@ class ApiError extends Error {
 }
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const str = (v: unknown) => String(v ?? "");
+const rec = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 
 async function context() {
   const supabase = await createClient();
@@ -82,7 +85,7 @@ export async function POST(
 
     const { data: lines, error: linesError } = await supabase
       .from("sales_order_lines")
-      .select("id, variant_id, quantity, delivered_quantity, reserved_quantity")
+      .select("id, variant_id, quantity, delivered_quantity, reserved_quantity, profile")
       .eq("organization_id", organizationId)
       .eq("sales_order_id", id);
 
@@ -93,6 +96,27 @@ export async function POST(
     );
 
     const location = await getDefaultStockLocation(organizationId);
+
+    const { count: deliveryCount } = await supabase
+      .from("sales_deliveries")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId);
+
+    const deliveryNumber = `PB-${String((deliveryCount ?? 0) + 1).padStart(5, "0")}`;
+
+    const { data: delivery, error: deliveryError } = await supabase
+      .from("sales_deliveries")
+      .insert({
+        organization_id: organizationId,
+        delivery_number: deliveryNumber,
+        sales_order_id: id,
+      })
+      .select("*")
+      .single();
+
+    if (deliveryError) throw new ApiError(deliveryError.message);
+
+    const deliveryLines: Array<Record<string, unknown>> = [];
 
     for (const requestedLine of requested) {
       const line = linesById.get(String(requestedLine.id));
@@ -127,6 +151,21 @@ export async function POST(
         referenceId: id,
       });
 
+      const lineProfile = rec(line.profile);
+
+      deliveryLines.push({
+        organization_id: organizationId,
+        sales_delivery_id: delivery.id,
+        sales_order_line_id: line.id,
+        product_id: lineProfile.productId ?? null,
+        variant_id: line.variant_id,
+        sku: str(lineProfile.sku),
+        product_name: str(lineProfile.productName),
+        color: str(lineProfile.color),
+        size: str(lineProfile.size),
+        quantity,
+      });
+
       const { error: updateError } = await supabase
         .from("sales_order_lines")
         .update({
@@ -137,6 +176,21 @@ export async function POST(
 
       if (updateError) throw new ApiError(updateError.message);
     }
+
+    if (deliveryLines.length === 0) {
+      await supabase
+        .from("sales_deliveries")
+        .delete()
+        .eq("id", delivery.id);
+
+      throw new ApiError("Er is niets geleverd.", 400);
+    }
+
+    const { error: deliveryLinesError } = await supabase
+      .from("sales_delivery_lines")
+      .insert(deliveryLines);
+
+    if (deliveryLinesError) throw new ApiError(deliveryLinesError.message);
 
     const { data: freshLines, error: freshLinesError } = await supabase
       .from("sales_order_lines")
@@ -163,7 +217,12 @@ export async function POST(
       if (statusError) throw new ApiError(statusError.message);
     }
 
-    return NextResponse.json({ ok: true, fullyDelivered });
+    return NextResponse.json({
+      ok: true,
+      fullyDelivered,
+      deliveryId: delivery.id,
+      deliveryNumber: delivery.delivery_number,
+    });
   } catch (error) {
     const e =
       error instanceof ApiError

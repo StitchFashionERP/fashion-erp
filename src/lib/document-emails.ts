@@ -669,12 +669,78 @@ function renderSalesOrderConfirmationDocument(
   });
 }
 
+type SalesDeliveryLineData = {
+  id: string;
+  sales_order_line_id: string;
+  product_id: string;
+  product_name: string;
+  product_code: string;
+  sku: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
+
+type SalesDeliveryData = {
+  id: string;
+  delivery_number: string;
+  delivery_date: string;
+  sales_order_id: string;
+  sales_delivery_lines: SalesDeliveryLineData[];
+};
+
+/**
+ * Same referenceId ambiguity as the PDF side (document-pdf.ts): a
+ * PACKING_SLIP reference is either a sales order or one specific delivery
+ * out of it. Duplicated here rather than imported from document-pdf.ts to
+ * avoid a circular import (that module already imports from this one).
+ */
+async function fetchSalesDelivery(
+  id: string,
+): Promise<SalesDeliveryData | null> {
+  try {
+    const response = await fetch(
+      `/api/sales-deliveries/${id}`,
+      { cache: "no-store" },
+    );
+
+    if (!response.ok) return null;
+
+    return (await response.json()) as SalesDeliveryData;
+  } catch {
+    return null;
+  }
+}
+
 function renderPackingSlipDocument(
   order: SalesOrder,
+  delivery: SalesDeliveryData | null,
 ) {
-  const rows = order.lines
-    .map(
-      (line) => `
+  const rows = delivery
+    ? delivery.sales_delivery_lines
+        .map(
+          (line) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(
+              line.product_name,
+            )}</strong>
+            <div class="line-sub">${escapeHtml(
+              line.product_code,
+            )} · ${escapeHtml(line.sku)}</div>
+          </td>
+          <td>${escapeHtml(line.color)}</td>
+          <td>${escapeHtml(line.size)}</td>
+          <td class="number">${escapeHtml(
+            line.quantity,
+          )}</td>
+        </tr>
+      `,
+        )
+        .join("")
+    : order.lines
+        .map(
+          (line) => `
         <tr>
           <td>
             <strong>${escapeHtml(
@@ -694,8 +760,8 @@ function renderPackingSlipDocument(
           )}</td>
         </tr>
       `,
-    )
-    .join("");
+        )
+        .join("");
 
   const lineTable = `
     <table class="lines">
@@ -704,18 +770,28 @@ function renderPackingSlipDocument(
           <th>Artikel</th>
           <th>Kleur</th>
           <th>Maat</th>
-          <th class="number">Besteld</th>
-          <th class="number">Geleverd</th>
+          ${
+            delivery
+              ? `<th class="number">Aantal</th>`
+              : `<th class="number">Besteld</th><th class="number">Geleverd</th>`
+          }
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 
+  const documentNumber = delivery
+    ? delivery.delivery_number
+    : order.orderNumber;
+  const documentDate = delivery
+    ? delivery.delivery_date
+    : order.orderDate;
+
   return renderDocumentShell({
     title: "Pakbon",
-    documentNumber: order.orderNumber,
-    documentDate: order.orderDate,
+    documentNumber,
+    documentDate,
     recipientName: order.customerName,
     recipientDetails: [
       order.contactPerson,
@@ -1008,8 +1084,14 @@ ${getSenderCompanyName()}`,
   }
 
   if (documentType === "PACKING_SLIP") {
-    const order =
-      getSalesOrderById(referenceId);
+    const delivery =
+      await fetchSalesDelivery(referenceId);
+
+    const order = delivery
+      ? await loadSalesOrderById(
+          delivery.sales_order_id,
+        )
+      : getSalesOrderById(referenceId);
 
     if (!order) {
       throw new Error(
@@ -1017,8 +1099,15 @@ ${getSenderCompanyName()}`,
       );
     }
 
+    const documentNumber = delivery
+      ? delivery.delivery_number
+      : order.orderNumber;
+
     const documentHtml =
-      renderPackingSlipDocument(order);
+      renderPackingSlipDocument(
+        order,
+        delivery,
+      );
 
     const customers =
       await getCustomers();
@@ -1031,8 +1120,10 @@ ${getSenderCompanyName()}`,
 
     return {
       documentType,
-      referenceId: order.id,
-      referenceNumber: order.orderNumber,
+      referenceId: delivery
+        ? delivery.id
+        : order.id,
+      referenceNumber: documentNumber,
       to:
         order.deliveryEmail ||
         customer?.deliveryEmail ||
@@ -1044,7 +1135,7 @@ ${getSenderCompanyName()}`,
         customer?.deliveryCc ||
         "",
       bcc: "",
-      subject: `Kopie pakbon ${order.orderNumber}`,
+      subject: `Kopie pakbon ${documentNumber}`,
       message: `Beste ${
         order.contactPerson ||
         "heer/mevrouw"
@@ -1057,7 +1148,7 @@ Met vriendelijke groet,
 STITCH ERP Fashion Management`,
       includeAttachment: true,
       attachment: createHtmlAttachment(
-        `Pakbon-${order.orderNumber}.html`,
+        `Pakbon-${documentNumber}.html`,
         documentHtml,
       ),
       recipientName:
