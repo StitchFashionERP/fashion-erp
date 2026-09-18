@@ -24,7 +24,6 @@ import {
   getReceiptsForPurchaseOrder,
   isPurchaseOrderOverdue,
   reopenPurchaseOrder,
-  updatePurchaseOrderStatus,
   type PurchaseOrder,
   type PurchaseOrderStatus,
   type PurchaseReceipt,
@@ -700,15 +699,24 @@ export default function PurchaseOrderDetailPage() {
               showEnglishPdf
               emailLabel="Versturen naar leverancier"
               onSent={() => {
-                const updated =
-                  updatePurchaseOrderStatus(
-                    order.id,
-                    "Besteld",
-                  );
+                void (async () => {
+                  try {
+                    await updatePurchaseOrderStatusRemote(
+                      order.id,
+                      "Besteld",
+                    );
 
-                if (updated) {
-                  setOrder(updated);
-                }
+                    await reloadOrder();
+                  } catch (caughtError) {
+                    setError(
+                      caughtError instanceof Error
+                        ? caughtError.message
+                        : "Status wijzigen mislukt.",
+                    );
+
+                    return;
+                  }
+                })();
 
                 setNotification(
                   "De inkooporder is per e-mail verstuurd.",

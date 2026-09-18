@@ -520,7 +520,10 @@ export type PaymentConditionInput = {
   paymentDiscountDays?: number;
 };
 
-export function getPaymentConditionText(input: PaymentConditionInput) {
+export function getPaymentConditionText(
+  input: PaymentConditionInput,
+  language: "nl" | "en" = "nl",
+) {
   const paymentDays = Math.max(
     1,
     Math.floor(Number(input.paymentDays) || 30),
@@ -535,6 +538,16 @@ export function getPaymentConditionText(input: PaymentConditionInput) {
     0,
     Math.floor(Number(input.paymentDiscountDays) || 0),
   );
+
+  if (language === "en") {
+    if (discountPercentage > 0 && discountDays > 0) {
+      return `${discountPercentage.toLocaleString(
+        "en-US",
+      )}% discount if paid within ${discountDays} days, otherwise net ${paymentDays} days`;
+    }
+
+    return `Net ${paymentDays} days`;
+  }
 
   if (discountPercentage > 0 && discountDays > 0) {
     return `${discountPercentage.toLocaleString(

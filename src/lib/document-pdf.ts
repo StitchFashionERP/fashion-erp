@@ -3,8 +3,8 @@
 import { jsPDF } from "jspdf";
 import * as QRCode from "qrcode";
 import {
-  getPurchaseOrderById,
   getPurchaseOrderTotals,
+  loadPurchaseOrderById,
 } from "@/lib/purchasing";
 import {
   getSalesOrderById,
@@ -13,6 +13,7 @@ import {
   type SalesOrderLine,
 } from "@/lib/sales";
 import { getInvoiceById } from "@/lib/invoices";
+import { fetchSuppliers } from "@/lib/suppliers";
 import {
   getCreditNoteById,
 } from "@/lib/returns";
@@ -76,6 +77,7 @@ type DocumentDefinition = {
   customerId?: string;
   customerName: string;
   customerLines: string[];
+  language?: DocumentLanguage;
   meta: DocumentMetaRow[];
   articleBlocks: FashionArticleBlock[];
   totalUnits: number;
@@ -929,17 +931,39 @@ function getSalesDefinition(
   };
 }
 
-function getPurchaseDefinition(
+async function getPurchaseDefinition(
   referenceId: string,
   language: DocumentLanguage = "nl",
-): DocumentDefinition {
-  const order = getPurchaseOrderById(referenceId);
+): Promise<DocumentDefinition> {
+  const order = await loadPurchaseOrderById(referenceId);
 
   if (!order) {
     throw new Error(
       "Inkooporder niet gevonden.",
     );
   }
+
+  const suppliers = await fetchSuppliers();
+  const supplier = suppliers.find(
+    (item) => item.id === order.supplierId,
+  );
+
+  const supplierAddressLines = supplier
+    ? [
+        supplier.address ||
+          [supplier.street, supplier.houseNumber]
+            .filter(Boolean)
+            .join(" "),
+        [supplier.postalCode, supplier.city]
+          .filter(Boolean)
+          .join(" "),
+        supplier.country,
+        supplier.vatNumber
+          ? `${language === "en" ? "VAT" : "BTW"}: ${supplier.vatNumber}`
+          : "",
+        supplier.email,
+      ].filter(Boolean)
+    : [];
 
   const totals = getPurchaseOrderTotals(order);
 
@@ -991,7 +1015,7 @@ function getPurchaseDefinition(
         return {
           productCode: first.productCode,
           productName: first.productName,
-          brand: "",
+          brand: product?.brand ?? "",
           season: order.collectionCode || "",
           color: first.color,
           colorCode: "",
@@ -1032,9 +1056,11 @@ function getPurchaseDefinition(
     date: order.orderDate,
     customerName: order.supplierName,
     customerLines: [
-      order.deliveryAddress,
+      ...supplierAddressLines,
       order.supplierReference
-        ? `Referentie: ${order.supplierReference}`
+        ? `${
+            language === "en" ? "Reference" : "Referentie"
+          }: ${order.supplierReference}`
         : "",
     ].filter(Boolean),
     meta: [
@@ -1083,7 +1109,7 @@ function getPurchaseDefinition(
           language === "en"
             ? "Payment terms"
             : "Betalingstermijn",
-        value: getPaymentConditionText(order),
+        value: getPaymentConditionText(order, language),
       },
       {
         label:
@@ -1093,6 +1119,7 @@ function getPurchaseDefinition(
         value: order.currency,
       },
     ],
+    language,
     articleBlocks,
     totalUnits: totals.orderedQuantity,
     totalArticles: new Set(
@@ -1443,7 +1470,7 @@ function getCreditNoteDefinition(
   };
 }
 
-function getDefinition(
+async function getDefinition(
   documentType: BusinessDocumentType,
   referenceId: string,
   language: DocumentLanguage = "nl",
@@ -2115,6 +2142,7 @@ function drawArticleBlock(
   y: number,
   definition: DocumentDefinition,
 ) {
+  const isEnglish = definition.language === "en";
   const showImage = hasArticleImage(
     block,
     definition,
@@ -2201,15 +2229,15 @@ function drawArticleBlock(
   pdf.setFontSize(6.8);
   pdf.setFont("helvetica", "normal");
   pdf.text(
-    `Merk: ${block.brand || "—"}`,
+    `${isEnglish ? "Brand" : "Merk"}: ${block.brand || "—"}`,
     productTextX,
-    y + 13,
+    y + (showImage ? 13 : 9),
   );
 
   pdf.text(
-    `Seizoen: ${block.season || "—"}`,
+    `${isEnglish ? "Season" : "Seizoen"}: ${block.season || "—"}`,
     showImage ? productTextX : 95,
-    y + (showImage ? 18 : 11),
+    y + (showImage ? 18 : 9),
   );
 
   pdf.setDrawColor(80, 80, 80);
@@ -2232,13 +2260,13 @@ function drawArticleBlock(
   pdf.setFontSize(6.3);
 
   pdf.text(
-    "Kleur",
+    isEnglish ? "Color" : "Kleur",
     MARGIN_X + 3,
     tableHeaderY,
   );
 
   pdf.text(
-    "Kleurnr.",
+    isEnglish ? "Color no." : "Kleurnr.",
     MARGIN_X + 25,
     tableHeaderY,
   );
@@ -2255,13 +2283,13 @@ function drawArticleBlock(
   );
 
   pdf.text(
-    "Totaal",
+    isEnglish ? "Total" : "Totaal",
     totalColumnX,
     tableHeaderY,
   );
 
   pdf.text(
-    "Ordernr.",
+    isEnglish ? "Order no." : "Ordernr.",
     orderColumnX,
     tableHeaderY,
   );
@@ -2271,19 +2299,19 @@ function drawArticleBlock(
     "SALES_ORDER_CONFIRMATION"
   ) {
     pdf.text(
-      "Verkoopprijs",
+      isEnglish ? "Sales price" : "Verkoopprijs",
       salesPriceColumnX,
       tableHeaderY,
     );
 
     pdf.text(
-      "Adviesprijs",
+      isEnglish ? "RRP" : "Adviesprijs",
       retailPriceColumnX,
       tableHeaderY,
     );
   } else {
     pdf.text(
-      "Prijs",
+      isEnglish ? "Price" : "Prijs",
       salesPriceColumnX,
       tableHeaderY,
     );
@@ -2407,6 +2435,7 @@ function drawTotals(
   definition: DocumentDefinition,
   startY: number,
 ) {
+  const isEnglish = definition.language === "en";
   let y = startY;
 
   pdf.setDrawColor(40, 40, 40);
@@ -2416,7 +2445,7 @@ function drawTotals(
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8);
-  pdf.text("Artikelen", 158, y);
+  pdf.text(isEnglish ? "Articles" : "Artikelen", 158, y);
   pdf.text(
     String(definition.totalArticles),
     196,
@@ -2425,7 +2454,7 @@ function drawTotals(
   );
 
   y += 5;
-  pdf.text("Stuks", 158, y);
+  pdf.text(isEnglish ? "Units" : "Stuks", 158, y);
   pdf.text(
     String(definition.totalUnits),
     196,
@@ -2438,7 +2467,7 @@ function drawTotals(
   ) {
     y += 6;
     pdf.setFont("helvetica", "normal");
-    pdf.text("Subtotaal", 158, y);
+    pdf.text(isEnglish ? "Subtotal" : "Subtotaal", 158, y);
     pdf.text(
       formatCurrency(
         definition.subtotal,
@@ -2452,7 +2481,7 @@ function drawTotals(
 
   if (typeof definition.vat === "number") {
     y += 5;
-    pdf.text("BTW", 158, y);
+    pdf.text(isEnglish ? "VAT" : "BTW", 158, y);
     pdf.text(
       formatCurrency(
         definition.vat,
@@ -2469,7 +2498,7 @@ function drawTotals(
     pdf.setDrawColor(40, 40, 40);
     pdf.line(158, y - 3, 196, y - 3);
     pdf.setFont("helvetica", "bold");
-    pdf.text("Totaal", 158, y);
+    pdf.text(isEnglish ? "Total" : "Totaal", 158, y);
     pdf.text(
       formatCurrency(
         definition.total,
@@ -2488,6 +2517,7 @@ function drawNotes(
   pdf: jsPDF,
   notes: string,
   startY: number,
+  language?: DocumentLanguage,
 ) {
   if (!notes.trim()) {
     return startY;
@@ -2511,7 +2541,7 @@ function drawNotes(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(7);
   pdf.text(
-    "OPMERKINGEN",
+    language === "en" ? "NOTES" : "OPMERKINGEN",
     MARGIN_X + 3,
     startY + 5,
   );
@@ -2821,7 +2851,7 @@ export async function createBusinessDocumentPdf(
     }
   }
 
-  const definition = getDefinition(
+  const definition = await getDefinition(
     documentType,
     referenceId,
     options?.language ?? "nl",
@@ -2894,6 +2924,7 @@ export async function createBusinessDocumentPdf(
             pdf,
             definition.notes,
             y + 3,
+            definition.language,
           );
         }
 

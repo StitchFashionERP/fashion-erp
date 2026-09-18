@@ -9,8 +9,8 @@ import {
   getCustomers,
 } from "@/lib/customers";
 import {
-  getPurchaseOrderById,
   getPurchaseOrderTotals,
+  loadPurchaseOrderById,
   type PurchaseOrder,
 } from "@/lib/purchasing";
 import {
@@ -880,7 +880,7 @@ export async function createDocumentEmailDraft(
 ): Promise<DocumentEmailDraft> {
   if (documentType === "PURCHASE_ORDER") {
     const order =
-      getPurchaseOrderById(referenceId);
+      await loadPurchaseOrderById(referenceId);
 
     if (!order) {
       throw new Error(

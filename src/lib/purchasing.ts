@@ -214,6 +214,28 @@ export function getPurchaseOrderById(id: string) {
   );
 }
 
+/**
+ * Fetches the purchase order from the actual database-backed API
+ * (/api/purchase-orders), unlike getPurchaseOrderById which reads from the
+ * separate shared-state cache that purchase orders created via
+ * /api/purchase-orders never get written into.
+ */
+export async function loadPurchaseOrderById(
+  id: string,
+): Promise<PurchaseOrder | null> {
+  const response = await fetch("/api/purchase-orders", {
+    cache: "no-store",
+  });
+
+  const orders = (await response.json()) as PurchaseOrder[];
+
+  if (!Array.isArray(orders)) {
+    return null;
+  }
+
+  return orders.find((order) => order.id === id) ?? null;
+}
+
 export function getPurchaseReceiptById(
   id: string,
 ) {
