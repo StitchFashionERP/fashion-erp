@@ -369,16 +369,22 @@ export default function PurchaseDemandPage() {
       .filter((group) => !supplierFilter || group.supplier.id === supplierFilter)
       .map((group) => ({
         ...group,
-        rows: group.rows.filter((row) => {
-          const query = search.trim().toLowerCase();
-          if (!query) return true;
+        rows: group.rows
+          .filter((row) => {
+            const query = search.trim().toLowerCase();
+            if (!query) return true;
 
-          return (
-            row.productCode.toLowerCase().includes(query) ||
-            row.productName.toLowerCase().includes(query) ||
-            row.color.toLowerCase().includes(query)
-          );
-        }),
+            return (
+              row.productCode.toLowerCase().includes(query) ||
+              row.productName.toLowerCase().includes(query) ||
+              row.color.toLowerCase().includes(query)
+            );
+          })
+          .sort(
+            (a, b) =>
+              a.productName.localeCompare(b.productName, "nl") ||
+              a.color.localeCompare(b.color, "nl"),
+          ),
       }))
       .filter((group) => group.rows.length > 0)
       .sort((a, b) =>
@@ -633,11 +639,33 @@ export default function PurchaseDemandPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 gap: 24,
-                borderBottom: "1px solid #e5e7eb",
+                background: "#eff6ff",
+                borderBottom: "2px solid #bfdbfe",
               }}
             >
               <div>
-                <h2 style={{ margin: "0 0 6px" }}>
+                <div
+                  style={{
+                    color: "#1d4ed8",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: 0.6,
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}
+                >
+                  Leverancier
+                  {group.supplier.supplierNumber
+                    ? ` · ${group.supplier.supplierNumber}`
+                    : ""}
+                </div>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: 22,
+                    color: "#111827",
+                  }}
+                >
                   {group.supplier.companyName}
                 </h2>
                 <Link href="/leveranciers">Naar leverancierskaart</Link>
